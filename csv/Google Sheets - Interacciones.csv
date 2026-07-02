@@ -1,0 +1,2 @@
+interaction_id,lead_id,timestamp,direction,channel,message_raw,message_sent,ai_detected_intent,score_after_interaction,temperature_after_interaction
+int_demo_001,ld_demo_001,2026-03-18T10:00:00-03:00,inbound,whatsapp,"Estamos buscando para vivir. Preferimos Caballito o Parque Chacabuco, 3 ambientes, hasta 125 mil usd. Queremos avanzar este trimestre.",,buy_property,68,calificado

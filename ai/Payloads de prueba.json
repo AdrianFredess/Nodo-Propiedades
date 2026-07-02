@@ -1,0 +1,104 @@
+[
+  {
+    "source": "whatsapp",
+    "source_campaign": "organico_whatsapp",
+    "lead_name": "Martin",
+    "phone": "+5491166677788",
+    "email": null,
+    "message": "Hola, busco un depto 2 ambientes en Palermo o Villa Crespo. Tengo hasta 95 mil usd y me gustaria mudarme antes de julio. Puede ser con anticipo y credito.",
+    "property_ref": null,
+    "previous_interactions": [],
+    "current_lead_status": null,
+    "matched_properties_summary": []
+  },
+  {
+    "source": "web_form",
+    "source_campaign": "landing_palermo_2amb",
+    "lead_name": "Lucia Gomez",
+    "phone": "+5491155544433",
+    "email": "lucia@gmail.com",
+    "message": "Quiero comprar para vivir. Me interesa Palermo. Presupuesto estimado 120000 usd.",
+    "property_ref": null,
+    "previous_interactions": [],
+    "current_lead_status": "nuevo",
+    "matched_properties_summary": []
+  },
+  {
+    "source": "meta_lead_ads",
+    "source_campaign": "meta_caballito_inversion",
+    "lead_name": "Federico",
+    "phone": "+5491170012233",
+    "email": "fede@correo.com",
+    "message": "Me interesa invertir en un departamento chico para renta en Caballito o Almagro. Ticket hasta 80000 usd.",
+    "property_ref": null,
+    "previous_interactions": [],
+    "current_lead_status": "nuevo",
+    "matched_properties_summary": []
+  },
+  {
+    "source": "portal_inmobiliario",
+    "source_campaign": "zonaprop_publicacion_8821",
+    "lead_name": "Sofia Ramirez",
+    "phone": "+5491198765432",
+    "email": "sofia@mail.com",
+    "message": "Hola, sigue disponible la propiedad CAB-203? Busco comprar este mes. Tengo ahorros y quiero coordinar visita.",
+    "property_ref": "CAB-203",
+    "previous_interactions": [],
+    "current_lead_status": "nuevo",
+    "matched_properties_summary": []
+  },
+  {
+    "source": "manual",
+    "source_campaign": "referido_escribania",
+    "lead_name": "Carlos Diaz",
+    "phone": "+5491133344455",
+    "email": null,
+    "message": "Referido por escribania. Busca PH 3 ambientes en zona sur, hasta 110000 usd. Venta de su propiedad en curso.",
+    "property_ref": null,
+    "previous_interactions": [
+      {
+        "date": "2026-03-17T17:30:00-03:00",
+        "channel": "telefono",
+        "summary": "Dijo que define en 60 dias"
+      }
+    ],
+    "current_lead_status": "precalificado",
+    "matched_properties_summary": []
+  },
+  {
+    "source": "whatsapp",
+    "source_campaign": "organico_whatsapp",
+    "lead_name": "Curioso sin datos",
+    "phone": "+5491100000001",
+    "email": null,
+    "message": "Hola, cuanto sale ese depto?",
+    "property_ref": null,
+    "previous_interactions": [],
+    "current_lead_status": "nuevo",
+    "matched_properties_summary": []
+  },
+  {
+    "source": "whatsapp",
+    "source_campaign": "meta_caballito_compra",
+    "lead_name": "Pareja con potencial",
+    "phone": "+5491100000002",
+    "email": "pareja@test.com",
+    "message": "Estamos buscando para vivir. Preferimos Caballito o Parque Chacabuco, 3 ambientes, hasta 125 mil usd. Queremos avanzar este trimestre.",
+    "property_ref": null,
+    "previous_interactions": [],
+    "current_lead_status": "nuevo",
+    "matched_properties_summary": []
+  },
+  {
+    "source": "portal_inmobiliario",
+    "source_campaign": "publicacion_hot_cab203",
+    "lead_name": "Lead caliente visita",
+    "phone": "+5491100000003",
+    "email": "hot@test.com",
+    "message": "Vi la propiedad CAB-203. Tengo USD 140000 disponibles y quiero visitar esta semana. Busco cerrar dentro de 30 dias.",
+    "property_ref": "CAB-203",
+    "previous_interactions": [],
+    "current_lead_status": "nuevo",
+    "matched_properties_summary": []
+  }
+]

@@ -1,0 +1,5 @@
+property_id,external_ref,title,operation_type,property_type,address,zone,city,bedrooms,bathrooms,area_m2,price,currency,expenses,features,payment_options,status,publication_link,advisor_owner,updated_at
+prop_001,CAB-203,Departamento 3 ambientes luminoso,compra,departamento,Calle Ejemplo 123,Caballito,CABA,2,1,68,128000,USD,95000,"balcon;apto credito;luminoso","contado;credito_preaprobado",activo,https://ejemplo.com/cab-203,Asesor 1,2026-03-18T09:00:00-03:00
+prop_002,PAL-110,Departamento 2 ambientes moderno,compra,departamento,Calle Demo 450,Palermo,CABA,1,1,47,98000,USD,88000,"amenities;balcon","contado;anticipo_y_credito",activo,https://ejemplo.com/pal-110,Asesor 1,2026-03-18T09:00:00-03:00
+prop_003,ALM-090,Departamento chico para renta,compra,departamento,Calle Test 89,Almagro,CABA,1,1,36,79000,USD,62000,"apto profesional","contado",activo,https://ejemplo.com/alm-090,Asesor 1,2026-03-18T09:00:00-03:00
+prop_004,PCH-301,Departamento 3 ambientes reciclado,compra,departamento,Calle Mock 55,Parque Chacabuco,CABA,2,1,70,121000,USD,91000,"reciclado;balcon","contado;credito_preaprobado",activo,https://ejemplo.com/pch-301,Asesor 1,2026-03-18T09:00:00-03:00

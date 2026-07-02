@@ -1,0 +1,2 @@
+followup_id,lead_id,created_at,scheduled_at,followup_type,channel,message_template,status,attempt_number,result,advisor_required,closed_reason
+fu_demo_001,ld_demo_001,2026-03-18T10:05:00-03:00,2026-03-20T10:05:00-03:00,seguimiento_48h,whatsapp,"Perfecto, estas bastante bien definido. Decime solo si pensas comprar al contado, con credito o combinacion, y te filtro mejor.",pending,1,,false,

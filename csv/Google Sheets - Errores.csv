@@ -1,0 +1,2 @@
+error_id,workflow_name,node_name,lead_id,timestamp,error_message,payload_snapshot,status
+err_demo_001,WF-02 Core Lead Processor,AI Agent - Analyze Lead,ld_demo_001,2026-03-18T10:10:00-03:00,JSON invalido del agente IA,"{""sample"":true}",open

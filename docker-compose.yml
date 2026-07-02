@@ -1,0 +1,35 @@
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - NODE_ENV=production
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      # Misma URL pública que usás en el navegador (ngrok). Sin esto Google OAuth suele dar redirect_uri_mismatch.
+      - N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL:-}
+      # Permite completar el callback OAuth sin sesión (evita errores raros al volver de Google).
+      - N8N_SKIP_AUTH_ON_OAUTH_CALLBACK=true
+      # No fijar N8N_ENCRYPTION_KEY aquí: debe leerse solo de ~/.n8n/config (evita mismatch en Docker+Windows).
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+      # Forzamos desde el compose: en muchas PCs hay N8N_BASIC_AUTH_* en el entorno global y eso rompe el login.
+      - N8N_BASIC_AUTH_ACTIVE=false
+      - N8N_BASIC_AUTH_USER=
+      - N8N_BASIC_AUTH_PASSWORD=
+      - GENERIC_TIMEZONE=America/Argentina/Buenos_Aires
+      - TZ=America/Argentina/Buenos_Aires
+    volumes:
+      # Carpeta del HOST con database.sqlite y config (no uses N8N_USER_FOLDER aquí: en CLI es el *padre* de .n8n)
+      - ${N8N_HOST_DATA_DIR:-C:/Users/adrian/.n8n}:/home/node/.n8n
+      - ./workflows:/workflows:ro
+      - ./ai:/ai:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

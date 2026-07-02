@@ -1,0 +1,270 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI Agent Output Schema - Inmobiliaria",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "lead_intent",
+    "buyer_profile",
+    "intent_confidence",
+    "extracted_data",
+    "missing_fields",
+    "lead_score",
+    "lead_temperature",
+    "readiness_flags",
+    "next_best_action",
+    "followup_plan",
+    "customer_message",
+    "advisor_summary",
+    "disqualification_reason"
+  ],
+  "properties": {
+    "lead_intent": {
+      "type": "string",
+      "enum": [
+        "buy_property",
+        "invest_property",
+        "compare_options",
+        "curious",
+        "outside_funnel"
+      ]
+    },
+    "buyer_profile": {
+      "type": "string",
+      "enum": [
+        "homebuyer",
+        "investor",
+        "unknown"
+      ]
+    },
+    "intent_confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "extracted_data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lead_name",
+        "operation_type",
+        "property_type",
+        "preferred_zones",
+        "city",
+        "bedrooms",
+        "budget_amount",
+        "budget_currency",
+        "payment_method",
+        "urgency_level",
+        "timeframe_days",
+        "property_ref",
+        "investment_goal"
+      ],
+      "properties": {
+        "lead_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operation_type": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "compra",
+            "inversion",
+            "permuta",
+            null
+          ]
+        },
+        "property_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "preferred_zones": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "city": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bedrooms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "budget_amount": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "budget_currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "USD",
+            "ARS",
+            null
+          ]
+        },
+        "payment_method": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "contado",
+            "credito_preaprobado",
+            "anticipo_y_credito",
+            "venta_previa",
+            "desconocido",
+            null
+          ]
+        },
+        "urgency_level": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "alta",
+            "media",
+            "baja",
+            null
+          ]
+        },
+        "timeframe_days": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "property_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "investment_goal": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "missing_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "lead_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "lead_temperature": {
+      "type": "string",
+      "enum": [
+        "frio",
+        "tibio",
+        "calificado",
+        "caliente"
+      ]
+    },
+    "readiness_flags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "has_budget",
+        "has_zone",
+        "has_payment_method",
+        "has_urgency",
+        "accepted_next_step"
+      ],
+      "properties": {
+        "has_budget": {
+          "type": "boolean"
+        },
+        "has_zone": {
+          "type": "boolean"
+        },
+        "has_payment_method": {
+          "type": "boolean"
+        },
+        "has_urgency": {
+          "type": "boolean"
+        },
+        "accepted_next_step": {
+          "type": "boolean"
+        }
+      }
+    },
+    "next_best_action": {
+      "type": "string",
+      "enum": [
+        "pedir_datos",
+        "enviar_opciones",
+        "invitar_visita",
+        "derivar_asesor",
+        "seguimiento_24h",
+        "seguimiento_3d",
+        "reactivacion_futura",
+        "engage_curioso",
+        "descartar"
+      ]
+    },
+    "followup_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "should_schedule_followup",
+        "followup_type",
+        "followup_in_hours"
+      ],
+      "properties": {
+        "should_schedule_followup": {
+          "type": "boolean"
+        },
+        "followup_type": {
+          "type": "string"
+        },
+        "followup_in_hours": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "customer_message": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "advisor_summary": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "disqualification_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

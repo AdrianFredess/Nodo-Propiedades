@@ -1,0 +1,41 @@
+{
+  "package_name": "Meta Produccion Final",
+  "primary_channel": "Meta WhatsApp Cloud API",
+  "entrypoint_workflow": "WF-09B Meta WhatsApp Cloud Webhook Produccion.json",
+  "test_workflow": "WF-08 Manual Lead Tester.json",
+  "endpoint": "/webhook/meta-whatsapp-prod",
+  "use_in_production": [
+    "WF-07 Error Logger.json",
+    "WF-06 Advisor Alert.json",
+    "WF-03 Property Matching.json",
+    "WF-04 Follow-up Orchestrator.json",
+    "WF-05 Daily Reactivation.json",
+    "WF-10 Meta Template Sender.json",
+    "WF-11 Meta Status Handler.json",
+    "WF-02 Core Lead Processor.json",
+    "WF-08 Manual Lead Tester.json",
+    "WF-09B Meta WhatsApp Cloud Webhook Produccion.json",
+    "Configuracion Base.example.json",
+    "Prompt AI Agent Inmobiliario.txt",
+    "AI Output Schema.json",
+    "Google Sheets - Leads.csv",
+    "Google Sheets - Propiedades.csv",
+    "Google Sheets - Seguimientos.csv",
+    "Google Sheets - Interacciones.csv",
+    "Google Sheets - Errores.csv",
+    "Reemplazar Placeholders.ps1"
+  ],
+  "reference_or_backup": [
+    "WF-00 Orquestador Principal Importable.json",
+    "WF-01 Intake Multicanal.json",
+    "WF-09 Meta WhatsApp Cloud Webhook.json",
+    "Blueprint Sistema Inmobiliario n8n.md"
+  ],
+  "support_docs": [
+    "LEER PRIMERO - Meta Produccion Final.md",
+    "Stack Final Meta Produccion.md",
+    "Importacion Exacta en n8n.md",
+    "Meta WhatsApp Cloud API - Setup.md",
+    "Meta Ventana 24h y Templates.md"
+  ]
+}

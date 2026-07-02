@@ -1,0 +1,798 @@
+{
+  "name": "SIMPLE-03 Messenger Bot",
+  "nodes": [
+    {
+      "id": "s03-node-01",
+      "name": "Webhook Messenger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "meta-messenger",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "webhookId": "s03-messenger-webhook"
+    },
+    {
+      "id": "s03-node-verify",
+      "name": "Webhook Messenger Verify",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        500
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "meta-messenger",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "webhookId": "s03-messenger-webhook"
+    },
+    {
+      "id": "s03-node-verify-resp",
+      "name": "Respond - Verify Meta",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        420,
+        500
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "s03-node-02",
+      "name": "Code - Normalizar Messenger",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\ntry {\n  const entry = body.entry?.[0];\n  const messaging = entry?.messaging?.[0];\n  \n  if (!messaging) return [];\n  \n  const sender_id = messaging.sender?.id;\n  const texto = messaging.message?.text || '';\n  \n  if (!sender_id || !texto || messaging.message?.is_echo) return [];\n  \n  return [{\n    json: {\n      canal: 'messenger',\n      chat_id: sender_id,\n      dedupe_key: 'messenger:' + sender_id,\n      lead_name: 'Cliente Messenger',\n      phone: sender_id,\n      mensaje: texto,\n      fecha: new Date().toISOString()\n    }\n  }];\n} catch(e) {\n  return [];\n}"
+      }
+    },
+    {
+      "id": "s03-node-03",
+      "name": "IF - Tiene Mensaje",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        640,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.mensaje || '' }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "s03-node-ok",
+      "name": "Respond - OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        860,
+        480
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"ok\" }",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "s03-node-04",
+      "name": "Google Sheets - Buscar Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        860,
+        300
+      ],
+      "parameters": {
+        "operation": "lookup",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads"
+        },
+        "lookupColumn": "dedupe_key",
+        "lookupValue": "={{ $json.dedupe_key }}",
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRange",
+              "headerRow": 2,
+              "firstDataRow": 3
+            }
+          }
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "WBM00QjQj4q8xjLF",
+          "name": "Cuenta de Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "s03-node-05",
+      "name": "IF - Lead Existe",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.lead_id || $json.dedupe_key || '' }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "s03-node-06",
+      "name": "Google Sheets - Actualizar Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1300,
+        120
+      ],
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "dedupe_key": "={{ $('Code - Normalizar Messenger').item.json.dedupe_key }}",
+            "updated_at": "={{ $('Code - Normalizar Messenger').item.json.fecha }}",
+            "last_message": "={{ $('Code - Normalizar Messenger').item.json.mensaje }}",
+            "last_interaction_at": "={{ $('Code - Normalizar Messenger').item.json.fecha }}"
+          },
+          "schema": [
+            {
+              "id": "dedupe_key",
+              "displayName": "dedupe_key",
+              "required": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "last_message",
+              "displayName": "last_message",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "last_interaction_at",
+              "displayName": "last_interaction_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            }
+          ],
+          "matchingColumns": [
+            "dedupe_key"
+          ]
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRange",
+              "headerRow": 2,
+              "firstDataRow": 3
+            }
+          }
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "WBM00QjQj4q8xjLF",
+          "name": "Cuenta de Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "s03-node-07",
+      "name": "Google Sheets - Crear Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1300,
+        480
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ 'ld_ms_' + Date.now() }}",
+            "dedupe_key": "={{ $('Code - Normalizar Messenger').item.json.dedupe_key }}",
+            "created_at": "={{ $('Code - Normalizar Messenger').item.json.fecha }}",
+            "updated_at": "={{ $('Code - Normalizar Messenger').item.json.fecha }}",
+            "source": "messenger",
+            "lead_name": "={{ $('Code - Normalizar Messenger').item.json.lead_name }}",
+            "phone": "={{ $('Code - Normalizar Messenger').item.json.chat_id }}",
+            "last_message": "={{ $('Code - Normalizar Messenger').item.json.mensaje }}",
+            "last_interaction_at": "={{ $('Code - Normalizar Messenger').item.json.fecha }}",
+            "temperature": "frio",
+            "status": "abierto"
+          },
+          "schema": [
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "dedupe_key",
+              "displayName": "dedupe_key",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "lead_name",
+              "displayName": "lead_name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "last_message",
+              "displayName": "last_message",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "last_interaction_at",
+              "displayName": "last_interaction_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "temperature",
+              "displayName": "temperature",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            }
+          ],
+          "matchingColumns": [
+            "dedupe_key"
+          ]
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRange",
+              "headerRow": 2,
+              "firstDataRow": 3
+            }
+          }
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "WBM00QjQj4q8xjLF",
+          "name": "Cuenta de Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "s03-node-08",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1520,
+        300
+      ],
+      "parameters": {
+        "mode": "passThrough",
+        "output": "first"
+      }
+    },
+    {
+      "id": "s03-node-09",
+      "name": "Code - Armar Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1740,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const prep = $('Code - Normalizar Messenger').item.json;\nconst prompt = `Sos un asistente de una inmobiliaria llamada Nodo Propiedades.\nEl cliente ${prep.lead_name} te escribió por Messenger: \"${prep.mensaje}\"\n\nTu tarea:\n1. Analizar su intención (comprar, alquilar, consulta, sin interés)\n2. Clasificar su temperatura: frio (solo curiosidad), tibio (interés real), caliente (listo para avanzar)\n3. Generar una respuesta breve y amigable en español\n\nResponde SOLO con este JSON sin texto adicional:\n{\"temperatura\":\"frio|tibio|caliente\",\"intencion\":\"descripcion breve\",\"respuesta\":\"mensaje para el cliente\"}`;\n\nreturn [{\n  json: {\n    ...prep,\n    prompt_groq: prompt\n  }\n}];"
+      }
+    },
+    {
+      "id": "s03-node-10",
+      "name": "Basic LLM Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        1960,
+        300
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt_groq }}"
+      }
+    },
+    {
+      "id": "s03-node-11",
+      "name": "Groq Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        1960,
+        520
+      ],
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {
+          "baseURL": "https://api.groq.com/openai/v1"
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "GgWE6f3vqREslMLv",
+          "name": "Groq API"
+        }
+      }
+    },
+    {
+      "id": "s03-node-12",
+      "name": "Code - Procesar IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2180,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const textoIA = ($json.text || '').trim();\nconst prep = $('Code - Normalizar Messenger').item.json;\n\nlet temperatura = 'frio';\nlet intencion = 'consulta general';\nlet respuesta = '¡Hola! Gracias por contactarnos. ¿En qué te puedo ayudar?';\n\ntry {\n  const match = textoIA.match(/\\{[\\s\\S]*?\\}/);\n  if (match) {\n    const parsed = JSON.parse(match[0]);\n    temperatura = parsed.temperatura || 'frio';\n    intencion = parsed.intencion || 'consulta general';\n    respuesta = parsed.respuesta || respuesta;\n  }\n} catch(e) {}\n\nreturn [{\n  json: {\n    ...prep,\n    temperatura,\n    intencion,\n    respuesta_messenger: respuesta\n  }\n}];"
+      }
+    },
+    {
+      "id": "s03-node-13",
+      "name": "Google Sheets - Actualizar Temperatura",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        2400,
+        300
+      ],
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "dedupe_key": "={{ $json.dedupe_key }}",
+            "temperature": "={{ $json.temperatura }}",
+            "lead_intent": "={{ $json.intencion }}",
+            "updated_at": "={{ new Date().toISOString() }}"
+          },
+          "schema": [
+            {
+              "id": "dedupe_key",
+              "displayName": "dedupe_key",
+              "required": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "temperature",
+              "displayName": "temperature",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "lead_intent",
+              "displayName": "lead_intent",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            }
+          ],
+          "matchingColumns": [
+            "dedupe_key"
+          ]
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRange",
+              "headerRow": 2,
+              "firstDataRow": 3
+            }
+          }
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "WBM00QjQj4q8xjLF",
+          "name": "Cuenta de Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "s03-node-14",
+      "name": "HTTP Request - Enviar Messenger",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2620,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/__SET_META_GRAPH_VERSION__/me/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer __SET_META_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "body": "={{ JSON.stringify({ recipient: { id: $json.chat_id }, message: { text: $json.respuesta_messenger } }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "s03-node-15",
+      "name": "Respond - Enviado OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        2840,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"ok\" }",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Messenger": {
+      "main": [
+        [
+          {
+            "node": "Code - Normalizar Messenger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Messenger Verify": {
+      "main": [
+        [
+          {
+            "node": "Respond - Verify Meta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Normalizar Messenger": {
+      "main": [
+        [
+          {
+            "node": "IF - Tiene Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Tiene Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Buscar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond - OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Buscar Lead": {
+      "main": [
+        [
+          {
+            "node": "IF - Lead Existe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Lead Existe": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Actualizar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Sheets - Crear Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Actualizar Lead": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Crear Lead": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code - Armar Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Armar Prompt": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code - Procesar IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Procesar IA": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Actualizar Temperatura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Actualizar Temperatura": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - Enviar Messenger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request - Enviar Messenger": {
+      "main": [
+        [
+          {
+            "node": "Respond - Enviado OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "active": true,
+  "id": "cee5ffbe-f227-4bb3-bcd4-579d34df0333"
+}

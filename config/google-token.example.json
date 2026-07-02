@@ -1,0 +1,7 @@
+{
+  "access_token": "TU_ACCESS_TOKEN",
+  "refresh_token": "TU_REFRESH_TOKEN",
+  "scope": "https://www.googleapis.com/auth/spreadsheets",
+  "token_type": "Bearer",
+  "expiry_date": 1234567890000
+}

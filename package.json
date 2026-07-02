@@ -1,0 +1,14 @@
+{
+  "name": "nodo-propiedades",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scripts y workflows Nodo Propiedades (n8n)",
+  "scripts": {
+    "import-stock": "node scripts/importar_30_propiedades_stock.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.6.0",
+    "csv-parse": "^5.6.0",
+    "googleapis": "^144.0.0"
+  }
+}

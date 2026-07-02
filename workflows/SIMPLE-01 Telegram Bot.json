@@ -1,0 +1,164 @@
+{
+  "id": "64c3f53b-2064-405a-bff0-b89fd34cd75d",
+  "name": "SIMPLE-01 Telegram Bot",
+  "nodes": [
+    {
+      "id": "s01-n01",
+      "name": "Schedule - Polling",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "seconds", "secondsInterval": 5 }]
+        }
+      }
+    },
+    {
+      "id": "s01-n02",
+      "name": "HTTP - getUpdates",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [440, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.telegram.org/bot8775127360:AAFFUXcmoCRujhAhVqQWO5gEbfK8UKR4lbY/getUpdates",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "timeout", "value": "0" },
+            { "name": "limit", "value": "10" },
+            { "name": "offset", "value": "={{ $getWorkflowStaticData('global').offset || 0 }}" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "s01-n03",
+      "name": "Code - Extraer Mensajes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "parameters": {
+        "jsCode": "const data = $getWorkflowStaticData('global');\nconst updates = $input.first().json.result || [];\nif (!updates.length) return [];\n\ndata.offset = updates[updates.length - 1].update_id + 1;\n\nreturn updates\n  .filter(u => u.message?.text)\n  .map(u => ({\n    json: {\n      chat_id: String(u.message.chat.id),\n      nombre: u.message.from?.first_name || 'Cliente',\n      canal: 'telegram',\n      mensaje: u.message.text\n    }\n  }));"
+      }
+    },
+    {
+      "id": "s01-n04",
+      "name": "Set - Clasificar",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [920, 300],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            { "id": "f01", "name": "chat_id", "type": "string", "value": "={{ $json.chat_id }}" },
+            { "id": "f02", "name": "nombre", "type": "string", "value": "={{ $json.nombre }}" },
+            { "id": "f03", "name": "canal", "type": "string", "value": "={{ $json.canal }}" },
+            { "id": "f04", "name": "mensaje", "type": "string", "value": "={{ $json.mensaje }}" },
+            { "id": "f05", "name": "fecha", "type": "string", "value": "={{ $now.toISO() }}" },
+            {
+              "id": "f06",
+              "name": "calificacion",
+              "type": "string",
+              "value": "={{ ['comprar','urgente','ya'].some(w => $json.mensaje.toLowerCase().includes(w)) ? 'caliente' : ['info','precio','ver'].some(w => $json.mensaje.toLowerCase().includes(w)) ? 'tibio' : 'frio' }}"
+            },
+            {
+              "id": "f07",
+              "name": "respuesta",
+              "type": "string",
+              "value": "={{ ['comprar','urgente','ya'].some(w => $json.mensaje.toLowerCase().includes(w)) ? 'Te contacto ahora mismo 🔥' : ['info','precio','ver'].some(w => $json.mensaje.toLowerCase().includes(w)) ? 'Te paso más información 📋' : 'Quedo a tu disposición 😊' }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "s01-n05",
+      "name": "Google Sheets - Guardar",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1160, 300],
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "mode": "id", "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Leads" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_name": "={{ $json.nombre }}",
+            "source": "={{ $json.canal }}",
+            "last_message": "={{ $json.mensaje }}",
+            "temperature": "={{ $json.calificacion }}",
+            "last_interaction_at": "={{ $json.fecha }}",
+            "dedupe_key": "={{ 'telegram:' + $json.chat_id }}",
+            "lead_id": "={{ 'ld_tg_' + $json.chat_id + '_' + Date.now() }}",
+            "status": "abierto"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "lead_name", "displayName": "lead_name", "required": false, "defaultMatch": false, "canBeUsedToMatch": false },
+            { "id": "source", "displayName": "source", "required": false, "defaultMatch": false, "canBeUsedToMatch": false },
+            { "id": "last_message", "displayName": "last_message", "required": false, "defaultMatch": false, "canBeUsedToMatch": false },
+            { "id": "temperature", "displayName": "temperature", "required": false, "defaultMatch": false, "canBeUsedToMatch": false },
+            { "id": "last_interaction_at", "displayName": "last_interaction_at", "required": false, "defaultMatch": false, "canBeUsedToMatch": false },
+            { "id": "dedupe_key", "displayName": "dedupe_key", "required": false, "defaultMatch": false, "canBeUsedToMatch": false },
+            { "id": "lead_id", "displayName": "lead_id", "required": false, "defaultMatch": false, "canBeUsedToMatch": false },
+            { "id": "status", "displayName": "status", "required": false, "defaultMatch": false, "canBeUsedToMatch": false }
+          ]
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": { "rangeDefinition": "specifyRange", "headerRow": 2, "firstDataRow": 3 }
+          }
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "WBM00QjQj4q8xjLF", "name": "Cuenta de Google Sheets" }
+      }
+    },
+    {
+      "id": "s01-n06",
+      "name": "HTTP - Responder Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1400, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot8775127360:AAFFUXcmoCRujhAhVqQWO5gEbfK8UKR4lbY/sendMessage",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ chat_id: $json.chat_id, text: $json.respuesta }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Schedule - Polling": {
+      "main": [[ { "node": "HTTP - getUpdates", "type": "main", "index": 0 } ]]
+    },
+    "HTTP - getUpdates": {
+      "main": [[ { "node": "Code - Extraer Mensajes", "type": "main", "index": 0 } ]]
+    },
+    "Code - Extraer Mensajes": {
+      "main": [[ { "node": "Set - Clasificar", "type": "main", "index": 0 } ]]
+    },
+    "Set - Clasificar": {
+      "main": [[ { "node": "Google Sheets - Guardar", "type": "main", "index": 0 } ]]
+    },
+    "Google Sheets - Guardar": {
+      "main": [[ { "node": "HTTP - Responder Telegram", "type": "main", "index": 0 } ]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "meta": { "templateCredsSetupCompleted": true },
+  "active": true
+}

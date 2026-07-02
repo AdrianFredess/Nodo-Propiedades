@@ -1,0 +1,43 @@
+# Credenciales y configuración sensible
+.env
+config/google-credentials.json
+config/google-token.json
+config/*.bak
+
+# Docker
+.docker/
+
+# n8n local (base de datos SQLite)
+*.sqlite
+*.sqlite-journal
+
+# Scripts que ya fueron aplicados (NO ejecutar de nuevo)
+scripts/apply_production_fixes_m123.js
+scripts/apply_claude_v2_patches.js
+
+# Logs y temporales
+*.log
+tmp/
+temp/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# Editor / IDE
+.vscode/
+.idea/
+.cursor/
+
+# Túneles y dumps locales
+tunnels.json
+tunnels_utf8.json
+db_dump.txt
+*.swp
+*.swo

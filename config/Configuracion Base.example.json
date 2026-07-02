@@ -1,0 +1,70 @@
+{
+  "project_name": "Sistema Inmobiliario n8n",
+  "google_sheets": {
+    "document_id": "1-0IBpaUl3svRmzMqNK0NYZYbuUDxCytnBd5Ql2DcOjo",
+    "sheet_names": {
+      "leads": "Leads",
+      "properties": "Propiedades",
+      "followups": "Seguimientos",
+      "interactions": "Interacciones",
+      "errors": "Errores"
+    }
+  },
+  "workflows": {
+    "core_processor_workflow_id": "__SET_CORE_WORKFLOW_ID__",
+    "property_matching_workflow_id": "__SET_PROPERTY_MATCHING_WORKFLOW_ID__",
+    "followup_workflow_id": "__SET_FOLLOWUP_WORKFLOW_ID__",
+    "advisor_alert_workflow_id": "__SET_ADVISOR_ALERT_WORKFLOW_ID__",
+    "error_logger_workflow_id": "__SET_ERROR_LOGGER_WORKFLOW_ID__",
+    "meta_status_handler_workflow_id": "__SET_META_STATUS_HANDLER_WORKFLOW_ID__",
+    "meta_template_sender_workflow_id": "__SET_META_TEMPLATE_SENDER_WORKFLOW_ID__"
+  },
+  "channels": {
+    "meta_whatsapp": {
+      "graph_version": "__SET_META_GRAPH_VERSION__",
+      "phone_number_id": "__SET_META_PHONE_NUMBER_ID__",
+      "access_token": "__SET_META_ACCESS_TOKEN__",
+      "verify_token": "__SET_META_VERIFY_TOKEN__",
+      "app_secret": "__SET_META_APP_SECRET__"
+    },
+    "meta_messenger": {
+      "page_id": "__SET_META_PAGE_ID__",
+      "access_token": "__SET_META_ACCESS_TOKEN__",
+      "verify_token": "__SET_META_VERIFY_TOKEN__"
+    },
+    "telegram": {
+      "bot_token": "__SET_TELEGRAM_BOT_TOKEN__"
+    },
+    "instagram_reply_api_url": "__SET_INSTAGRAM_REPLY_API_URL__",
+    "email_from": "__SET_EMAIL_FROM__"
+  },
+  "business_rules": {
+    "funnel_type": "venta",
+    "hot_lead_sla_minutes": 10,
+    "qualified_lead_sla_minutes": 120,
+    "followup_hours_default": {
+      "frio": 24,
+      "tibio": 24,
+      "calificado": 48,
+      "caliente": 2
+    },
+    "property_matching_price_delta_percent": 10,
+    "reactivation_days": [
+      15,
+      30,
+      45
+    ]
+  },
+  "advisors": [
+    {
+      "name": "Asesor 1",
+      "phone": "__SET_ADVISOR_PHONE__",
+      "email": "__SET_ADVISOR_EMAIL__",
+      "priority_zones": [
+        "Palermo",
+        "Caballito",
+        "Belgrano"
+      ]
+    }
+  ]
+}
