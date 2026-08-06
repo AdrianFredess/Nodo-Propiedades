@@ -1,0 +1,98 @@
+# WhatsApp sin Meta Cloud API (alternativa Baileys).
+# Uso: docker compose -f docker-compose.evolution.yml --env-file .env.evolution up -d
+# No toca el contenedor n8n existente.
+
+services:
+  evolution-api:
+    image: evoapicloud/evolution-api:v2.2.3
+    container_name: nodopropiedades-evolution-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_URL=${EVOLUTION_SERVER_URL:-http://localhost:8080}
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
+      - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
+      - LANGUAGE=es
+      - LOG_LEVEL=ERROR,WARN,INFO
+      - DATABASE_ENABLED=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://${EVOLUTION_DB_USER}:${EVOLUTION_DB_PASSWORD}@evolution-postgres:5432/${EVOLUTION_DB_NAME}?schema=evolution
+      - DATABASE_CONNECTION_CLIENT_NAME=nodo_evolution
+      - DATABASE_SAVE_DATA_INSTANCE=true
+      - DATABASE_SAVE_DATA_NEW_MESSAGE=true
+      - DATABASE_SAVE_MESSAGE_UPDATE=true
+      - DATABASE_SAVE_DATA_CONTACTS=false
+      - DATABASE_SAVE_DATA_CHATS=false
+      - REDIS_ENABLED=true
+      - REDIS_URI=redis://evolution-redis:6379
+      - REDIS_PREFIX_KEY=evolution
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://evolution-redis:6379
+      - CACHE_REDIS_PREFIX_KEY=evolution_cache
+      - CACHE_LOCAL_ENABLED=false
+      - WEBHOOK_GLOBAL_ENABLED=true
+      - WEBHOOK_GLOBAL_URL=${EVOLUTION_WEBHOOK_URL}
+      - WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=false
+      - WEBHOOK_EVENTS_APPLICATION_STARTUP=false
+      - WEBHOOK_EVENTS_QRCODE_UPDATED=true
+      - WEBHOOK_EVENTS_MESSAGES_SET=false
+      - WEBHOOK_EVENTS_MESSAGES_UPSERT=true
+      - WEBHOOK_EVENTS_MESSAGES_UPDATE=false
+      - WEBHOOK_EVENTS_MESSAGES_DELETE=false
+      - WEBHOOK_EVENTS_SEND_MESSAGE=false
+      - WEBHOOK_EVENTS_CONNECTION_UPDATE=true
+      - CONFIG_SESSION_PHONE_CLIENT=Nodo Propiedades
+      - CONFIG_SESSION_PHONE_NAME=Chrome
+      - QRCODE_LIMIT=30
+      - QRCODE_COLOR=#198754
+      - DEL_INSTANCE=false
+    volumes:
+      - evolution_instances:/evolution/instances
+    depends_on:
+      evolution-postgres:
+        condition: service_healthy
+      evolution-redis:
+        condition: service_started
+    networks:
+      - nodo-evolution
+
+  evolution-postgres:
+    image: postgres:16-alpine
+    container_name: nodopropiedades-evolution-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${EVOLUTION_DB_NAME}
+      - POSTGRES_USER=${EVOLUTION_DB_USER}
+      - POSTGRES_PASSWORD=${EVOLUTION_DB_PASSWORD}
+    volumes:
+      - evolution_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${EVOLUTION_DB_USER} -d ${EVOLUTION_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - nodo-evolution
+
+  evolution-redis:
+    image: redis:7-alpine
+    container_name: nodopropiedades-evolution-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - evolution_redis:/data
+    networks:
+      - nodo-evolution
+
+volumes:
+  evolution_instances:
+  evolution_pgdata:
+  evolution_redis:
+
+networks:
+  nodo-evolution:
+    name: nodo-evolution

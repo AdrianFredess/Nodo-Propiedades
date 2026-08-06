@@ -22,7 +22,7 @@
       "position": [440, 300],
       "parameters": {
         "method": "GET",
-        "url": "https://api.telegram.org/bot8775127360:AAFFUXcmoCRujhAhVqQWO5gEbfK8UKR4lbY/getUpdates",
+        "url": "https://api.telegram.org/bot__SET_TELEGRAM_BOT_TOKEN__/getUpdates",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
@@ -96,7 +96,9 @@
             "last_interaction_at": "={{ $json.fecha }}",
             "dedupe_key": "={{ 'telegram:' + $json.chat_id }}",
             "lead_id": "={{ 'ld_tg_' + $json.chat_id + '_' + Date.now() }}",
-            "status": "abierto"
+            "status": "abierto",
+            "estado_seguimiento": "respondido",
+            "canal_origen": "telegram"
           },
           "matchingColumns": [],
           "schema": [
@@ -107,7 +109,9 @@
             { "id": "last_interaction_at", "displayName": "last_interaction_at", "required": false, "defaultMatch": false, "canBeUsedToMatch": false },
             { "id": "dedupe_key", "displayName": "dedupe_key", "required": false, "defaultMatch": false, "canBeUsedToMatch": false },
             { "id": "lead_id", "displayName": "lead_id", "required": false, "defaultMatch": false, "canBeUsedToMatch": false },
-            { "id": "status", "displayName": "status", "required": false, "defaultMatch": false, "canBeUsedToMatch": false }
+            { "id": "status", "displayName": "status", "required": false, "defaultMatch": false, "canBeUsedToMatch": false },
+            { "id": "estado_seguimiento", "displayName": "estado_seguimiento", "required": false, "defaultMatch": false, "canBeUsedToMatch": false },
+            { "id": "canal_origen", "displayName": "canal_origen", "required": false, "defaultMatch": false, "canBeUsedToMatch": false }
           ]
         },
         "options": {
@@ -128,7 +132,7 @@
       "position": [1400, 300],
       "parameters": {
         "method": "POST",
-        "url": "https://api.telegram.org/bot8775127360:AAFFUXcmoCRujhAhVqQWO5gEbfK8UKR4lbY/sendMessage",
+        "url": "https://api.telegram.org/bot__SET_TELEGRAM_BOT_TOKEN__/sendMessage",
         "sendBody": true,
         "contentType": "json",
         "body": "={{ JSON.stringify({ chat_id: $json.chat_id, text: $json.respuesta }) }}",

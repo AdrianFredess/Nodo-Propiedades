@@ -1,31 +1,43 @@
-# Sistema Inmobiliario n8n - Meta WhatsApp
+# Nodo Propiedades
 
-Sistema de captación, scoring y seguimiento de leads para inmobiliaria, integrado con Meta WhatsApp Cloud API.
+CRM inmobiliario en **n8n**: bots por canal (Telegram / WhatsApp / Messenger), IA vía **Groq**, persistencia en **Google Sheets**.
 
-## Inicio rápido
+## Arranque (lo práctico hoy)
 
-1. **Leé primero**: `docs/LEER PRIMERO - Meta Produccion Final.md`
-2. **Estructura**: workflows, docs, scripts, config, ai, csv
-3. **Scripts** (n8n **cerrado** para los que tocan `database.sqlite`):
-   - `node scripts/_sync_importar_todos_workflows.js` — importa todos los JSON de `workflows/` y quita duplicados por nombre
-   - `node scripts/_actualizar_ids_importados.js` — enlaza placeholders `__SET_*__` y prompt del AI Agent en la base
-   - `node scripts/_post_import.js` — encadena actualizar IDs + corregir referencias viejas + verificar
-   - `node scripts/_eliminar_duplicados_workflows.js` — solo deduplicar por nombre (mantiene el más reciente)
-   - `node scripts/_fix_import_n8n2.js --all` — ajusta JSON del repo para n8n 2.x (nodos / Execute Workflow)
-   - `node scripts/_fix_switch_v2_n8n.js` — corrige Switch `typeVersion` vs parámetros v2
-   - `node scripts/apply_claude_v2_patches.js` — aplica en JSON los FIX/mejoras del checklist v2 (WF-02…WF-07); el prompt largo está en `ai/Prompt AI Agent Inmobiliario.txt`
-   - Diagnóstico: `_verificar_referencias.js`, `_diagnosticar_workflow_ids.js`, `_analizar_todos_workflows.js`, `_duplicados_por_nombre.js`
-   - `.\scripts\_setup_ollama_completo.ps1` — Ollama + prompt + credencial + conexión al AI Agent en WF-02 (n8n cerrado al final)
-   - `node scripts/_setup_ollama_n8n.js` — solo credencial Ollama + cable al AI Agent (n8n cerrado)
-   - `.\scripts\Reemplazar Placeholders.ps1` — placeholders en archivos locales
+1. Leer **`docs/ARRANQUE-LOCAL.md`**
+2. `docker compose up -d` → n8n en http://localhost:5678
+3. WhatsApp sin Meta Cloud: **WAHA** (`docker-compose.waha.yml` + `.env.waha` desde `.env.waha.example`)
+4. Importar workflows de `workflows/SIMPLE-*.json` y reemplazar placeholders `__SET_*__`
+5. Credenciales solo en n8n / archivos `.env` locales (**nunca en git**)
+
+### Stack documentado vs stack en uso
+
+| | En repo / docs “Meta final” | Uso local habitual |
+|--|----------------------------|-------------------|
+| IA | Ollama + AI Agent (WF-00…13) | **Groq** (`llama-3.3-70b-versatile`) en bots SIMPLE / bot TG en n8n |
+| WhatsApp | Meta Cloud API | **WAHA** (path webhook `evolution-whatsapp`) o placeholders Meta |
+| Sheets CRM | `Leads` / `Interacciones` (csv/) | **`Leads_Bot` + `Consultas`** |
+
+Los workflows `WF-*` de `docs/LEER PRIMERO - Meta Produccion Final.md` son un plan de despliegue Meta/Ollama; no son el runtime mínimo de los SIMPLE.
+
+## Secretos
+
+- Tokens de bots, API keys, `.env*`, `waha-data/`, QR y sesiones **no se versionan**
+- En Telegram HTTP: usar `bot__SET_TELEGRAM_BOT_TOKEN__/` o la credencial n8n
+- Si un token llegó a un commit viejo: **revocarlo** en BotFather / proveedor y generar uno nuevo
 
 ## Carpetas
 
 | Carpeta | Contenido |
 |---------|-----------|
-| `workflows/` | JSON de workflows n8n |
-| `docs/` | Documentación |
-| `scripts/` | Scripts de configuración |
-| `config/` | Configuracion base, manifiesto |
-| `ai/` | Prompt, esquema y payloads del AI Agent |
-| `csv/` | CSV para Google Sheets |
+| `workflows/` | JSON SIMPLE-01…04 (plantillas) |
+| `docs/` | Documentación (arranque, Meta/legacy, runbooks) |
+| `scripts/` | Utilidades de import/setup (sin dumps de sesión) |
+| `config/` | Manifiesto / ejemplos (sin credentials reales) |
+| `ai/` | Prompt y schema del AI Agent (plan/WF; no siempre cableado) |
+| `csv/` | Esquemas de ejemplo para Sheets |
+
+## Scripts legacy (n8n cerrado si tocan SQLite)
+
+Ver `docs/LEER PRIMERO - Meta Produccion Final.md` y scripts `_post_import.js`, etc., si retomás el stack completo WF/Meta.
+

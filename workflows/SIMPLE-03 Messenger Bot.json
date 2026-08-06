@@ -209,7 +209,9 @@
             "dedupe_key": "={{ $('Code - Normalizar Messenger').item.json.dedupe_key }}",
             "updated_at": "={{ $('Code - Normalizar Messenger').item.json.fecha }}",
             "last_message": "={{ $('Code - Normalizar Messenger').item.json.mensaje }}",
-            "last_interaction_at": "={{ $('Code - Normalizar Messenger').item.json.fecha }}"
+            "last_interaction_at": "={{ $('Code - Normalizar Messenger').item.json.fecha }}",
+            "estado_seguimiento": "respondido",
+            "canal_origen": "messenger"
           },
           "schema": [
             {
@@ -236,6 +238,20 @@
             {
               "id": "last_interaction_at",
               "displayName": "last_interaction_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "estado_seguimiento",
+              "displayName": "estado_seguimiento",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "canal_origen",
+              "displayName": "canal_origen",
               "required": false,
               "defaultMatch": false,
               "canBeUsedToMatch": false
@@ -296,7 +312,9 @@
             "last_message": "={{ $('Code - Normalizar Messenger').item.json.mensaje }}",
             "last_interaction_at": "={{ $('Code - Normalizar Messenger').item.json.fecha }}",
             "temperature": "frio",
-            "status": "abierto"
+            "status": "abierto",
+            "estado_seguimiento": "respondido",
+            "canal_origen": "messenger"
           },
           "schema": [
             {
@@ -372,6 +390,20 @@
             {
               "id": "status",
               "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "estado_seguimiento",
+              "displayName": "estado_seguimiento",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "canal_origen",
+              "displayName": "canal_origen",
               "required": false,
               "defaultMatch": false,
               "canBeUsedToMatch": false

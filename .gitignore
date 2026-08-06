@@ -1,5 +1,6 @@
 # Credenciales y configuración sensible
 .env
+.env.evolution
 config/google-credentials.json
 config/google-token.json
 config/*.bak
@@ -41,3 +42,26 @@ tunnels_utf8.json
 db_dump.txt
 *.swp
 *.swo
+
+.env.waha
+.env.evolution
+waha-data/
+
+# Tesis / temporales locales
+_tmp_tesis*
+_tmp_tesis_docx/
+
+# Dumps/QR de sesión WhatsApp (no versionar)
+scripts/evo-*.json
+scripts/waha-session*.json
+scripts/waha-start-session.json
+scripts/whatsapp-qr.*
+scripts/test-wa-*.json
+scripts/patch-simple02.json
+scripts/_wa_partial_ops.json
+scripts/_wa_ops.json
+scripts/_wa_ops_code_only.json
+scripts/_wa_procesar_ia_payload.json
+*.png
+!csv/**
+
