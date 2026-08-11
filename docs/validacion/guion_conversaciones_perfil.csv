@@ -1,0 +1,31 @@
+﻿id,perfil_esperado,mensaje_usuario,notas
+CAL-01,caliente,"Hola, soy Carla, necesito comprar un depto de 2 amb en Godoy Cruz esta misma semana, presupuesto hasta 95000 dolares, decisime que hay",redaccion_unica_no_pseudorreplicada
+CAL-02,caliente,"Buenas, mi nombre es Martín. Busco casa 3 dorm en Maipú para mudarme ya, hasta 180 mil usd, ¿me agendás visita?",redaccion_unica_no_pseudorreplicada
+CAL-03,caliente,"Soy Lucía, quiero comprar PH en Chacras hasta 220k, prioritario este mes, ¿qué tenés disponible hoy?",redaccion_unica_no_pseudorreplicada
+CAL-04,caliente,"Hola soy Diego. Depto 2 amb Centro de Mendoza, compra cash hasta 80k usd, urgencia alta por trabajo",redaccion_unica_no_pseudorreplicada
+CAL-05,caliente,"Me llamo Paula, busco local comercial en Godoy Cruz para comprar, presupuesto 150 mil, quiero firmar en 15 días",redaccion_unica_no_pseudorreplicada
+CAL-06,caliente,"Soy Andrés, casa o duplex en Luján de Cuyo, 3 amb, compra hasta 160k, mudanza el mes que viene, dame opciones ya",redaccion_unica_no_pseudorreplicada
+CAL-07,caliente,"Hola, Vero acá. Compro depto 3 amb en Las Heras hasta 100k dólares, necesito ver uno esta semana",redaccion_unica_no_pseudorreplicada
+CAL-08,caliente,"Buen día, Roberto. Terreno o casa en Guaymallén para compra inmediata, max 120k, ¿tenemos turno?",redaccion_unica_no_pseudorreplicada
+CAL-09,caliente,"Soy Flor, depto 2 dorm en Nueva Ciudad, compra hasta 110000, urgencia por alquiler que vence",redaccion_unica_no_pseudorreplicada
+CAL-10,caliente,"Hola, soy Nico. Busco dpto amoblado o semi para comprar en Godoy Cruz, 3 amb, 130k usd, avanzar YA",redaccion_unica_no_pseudorreplicada
+TIB-11,tibio,"Hola, estoy mirando departamentos por zona de Maipú, todavía no sé si compro o alquilo. ¿Qué hay por 2 amb?",redaccion_unica_no_pseudorreplicada
+TIB-12,tibio,"Buenas, me interesa ver opciones de casas en Luján pero sin apuro. Presupuesto más o menos 100-130k",redaccion_unica_no_pseudorreplicada
+TIB-13,tibio,"Quería consultar sobre depts en Centro, más que nada para informarme de precios",redaccion_unica_no_pseudorreplicada
+TIB-14,tibio,"Hola, pensamos mudarnos el año que viene a Godoy Cruz, 2 o 3 amb, ¿me pasás una idea de valores?",redaccion_unica_no_pseudorreplicada
+TIB-15,tibio,"Estoy comparando alquiler vs compra de un local chico en Guaymallén, no tengo fecha firme",redaccion_unica_no_pseudorreplicada
+TIB-16,tibio,"Buenas, mi pareja y yo queremos ver un PH en Chacras cuando puedan, presupuesto flexible",redaccion_unica_no_pseudorreplicada
+TIB-17,tibio,"Hola, busco info de duplex en Las Heras, aún estamos evaluando bancos",redaccion_unica_no_pseudorreplicada
+TIB-18,tibio,Consulta general: qué tenés en Maipú alrededor de 70 mil dólares en depts,redaccion_unica_no_pseudorreplicada
+TIB-19,tibio,"Hola, me gustaría conocer opciones de casa 2 dorm, no sé zona todavía, tal vez Maipú o Godoy",redaccion_unica_no_pseudorreplicada
+TIB-20,tibio,"Buenas, un amigo me recomendó, me interesa depto para inversión a mediano plazo en Mendoza capital",redaccion_unica_no_pseudorreplicada
+FRI-21,frio,"Hola, solo miraba el catálogo, no busco nada en particular",redaccion_unica_no_pseudorreplicada
+FRI-22,frio,¿Ustedes venden autos también o solo casas?,redaccion_unica_no_pseudorreplicada
+FRI-23,frio,"Buenas, una curiosidad: más o menos cuánto sale un depto en Mendoza?",redaccion_unica_no_pseudorreplicada
+FRI-24,frio,"Hola, pasaba a ver, no sé si me animo a buscar ahora",redaccion_unica_no_pseudorreplicada
+FRI-25,frio,¿Hacen tasaciones gratis? Por ahora no pienso mudarme,redaccion_unica_no_pseudorreplicada
+FRI-26,frio,"Buenas, cómo está el mercado en general? Solo charla",redaccion_unica_no_pseudorreplicada
+FRI-27,frio,"Hola bot, contame un chiste de inmobiliaria jaja",redaccion_unica_no_pseudorreplicada
+FRI-28,frio,"Estoy en el canal porque me reenviaron el link, todavía no busco vivienda",redaccion_unica_no_pseudorreplicada
+FRI-29,frio,¿Trabajan en Córdoba también o solo Mendoza?,redaccion_unica_no_pseudorreplicada
+FRI-30,frio,"Hola, más adelante quizás. Por ahora solo dejame el contacto",redaccion_unica_no_pseudorreplicada

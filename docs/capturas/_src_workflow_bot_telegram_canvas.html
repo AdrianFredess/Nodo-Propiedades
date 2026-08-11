@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"/><title>Bot Telegram Inmobiliaria — canvas</title>
+<style>
+body{margin:0;background:#f0f2f5;font-family:Inter,Segoe UI,Arial,sans-serif;}
+.bar{background:#fff;border-bottom:1px solid #ddd;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;}
+.bar b{font-size:15px;}
+.badge{background:#1a7f37;color:#fff;font-size:12px;padding:3px 8px;border-radius:10px;}
+.canvas{position:relative;width:2201px;height:602px;margin:16px;background:
+  linear-gradient(90deg,rgba(0,0,0,.04) 1px,transparent 1px),
+  linear-gradient(rgba(0,0,0,.04) 1px,transparent 1px);
+  background-size:20px 20px;}
+.node{position:absolute;width:180px;background:#fff;border:1px solid #c5c9d0;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:8px 10px;}
+.node .t{font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.03em;}
+.node .n{font-size:13px;font-weight:600;color:#111;margin-top:2px;}
+svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+.note{margin:0 16px 20px;color:#555;font-size:12px;}
+</style></head><body>
+<div class="bar"><b>Bot Telegram Inmobiliaria</b><span class="badge">Active · 17 nodes · Groq llama-3.3</span></div>
+<div class="canvas">
+<svg><line x1="130" y1="292" x2="230" y2="292" stroke="#7f8c8d" stroke-width="2"/><line x1="701" y1="292" x2="788" y2="292" stroke="#7f8c8d" stroke-width="2"/><line x1="878" y1="292" x2="978" y2="292" stroke="#7f8c8d" stroke-width="2"/><line x1="1258" y1="292" x2="1359" y2="170" stroke="#7f8c8d" stroke-width="2"/><line x1="320" y1="292" x2="325" y2="292" stroke="#7f8c8d" stroke-width="2"/><line x1="320" y1="292" x2="420" y2="292" stroke="#7f8c8d" stroke-width="2"/><line x1="415" y1="292" x2="516" y2="292" stroke="#7f8c8d" stroke-width="2"/><line x1="510" y1="292" x2="516" y2="292" stroke="#7f8c8d" stroke-width="2"/><line x1="606" y1="292" x2="611" y2="292" stroke="#7f8c8d" stroke-width="2"/><line x1="1068" y1="292" x2="1563" y2="292" stroke="#7f8c8d" stroke-width="2"/><line x1="1068" y1="292" x2="1359" y2="414" stroke="#7f8c8d" stroke-width="2"/><line x1="1068" y1="292" x2="1168" y2="292" stroke="#7f8c8d" stroke-width="2"/><line x1="1068" y1="292" x2="1359" y2="510" stroke="#7f8c8d" stroke-width="2"/><line x1="1449" y1="170" x2="1563" y2="136" stroke="#7f8c8d" stroke-width="2"/><line x1="1653" y1="136" x2="1757" y2="136" stroke="#7f8c8d" stroke-width="2"/><line x1="1847" y1="136" x2="1961" y2="68" stroke="#7f8c8d" stroke-width="2"/><line x1="1847" y1="136" x2="1961" y2="204" stroke="#7f8c8d" stroke-width="2"/></svg>
+<div class="node" style="left:40px;top:264px"><div class="t">telegramTrigger</div><div class="n">Telegram Trigger</div></div><div class="node" style="left:230px;top:264px"><div class="t">set</div><div class="n">Set Variables</div></div><div class="node" style="left:420px;top:264px"><div class="t">googleSheets</div><div class="n">Leer Historial</div></div><div class="node" style="left:611px;top:264px"><div class="t">code</div><div class="n">Construir Prompt</div></div><div class="node" style="left:788px;top:264px"><div class="t">httpRequest</div><div class="n">HTTP Groq</div></div><div class="node" style="left:978px;top:264px"><div class="t">code</div><div class="n">Parsear Respuesta</div></div><div class="node" style="left:1168px;top:264px"><div class="t">if</div><div class="n">IF Lead Completo</div></div><div class="node" style="left:1359px;top:142px"><div class="t">googleSheets</div><div class="n">Guardar Lead</div></div><div class="node" style="left:1359px;top:386px"><div class="t">googleSheets</div><div class="n">Actualizar Historial</div></div><div class="node" style="left:1563px;top:264px"><div class="t">telegram</div><div class="n">Telegram Responder</div></div><div class="node" style="left:325px;top:264px"><div class="t">googleSheets</div><div class="n">Leer Stock Propiedades</div></div><div class="node" style="left:516px;top:264px"><div class="t">merge</div><div class="n">Esperar Lecturas</div></div><div class="node" style="left:1563px;top:108px"><div class="t">googleSheets</div><div class="n">Sync Leads_Bot</div></div><div class="node" style="left:1757px;top:108px"><div class="t">if</div><div class="n">IF Temperatura Caliente</div></div><div class="node" style="left:1961px;top:40px"><div class="t">httpRequest</div><div class="n">Email Lead Caliente</div></div><div class="node" style="left:1961px;top:176px"><div class="t">httpRequest</div><div class="n">Telegram Alerta Owner</div></div><div class="node" style="left:1359px;top:482px"><div class="t">googleSheets</div><div class="n">Registrar Consulta Telegram</div></div>
+</div>
+<p class="note">Vista estructural exportada desde n8n (mismo grafo y nombres de nodos del workflow activo). Preferir captura UI live cuando Docker/n8n estén disponibles.</p>
+</body></html>

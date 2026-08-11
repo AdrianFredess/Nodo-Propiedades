@@ -12,45 +12,11 @@
       ],
       "parameters": {
         "httpMethod": "POST",
-        "path": "meta-whatsapp",
-        "responseMode": "lastNode",
-        "options": {}
+        "options": {},
+        "path": "evolution-whatsapp",
+        "responseMode": "onReceived"
       },
       "webhookId": "s02-whatsapp-webhook"
-    },
-    {
-      "id": "s02-node-verify",
-      "name": "Webhook WhatsApp Verify",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        200,
-        500
-      ],
-      "parameters": {
-        "httpMethod": "GET",
-        "path": "meta-whatsapp",
-        "responseMode": "lastNode",
-        "options": {}
-      },
-      "webhookId": "s02-whatsapp-webhook"
-    },
-    {
-      "id": "s02-node-verify-resp",
-      "name": "Respond - Verify Meta",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [
-        420,
-        500
-      ],
-      "parameters": {
-        "respondWith": "text",
-        "responseBody": "={{ $json.query['hub.challenge'] }}",
-        "options": {
-          "responseCode": 200
-        }
-      }
     },
     {
       "id": "s02-node-02",
@@ -62,7 +28,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\ntry {\n  const entry = body.entry?.[0];\n  const change = entry?.changes?.[0];\n  const value = change?.value;\n  const msg = value?.messages?.[0];\n  \n  if (!msg || msg.type !== 'text') return [];\n  \n  const phone = msg.from;\n  const texto = msg.text?.body || '';\n  const contactName = value?.contacts?.[0]?.profile?.name || 'Cliente';\n  \n  return [{\n    json: {\n      canal: 'whatsapp',\n      chat_id: phone,\n      dedupe_key: 'whatsapp:' + phone,\n      lead_name: contactName,\n      phone: phone,\n      mensaje: texto,\n      waba_message_id: msg.id,\n      fecha: new Date().toISOString()\n    }\n  }];\n} catch(e) {\n  return [];\n}"
+        "jsCode": "const root = $input.first().json;\nconst body = root.body || root;\n\ntry {\n  const event = String(body.event || '').toLowerCase();\n  const payload = body.payload || body.data || body;\n\n  if (event && event !== 'message' && !event.includes('messages.upsert') && !event.includes('messages_upsert')) {\n    return [];\n  }\n\n  if (payload && (payload.from || payload._data)) {\n    if (payload.fromMe === true) return [];\n    const fromRaw = String(payload.from || '');\n    if (!fromRaw || fromRaw.includes('@g.us') || fromRaw === 'status@broadcast' || fromRaw.includes('status@broadcast')) return [];\n\n    // WAHA chatId: usar el from completo (@c.us o @lid)\n    const chatId = fromRaw;\n    const phone = fromRaw\n      .replace(/@c\\.us$/i, '')\n      .replace(/@s\\.whatsapp\\.net$/i, '')\n      .replace(/@lid$/i, '')\n      .split(':')[0];\n\n    const texto = String(payload.body || payload.caption || '').trim();\n    if (!phone || !texto) return [];\n\n    return [{\n      json: {\n        canal: 'whatsapp',\n        chat_id: chatId,\n        dedupe_key: 'whatsapp:' + chatId,\n        lead_name: payload.notifyName || payload._data?.notifyName || 'Cliente',\n        phone: phone,\n        mensaje: texto,\n        waba_message_id: payload.id || '',\n        fecha: new Date().toISOString(),\n      },\n    }];\n  }\n\n  const key = payload.key || {};\n  if (key.fromMe === true) return [];\n  const remoteJid = String(key.remoteJid || '');\n  if (!remoteJid || remoteJid.includes('@g.us')) return [];\n  const chatId = remoteJid;\n  const phone = remoteJid.replace(/@s\\.whatsapp\\.net$/i, '').replace(/@c\\.us$/i, '').replace(/@lid$/i, '').split(':')[0];\n  const msg = payload.message || {};\n  const texto = msg.conversation || msg.extendedTextMessage?.text || '';\n  if (!phone || !String(texto).trim()) return [];\n  return [{\n    json: {\n      canal: 'whatsapp',\n      chat_id: chatId,\n      dedupe_key: 'whatsapp:' + chatId,\n      lead_name: payload.pushName || 'Cliente',\n      phone: phone,\n      mensaje: String(texto).trim(),\n      waba_message_id: key.id || '',\n      fecha: new Date().toISOString(),\n    },\n  }];\n} catch (e) {\n  return [];\n}\n"
       }
     },
     {
@@ -96,53 +62,37 @@
       }
     },
     {
-      "id": "s02-node-ok",
-      "name": "Respond - OK",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [
-        860,
-        480
-      ],
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={ \"status\": \"ok\" }",
-        "options": {
-          "responseCode": 200
-        }
-      }
-    },
-    {
       "id": "s02-node-04",
       "name": "Google Sheets - Buscar Lead",
       "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
+      "typeVersion": 4.7,
       "position": [
         860,
         300
       ],
       "parameters": {
-        "operation": "lookup",
         "documentId": {
           "__rl": true,
           "mode": "id",
           "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
         },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "chat_id",
+              "lookupValue": "={{ $('Code - Normalizar WhatsApp').item.json.chat_id }}"
+            }
+          ]
+        },
+        "operation": "read",
+        "options": {
+          "returnFirstMatch": true
+        },
+        "resource": "sheet",
         "sheetName": {
           "__rl": true,
           "mode": "name",
-          "value": "Leads"
-        },
-        "lookupColumn": "dedupe_key",
-        "lookupValue": "={{ $json.dedupe_key }}",
-        "options": {
-          "dataLocationOnSheet": {
-            "values": {
-              "rangeDefinition": "specifyRange",
-              "headerRow": 2,
-              "firstDataRow": 3
-            }
-          }
+          "value": "Leads_Bot"
         }
       },
       "credentials": {
@@ -150,7 +100,9 @@
           "id": "WBM00QjQj4q8xjLF",
           "name": "Cuenta de Google Sheets"
         }
-      }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
     },
     {
       "id": "s02-node-05",
@@ -186,89 +138,42 @@
       "id": "s02-node-06",
       "name": "Google Sheets - Actualizar Lead",
       "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
+      "typeVersion": 4.7,
       "position": [
         1300,
         120
       ],
       "parameters": {
-        "operation": "update",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "chat_id"
+          ],
+          "schema": [],
+          "value": {
+            "canal_origen": "whatsapp",
+            "chat_id": "={{ $('Code - Normalizar WhatsApp').item.json.chat_id }}",
+            "dedupe_key": "={{ $('Code - Normalizar WhatsApp').item.json.dedupe_key }}",
+            "estado_seguimiento": "respondido",
+            "last_interaction_at": "={{ $('Code - Normalizar WhatsApp').item.json.fecha }}",
+            "last_message": "={{ $('Code - Normalizar WhatsApp').item.json.mensaje }}",
+            "nombre": "={{ $('Code - Normalizar WhatsApp').item.json.lead_name }}",
+            "phone": "={{ $('Code - Normalizar WhatsApp').item.json.phone }}",
+            "ultima_actualizacion": "={{ $('Code - Normalizar WhatsApp').item.json.fecha }}",
+            "updated_at": "={{ $('Code - Normalizar WhatsApp').item.json.fecha }}"
+          }
+        },
         "documentId": {
           "__rl": true,
           "mode": "id",
           "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
         },
+        "operation": "appendOrUpdate",
+        "options": {},
         "sheetName": {
           "__rl": true,
           "mode": "name",
-          "value": "Leads"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "dedupe_key": "={{ $('Code - Normalizar WhatsApp').item.json.dedupe_key }}",
-            "updated_at": "={{ $('Code - Normalizar WhatsApp').item.json.fecha }}",
-            "last_message": "={{ $('Code - Normalizar WhatsApp').item.json.mensaje }}",
-            "last_interaction_at": "={{ $('Code - Normalizar WhatsApp').item.json.fecha }}",
-            "estado_seguimiento": "respondido",
-            "canal_origen": "whatsapp"
-          },
-          "schema": [
-            {
-              "id": "dedupe_key",
-              "displayName": "dedupe_key",
-              "required": false,
-              "defaultMatch": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "updated_at",
-              "displayName": "updated_at",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "last_message",
-              "displayName": "last_message",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "last_interaction_at",
-              "displayName": "last_interaction_at",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "estado_seguimiento",
-              "displayName": "estado_seguimiento",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "canal_origen",
-              "displayName": "canal_origen",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            }
-          ],
-          "matchingColumns": [
-            "dedupe_key"
-          ]
-        },
-        "options": {
-          "dataLocationOnSheet": {
-            "values": {
-              "rangeDefinition": "specifyRange",
-              "headerRow": 2,
-              "firstDataRow": 3
-            }
-          }
+          "value": "Leads_Bot"
         }
       },
       "credentials": {
@@ -276,151 +181,55 @@
           "id": "WBM00QjQj4q8xjLF",
           "name": "Cuenta de Google Sheets"
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "s02-node-07",
       "name": "Google Sheets - Crear Lead",
       "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
+      "typeVersion": 4.7,
       "position": [
         1300,
         480
       ],
       "parameters": {
-        "operation": "append",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "chat_id"
+          ],
+          "schema": [],
+          "value": {
+            "canal_origen": "whatsapp",
+            "chat_id": "={{ $('Code - Normalizar WhatsApp').item.json.chat_id }}",
+            "created_at": "={{ $('Code - Normalizar WhatsApp').item.json.fecha }}",
+            "dedupe_key": "={{ $('Code - Normalizar WhatsApp').item.json.dedupe_key }}",
+            "estado_seguimiento": "respondido",
+            "last_interaction_at": "={{ $('Code - Normalizar WhatsApp').item.json.fecha }}",
+            "last_message": "={{ $('Code - Normalizar WhatsApp').item.json.mensaje }}",
+            "lead_id": "={{ 'ld_wa_' + Date.now() }}",
+            "lead_name": "={{ $('Code - Normalizar WhatsApp').item.json.lead_name }}",
+            "nombre": "={{ $('Code - Normalizar WhatsApp').item.json.lead_name }}",
+            "phone": "={{ $('Code - Normalizar WhatsApp').item.json.phone }}",
+            "source": "whatsapp",
+            "status": "abierto",
+            "temperature": "frio",
+            "ultima_actualizacion": "={{ $('Code - Normalizar WhatsApp').item.json.fecha }}",
+            "updated_at": "={{ $('Code - Normalizar WhatsApp').item.json.fecha }}"
+          }
+        },
         "documentId": {
           "__rl": true,
           "mode": "id",
           "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
         },
+        "operation": "append",
+        "options": {},
         "sheetName": {
           "__rl": true,
           "mode": "name",
-          "value": "Leads"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "lead_id": "={{ 'ld_wa_' + Date.now() }}",
-            "dedupe_key": "={{ $('Code - Normalizar WhatsApp').item.json.dedupe_key }}",
-            "created_at": "={{ $('Code - Normalizar WhatsApp').item.json.fecha }}",
-            "updated_at": "={{ $('Code - Normalizar WhatsApp').item.json.fecha }}",
-            "source": "whatsapp",
-            "lead_name": "={{ $('Code - Normalizar WhatsApp').item.json.lead_name }}",
-            "phone": "={{ $('Code - Normalizar WhatsApp').item.json.phone }}",
-            "last_message": "={{ $('Code - Normalizar WhatsApp').item.json.mensaje }}",
-            "last_interaction_at": "={{ $('Code - Normalizar WhatsApp').item.json.fecha }}",
-            "temperature": "frio",
-            "status": "abierto",
-            "estado_seguimiento": "respondido",
-            "canal_origen": "whatsapp"
-          },
-          "schema": [
-            {
-              "id": "lead_id",
-              "displayName": "lead_id",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "dedupe_key",
-              "displayName": "dedupe_key",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "created_at",
-              "displayName": "created_at",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "updated_at",
-              "displayName": "updated_at",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "source",
-              "displayName": "source",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "lead_name",
-              "displayName": "lead_name",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "phone",
-              "displayName": "phone",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "last_message",
-              "displayName": "last_message",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "last_interaction_at",
-              "displayName": "last_interaction_at",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "temperature",
-              "displayName": "temperature",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "status",
-              "displayName": "status",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "estado_seguimiento",
-              "displayName": "estado_seguimiento",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "canal_origen",
-              "displayName": "canal_origen",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            }
-          ],
-          "matchingColumns": [
-            "dedupe_key"
-          ]
-        },
-        "options": {
-          "dataLocationOnSheet": {
-            "values": {
-              "rangeDefinition": "specifyRange",
-              "headerRow": 2,
-              "firstDataRow": 3
-            }
-          }
+          "value": "Leads_Bot"
         }
       },
       "credentials": {
@@ -428,7 +237,8 @@
           "id": "WBM00QjQj4q8xjLF",
           "name": "Cuenta de Google Sheets"
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "s02-node-08",
@@ -454,7 +264,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "const prep = $('Code - Normalizar WhatsApp').item.json;\nconst prompt = `Sos un asistente de una inmobiliaria llamada Nodo Propiedades.\nEl cliente ${prep.lead_name} te escribió por WhatsApp: \"${prep.mensaje}\"\n\nTu tarea:\n1. Analizar su intención (comprar, alquilar, consulta, sin interés)\n2. Clasificar su temperatura: frio (solo curiosidad), tibio (interés real), caliente (listo para avanzar)\n3. Generar una respuesta breve y amigable en español\n\nResponde SOLO con este JSON sin texto adicional:\n{\"temperatura\":\"frio|tibio|caliente\",\"intencion\":\"descripcion breve\",\"respuesta\":\"mensaje para el cliente\"}`;\n\nreturn [{\n  json: {\n    ...prep,\n    prompt_groq: prompt\n  }\n}];"
+        "jsCode": "const prep = $('Code - Normalizar WhatsApp').item.json;\n\nlet row = {};\ntry {\n  row = $('Google Sheets - Buscar Lead').first().json || {};\n} catch (e) {\n  row = {};\n}\n\nconst msg = String(prep.mensaje || '').trim();\nconst historialPrev = String(row.historial || '').trim();\nconst isKnownLead = Boolean(\n  row.chat_id &&\n    (historialPrev ||\n      row.temperature ||\n      row.status === 'abierto' ||\n      row.estado_seguimiento === 'ninguno' ||\n      row.estado_seguimiento === 'enviado_1' ||\n      row.estado_seguimiento === 'respondido')\n);\n\nconst INTENT = /\\b(depto|departamento|casa|lote|local|oficina|alquiler|alquilo|alquilar|comprar|compra|venta|vender|propiedad|inmueble|inmobiliaria|presupuesto|habitaci[oó]n|dormitorio|ambientes|m2|zona|barrio|mendoza|godoy|cruz|lujan|nodo)\\b/i;\nconst PERSONAL = /\\b(hermano|hermana|mam[aá]|pap[aá]|partido|jueguito|f[uú]tbol|asado|salimos|birra|tomamos|llamame al personal|no es por una propiedad)\\b/i;\n\nlet should_reply = true;\nlet skip_reason = '';\nif (PERSONAL.test(msg) && !INTENT.test(msg)) {\n  should_reply = false;\n  skip_reason = 'mensaje_personal';\n} else if (!isKnownLead && !INTENT.test(msg)) {\n  should_reply = false;\n  skip_reason = 'sin_intencion_inmobiliaria';\n}\n\nconst datosPrev = {\n  operacion: row.operacion || '',\n  tipo_propiedad: row.tipo_propiedad || '',\n  zona: row.zona || '',\n  presupuesto: row.presupuesto || '',\n  dormitorios: row.dormitorios || '',\n};\nconst ultima_prev = row.ultima_actualizacion || row.last_interaction_at || row.updated_at || '';\nconst consultas_count_prev = row.consultas_count || '0';\n\nconst historialBlock = historialPrev ? historialPrev : '(Sin historial previo. Es el primer contacto calificado.)';\n\nconst prompt = `Sos el asistente virtual oficial de la inmobiliaria \"Nodo Propiedades\" (Mendoza, Argentina).\nAtendes por WhatsApp. Tono: profesional, claro, cordial, rioplatense neutro. Maximo 1 emoji si aporta.\n\nOBJETIVO: calificar el lead y pedir SOLO la info necesaria para un asesor humano.\n\nDATOS A COMPLETAR (una pregunta por turno):\n1) operacion: alquiler | compra | venta\n2) tipo_propiedad: depto | casa | lote | local | oficina | otro\n3) zona / barrio\n4) presupuesto (o rango)\n5) dormitorios / ambientes\n6) urgencia\n\nREGLAS:\n- Usa el HISTORIAL: no repitas preguntas ya respondidas.\n- Una pregunta concreta por mensaje.\n- 2 a 4 oraciones.\n- Si el tema no es inmobiliario pero hay historial, reconducilo.\n- Si hay datos casi completos, resume y avisá que un asesor contactará.\n- No inventes propiedades ni precios.\n\nDATOS YA CARGADOS:\n${JSON.stringify(datosPrev)}\n\nHISTORIAL:\n${historialBlock}\n\nCLIENTE: ${prep.lead_name}\nMENSAJE ACTUAL: \"${msg}\"\n\nResponde SOLO JSON valido:\n{\"temperatura\":\"frio|tibio|caliente\",\"intencion\":\"frase corta\",\"operacion\":\"\",\"tipo_propiedad\":\"\",\"zona\":\"\",\"presupuesto\":\"\",\"dormitorios\":\"\",\"lead_completo\":false,\"respuesta\":\"mensaje para el cliente\"}`;\n\nreturn [{\n  json: {\n    ...prep,\n    isKnownLead,\n    should_reply,\n    skip_reason,\n    historial_prev: historialPrev,\n    ultima_prev,\n    consultas_count_prev,\n    operacion_prev: datosPrev.operacion,\n    tipo_prev: datosPrev.tipo_propiedad,\n    zona_prev: datosPrev.zona,\n    presupuesto_prev: datosPrev.presupuesto,\n    dormitorios_prev: datosPrev.dormitorios,\n    prompt_groq: prompt,\n  },\n}];"
       }
     },
     {
@@ -503,80 +313,64 @@
         300
       ],
       "parameters": {
-        "jsCode": "const textoIA = ($json.text || '').trim();\nconst prep = $('Code - Normalizar WhatsApp').item.json;\n\nlet temperatura = 'frio';\nlet intencion = 'consulta general';\nlet respuesta = '¡Hola! Gracias por escribirnos. ¿En qué te puedo ayudar?';\n\ntry {\n  const match = textoIA.match(/\\{[\\s\\S]*?\\}/);\n  if (match) {\n    const parsed = JSON.parse(match[0]);\n    temperatura = parsed.temperatura || 'frio';\n    intencion = parsed.intencion || 'consulta general';\n    respuesta = parsed.respuesta || respuesta;\n  }\n} catch(e) {}\n\nreturn [{\n  json: {\n    ...prep,\n    temperatura,\n    intencion,\n    respuesta_wa: respuesta\n  }\n}];"
+        "jsCode": "const textoIA = ($json.text || '').trim();\nconst prep = $('Code - Armar Prompt').item.json;\n\nlet temperatura = 'frio';\nlet intencion = 'consulta general';\nlet respuesta = 'Hola, gracias por escribir a Nodo Propiedades. Para orientarte mejor: buscas alquilar o comprar, y en que zona?';\nlet operacion = prep.operacion_prev || '';\nlet tipo_propiedad = prep.tipo_prev || '';\nlet zona = prep.zona_prev || '';\nlet presupuesto = prep.presupuesto_prev || '';\nlet dormitorios = prep.dormitorios_prev || '';\nlet lead_completo = false;\n\ntry {\n  const match = textoIA.match(/\\{[\\s\\S]*\\}/);\n  if (match) {\n    const parsed = JSON.parse(match[0]);\n    temperatura = parsed.temperatura || temperatura;\n    intencion = parsed.intencion || intencion;\n    respuesta = parsed.respuesta || respuesta;\n    operacion = parsed.operacion || operacion;\n    tipo_propiedad = parsed.tipo_propiedad || tipo_propiedad;\n    zona = parsed.zona || zona;\n    presupuesto = parsed.presupuesto || presupuesto;\n    dormitorios = parsed.dormitorios || dormitorios;\n    lead_completo = Boolean(parsed.lead_completo);\n  }\n} catch (e) {}\n\nconst lineCliente = 'Cliente: ' + String(prep.mensaje || '').trim();\nconst lineBot = 'Bot: ' + String(respuesta || '').trim();\nconst prev = String(prep.historial_prev || '').trim();\nlet historial = prev ? prev + '\\n' + lineCliente + '\\n' + lineBot : lineCliente + '\\n' + lineBot;\nconst lines = historial.split('\\n').filter(Boolean);\nif (lines.length > 24) historial = lines.slice(-24).join('\\n');\n\nconst now = new Date();\nconst lastRaw = prep.ultima_prev || prep.fecha || '';\nconst lastTs = lastRaw ? new Date(lastRaw).getTime() : 0;\nconst daysGap = lastTs ? (now.getTime() - lastTs) / (1000 * 60 * 60 * 24) : 999;\nconst changedProperty =\n  (zona && prep.zona_prev && zona.toLowerCase() !== String(prep.zona_prev).toLowerCase()) ||\n  (tipo_propiedad && prep.tipo_prev && tipo_propiedad.toLowerCase() !== String(prep.tipo_prev).toLowerCase()) ||\n  (operacion && prep.operacion_prev && operacion.toLowerCase() !== String(prep.operacion_prev).toLowerCase());\nconst esNuevaConsulta = !prep.isKnownLead || daysGap >= 14 || Boolean(changedProperty) ? 'si' : 'no';\n\nconst y = now.getFullYear();\nconst m = String(now.getMonth() + 1).padStart(2, '0');\nconst d = String(now.getDate()).padStart(2, '0');\nconst hh = String(now.getHours()).padStart(2, '0');\nconst mm = String(now.getMinutes()).padStart(2, '0');\nconst fechaLocal = y + '-' + m + '-' + d + ' ' + hh + ':' + mm;\nconst mes = y + '-' + m;\nconst consultaId = 'c_' + String(prep.phone || 'x').slice(-8) + '_' + now.toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);\nconst prevCount = Number(prep.consultas_count_prev || 0) || 0;\nconst consultas_count = esNuevaConsulta === 'si' ? prevCount + 1 : Math.max(prevCount, 1);\n\nreturn [{\n  json: {\n    canal: prep.canal,\n    chat_id: prep.chat_id,\n    dedupe_key: prep.dedupe_key,\n    lead_name: prep.lead_name,\n    phone: prep.phone,\n    mensaje: prep.mensaje,\n    waba_message_id: prep.waba_message_id,\n    fecha: now.toISOString(),\n    fecha_local: fechaLocal,\n    mes: mes,\n    anio: String(y),\n    consulta_id: consultaId,\n    es_nueva_consulta: esNuevaConsulta,\n    consultas_count: String(consultas_count),\n    temperatura,\n    intencion,\n    respuesta_wa: respuesta,\n    operacion,\n    tipo_propiedad,\n    zona,\n    presupuesto,\n    dormitorios,\n    lead_completo: lead_completo ? 'si' : 'no',\n    historial,\n    status: lead_completo ? 'calificado' : 'abierto',\n  },\n}];\n"
       }
     },
     {
       "id": "s02-node-13",
       "name": "Google Sheets - Actualizar Temperatura",
       "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
+      "typeVersion": 4.7,
       "position": [
         2400,
         300
       ],
       "parameters": {
-        "operation": "update",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "chat_id"
+          ],
+          "schema": [],
+          "value": {
+            "canal_origen": "whatsapp",
+            "chat_id": "={{ $json.chat_id }}",
+            "consultas_count": "={{ $json.consultas_count }}",
+            "dedupe_key": "={{ $json.dedupe_key }}",
+            "dormitorios": "={{ $json.dormitorios }}",
+            "estado_seguimiento": "ninguno",
+            "historial": "={{ $json.historial }}",
+            "last_bot_message": "={{ $json.respuesta_wa }}",
+            "last_message": "={{ $json.mensaje }}",
+            "lead_completo": "={{ $json.lead_completo }}",
+            "lead_intent": "={{ $json.intencion }}",
+            "lead_name": "={{ $json.lead_name }}",
+            "nombre": "={{ $json.lead_name }}",
+            "operacion": "={{ $json.operacion }}",
+            "phone": "={{ $json.phone }}",
+            "presupuesto": "={{ $json.presupuesto }}",
+            "source": "whatsapp",
+            "status": "={{ $json.status }}",
+            "temperature": "={{ $json.temperatura }}",
+            "tipo_propiedad": "={{ $json.tipo_propiedad }}",
+            "ultima_actualizacion": "={{ $json.fecha }}",
+            "ultima_consulta_fecha": "={{ $json.fecha_local }}",
+            "updated_at": "={{ $json.fecha }}",
+            "zona": "={{ $json.zona }}"
+          }
+        },
         "documentId": {
           "__rl": true,
           "mode": "id",
           "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
         },
+        "operation": "appendOrUpdate",
+        "options": {},
+        "resource": "sheet",
         "sheetName": {
           "__rl": true,
           "mode": "name",
-          "value": "Leads"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "dedupe_key": "={{ $json.dedupe_key }}",
-            "temperature": "={{ $json.temperatura }}",
-            "lead_intent": "={{ $json.intencion }}",
-            "updated_at": "={{ new Date().toISOString() }}"
-          },
-          "schema": [
-            {
-              "id": "dedupe_key",
-              "displayName": "dedupe_key",
-              "required": false,
-              "defaultMatch": true,
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "temperature",
-              "displayName": "temperature",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "lead_intent",
-              "displayName": "lead_intent",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "updated_at",
-              "displayName": "updated_at",
-              "required": false,
-              "defaultMatch": false,
-              "canBeUsedToMatch": false
-            }
-          ],
-          "matchingColumns": [
-            "dedupe_key"
-          ]
-        },
-        "options": {
-          "dataLocationOnSheet": {
-            "values": {
-              "rangeDefinition": "specifyRange",
-              "headerRow": 2,
-              "firstDataRow": 3
-            }
-          }
+          "value": "Leads_Bot"
         }
       },
       "credentials": {
@@ -584,7 +378,8 @@
           "id": "WBM00QjQj4q8xjLF",
           "name": "Cuenta de Google Sheets"
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "s02-node-14",
@@ -596,14 +391,11 @@
         300
       ],
       "parameters": {
-        "method": "POST",
-        "url": "=https://graph.facebook.com/__SET_META_GRAPH_VERSION__/__SET_META_PHONE_NUMBER_ID__/messages",
-        "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "=Bearer __SET_META_ACCESS_TOKEN__"
+              "name": "X-Api-Key",
+              "value": "__SET_WAHA_API_KEY__"
             },
             {
               "name": "Content-Type",
@@ -611,46 +403,191 @@
             }
           ]
         },
+        "jsonBody": "={{ JSON.stringify({ session: 'nodo', chatId: String($('Code - Procesar IA').item.json.chat_id), text: String($('Code - Procesar IA').item.json.respuesta_wa) }) }}",
+        "method": "POST",
+        "options": {},
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "url": "http://host.docker.internal:3002/api/sendText"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "s02-n16",
+      "name": "IF - Interes Alto",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2620,
+        480
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
             {
-              "name": "messaging_product",
-              "value": "whatsapp"
-            },
-            {
-              "name": "to",
-              "value": "={{ $json.phone }}"
-            },
-            {
-              "name": "type",
-              "value": "text"
-            },
-            {
-              "name": "text",
-              "value": "={{ JSON.stringify({ body: $json.respuesta_wa }) }}"
+              "id": "c1",
+              "leftValue": "={{ $('Code - Procesar IA').item.json.temperatura }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "caliente"
             }
-          ]
-        },
-        "options": {}
+          ],
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": false,
+            "typeValidation": "loose"
+          }
+        }
       }
     },
     {
-      "id": "s02-node-15",
-      "name": "Respond - Enviado OK",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
+      "id": "s02-n17",
+      "name": "HTTP - Email Lead Caliente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
       "position": [
-        2840,
+        2860,
+        400
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "jsonBody": "={{ JSON.stringify({ name: 'Nodo Propiedades Bot', email: 'bot@nodopropiedades.local', _subject: 'LEAD CALIENTE WhatsApp - ' + $('Code - Procesar IA').item.json.lead_name, message: 'Lead caliente WhatsApp Nombre: ' + $('Code - Procesar IA').item.json.lead_name + ' Tel: ' + $('Code - Procesar IA').item.json.phone + ' Mensaje: ' + $('Code - Procesar IA').item.json.mensaje }) }}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "url": "https://formsubmit.co/ajax/adrianfredes12@gmail.com"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "s02-n18",
+      "name": "HTTP - Telegram Alerta Owner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2860,
+        560
+      ],
+      "parameters": {
+        "jsonBody": "={{ JSON.stringify({ chat_id: '__SET_OWNER_TELEGRAM_CHAT_ID__', text: 'LEAD CALIENTE WhatsApp\\nNombre: ' + $('Code - Procesar IA').item.json.lead_name + '\\nTel: ' + $('Code - Procesar IA').item.json.phone }) }}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "https://api.telegram.org/bot__SET_TELEGRAM_BOT_TOKEN__/sendMessage"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "s02-n-debe-responder",
+      "name": "IF - Debe Responder",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1860,
         300
       ],
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={ \"status\": \"ok\" }",
-        "options": {
-          "responseCode": 200
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "sr",
+              "leftValue": "={{ $json.should_reply }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              }
+            }
+          ],
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          }
         }
       }
+    },
+    {
+      "id": "s02-n-consultas",
+      "name": "Google Sheets - Registrar Consulta",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2620,
+        140
+      ],
+      "parameters": {
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [],
+          "value": {
+            "anio": "={{ $json.anio }}",
+            "canal_origen": "whatsapp",
+            "chat_id": "={{ $json.chat_id }}",
+            "consulta_id": "={{ $json.consulta_id }}",
+            "dormitorios": "={{ $json.dormitorios }}",
+            "es_nueva_consulta": "={{ $json.es_nueva_consulta }}",
+            "fecha": "={{ $json.fecha }}",
+            "fecha_local": "={{ $json.fecha_local }}",
+            "intencion": "={{ $json.intencion }}",
+            "lead_completo": "={{ $json.lead_completo }}",
+            "mensaje_cliente": "={{ $json.mensaje }}",
+            "mes": "={{ $json.mes }}",
+            "nombre": "={{ $json.lead_name }}",
+            "operacion": "={{ $json.operacion }}",
+            "phone": "={{ $json.phone }}",
+            "presupuesto": "={{ $json.presupuesto }}",
+            "respuesta_bot": "={{ $json.respuesta_wa }}",
+            "temperature": "={{ $json.temperatura }}",
+            "tipo_propiedad": "={{ $json.tipo_propiedad }}",
+            "zona": "={{ $json.zona }}"
+          }
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
+        },
+        "operation": "append",
+        "options": {
+          "useAppend": true
+        },
+        "resource": "sheet",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Consultas"
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "WBM00QjQj4q8xjLF",
+          "name": "Cuenta de Google Sheets"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -659,17 +596,6 @@
         [
           {
             "node": "Code - Normalizar WhatsApp",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Webhook WhatsApp Verify": {
-      "main": [
-        [
-          {
-            "node": "Respond - Verify Meta",
             "type": "main",
             "index": 0
           }
@@ -692,24 +618,6 @@
         [
           {
             "node": "Google Sheets - Buscar Lead",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Respond - OK",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Google Sheets - Buscar Lead": {
-      "main": [
-        [
-          {
-            "node": "IF - Lead Existe",
             "type": "main",
             "index": 0
           }
@@ -767,17 +675,6 @@
         ]
       ]
     },
-    "Code - Armar Prompt": {
-      "main": [
-        [
-          {
-            "node": "Basic LLM Chain",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Basic LLM Chain": {
       "main": [
         [
@@ -818,15 +715,63 @@
             "node": "HTTP Request - Enviar WhatsApp",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "IF - Interes Alto",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Sheets - Registrar Consulta",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
     },
-    "HTTP Request - Enviar WhatsApp": {
+    "IF - Interes Alto": {
       "main": [
         [
           {
-            "node": "Respond - Enviado OK",
+            "node": "HTTP - Email Lead Caliente",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP - Telegram Alerta Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Buscar Lead": {
+      "main": [
+        [
+          {
+            "node": "Code - Armar Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Armar Prompt": {
+      "main": [
+        [
+          {
+            "node": "IF - Debe Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Debe Responder": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
             "type": "main",
             "index": 0
           }
@@ -840,9 +785,10 @@
     "callerPolicy": "workflowsFromSameOwner",
     "errorWorkflow": ""
   },
-  "meta": {
-    "templateCredsSetupCompleted": true
-  },
-  "active": true,
-  "id": "a5939ce0-6dcc-4304-80e8-7f24927dc9fc"
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "abfa3b45-b0dc-462f-8ca3-0677e1e67250",
+  "id": "npq6sC6YLaUBpHac",
+  "active": true
 }

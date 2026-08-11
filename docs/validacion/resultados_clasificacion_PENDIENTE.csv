@@ -1,0 +1,31 @@
+﻿id,perfil_esperado,mensaje_usuario,clasificacion_obtenida,coincide,json_parseo_ok,lead_completo,tiempo_ms,respuesta_preview,timestamp_utc,modo_ejecucion,notas
+CAL-01,caliente,"Hola, soy Carla, necesito comprar un depto de 2 amb en Godoy Cruz esta misma semana, presupuesto hasta 95000 dolares, decisime que hay",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+CAL-02,caliente,"Buenas, mi nombre es Martín. Busco casa 3 dorm en Maipú para mudarme ya, hasta 180 mil usd, ¿me agendás visita?",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+CAL-03,caliente,"Soy Lucía, quiero comprar PH en Chacras hasta 220k, prioritario este mes, ¿qué tenés disponible hoy?",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+CAL-04,caliente,"Hola soy Diego. Depto 2 amb Centro de Mendoza, compra cash hasta 80k usd, urgencia alta por trabajo",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+CAL-05,caliente,"Me llamo Paula, busco local comercial en Godoy Cruz para comprar, presupuesto 150 mil, quiero firmar en 15 días",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+CAL-06,caliente,"Soy Andrés, casa o duplex en Luján de Cuyo, 3 amb, compra hasta 160k, mudanza el mes que viene, dame opciones ya",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+CAL-07,caliente,"Hola, Vero acá. Compro depto 3 amb en Las Heras hasta 100k dólares, necesito ver uno esta semana",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+CAL-08,caliente,"Buen día, Roberto. Terreno o casa en Guaymallén para compra inmediata, max 120k, ¿tenemos turno?",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+CAL-09,caliente,"Soy Flor, depto 2 dorm en Nueva Ciudad, compra hasta 110000, urgencia por alquiler que vence",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+CAL-10,caliente,"Hola, soy Nico. Busco dpto amoblado o semi para comprar en Godoy Cruz, 3 amb, 130k usd, avanzar YA",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+TIB-01,tibio,"Hola, estoy mirando departamentos por zona de Maipú, todavía no sé si compro o alquilo. ¿Qué hay por 2 amb?",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+TIB-02,tibio,"Buenas, me interesa ver opciones de casas en Luján pero sin apuro. Presupuesto más o menos 100-130k",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+TIB-03,tibio,"Quería consultar sobre depts en Centro, más que nada para informarme de precios",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+TIB-04,tibio,"Hola, pensamos mudarnos el año que viene a Godoy Cruz, 2 o 3 amb, ¿me pasás una idea de valores?",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+TIB-05,tibio,"Estoy comparando alquiler vs compra de un local chico en Guaymallén, no tengo fecha firme",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+TIB-06,tibio,"Buenas, mi pareja y yo queremos ver un PH en Chacras cuando puedan, presupuesto flexible",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+TIB-07,tibio,"Hola, busco info de duplex en Las Heras, aún estamos evaluando bancos",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+TIB-08,tibio,Consulta general: qué tenés en Maipú alrededor de 70 mil dólares en depts,,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+TIB-09,tibio,"Hola, me gustaría conocer opciones de casa 2 dorm, no sé zona todavía, tal vez Maipú o Godoy",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+TIB-10,tibio,"Buenas, un amigo me recomendó, me interesa depto para inversión a mediano plazo en Mendoza capital",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+FRI-01,frio,"Hola, solo miraba el catálogo, no busco nada en particular",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+FRI-02,frio,¿Ustedes venden autos también o solo casas?,,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+FRI-03,frio,"Buenas, una curiosidad: más o menos cuánto sale un depto en Mendoza?",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+FRI-04,frio,"Hola, pasaba a ver, no sé si me animo a buscar ahora",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+FRI-05,frio,¿Hacen tasaciones gratis? Por ahora no pienso mudarme,,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+FRI-06,frio,"Buenas, cómo está el mercado en general? Solo charla",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+FRI-07,frio,"Hola bot, contame un chiste de inmobiliaria jaja",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+FRI-08,frio,"Estoy en el canal porque me reenviaron el link, todavía no busco vivienda",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+FRI-09,frio,¿Trabajan en Córdoba también o solo Mendoza?,,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
+FRI-10,frio,"Hola, más adelante quizás. Por ahora solo dejame el contacto",,,,,,,,SIN_API_KEY_ejecutar_contra_bot,Completar cuando n8n+Groq/Telegram estén activos
