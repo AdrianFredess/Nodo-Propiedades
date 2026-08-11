@@ -63,5 +63,6 @@ scripts/_wa_ops.json
 scripts/_wa_ops_code_only.json
 scripts/_wa_procesar_ia_payload.json
 *.png
+!docs/capturas/*.png
 !csv/**
 
