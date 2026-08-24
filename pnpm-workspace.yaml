@@ -1,2 +1,7 @@
-allowBuilds:
-  better-sqlite3: true
+# Solo el root es workspace (scripts n8n). El panel está en front/ con ignore-workspace.
+packages:
+  - '.'
+
+# Evita fallar installs en Windows sin Visual Studio (scripts de n8n/sqlite).
+neverBuiltDependencies:
+  - better-sqlite3

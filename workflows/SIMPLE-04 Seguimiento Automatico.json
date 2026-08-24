@@ -1,15 +1,11 @@
 {
   "name": "SIMPLE-04 Seguimiento Automático",
-  "settings": {
-    "executionOrder": "v1",
-    "timezone": "America/Argentina/Buenos_Aires"
-  },
   "nodes": [
     {
       "id": "s04-n01",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
+      "typeVersion": 1.3,
       "position": [
         0,
         300
@@ -35,13 +31,13 @@
         480
       ],
       "parameters": {},
-      "notes": "Solo para pruebas manuales; el schedule de 5 min es el trigger productivo."
+      "notes": "Solo para pruebas manuales. Productivo: schedule cada 5 min; envio si >=20 min sin respuesta."
     },
     {
       "id": "s04-n02",
       "name": "Google Sheets - Read",
       "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
+      "typeVersion": 4.7,
       "position": [
         260,
         300
@@ -51,18 +47,20 @@
         "documentId": {
           "__rl": true,
           "mode": "id",
-          "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
+          "value": "__SET_GOOGLE_SHEET_ID__"
         },
         "sheetName": {
           "__rl": true,
           "mode": "name",
           "value": "Leads_Bot"
         },
-        "options": {}
+        "options": {},
+        "range": "A:ZZ",
+        "resource": "sheet"
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "WBM00QjQj4q8xjLF",
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
           "name": "Cuenta de Google Sheets"
         }
       },
@@ -79,14 +77,14 @@
         300
       ],
       "parameters": {
-        "jsCode": "const rows = $input.all().map((i) => i.json);\nconst now = Date.now();\nconst MS_WAIT = 5 * 60 * 1000; // TEMP prueba: 5 min (prod era 48h)\nconst blocked = new Set(['cerrado', 'respondido']);\n\nconst out = [];\nfor (const row of rows) {\n  if (!row || row.error) continue;\n  let estado = String(row.estado_seguimiento ?? 'ninguno').trim().toLowerCase();\n  if (!estado) estado = 'ninguno';\n  if (blocked.has(estado)) continue;\n  if (estado !== 'ninguno' && estado !== 'enviado_1') continue;\n\n  const rawDate = row.ultima_actualizacion || row.last_interaction_at || row.updated_at || '';\n  const t = rawDate ? new Date(rawDate).getTime() : NaN;\n  if (!rawDate || Number.isNaN(t)) continue;\n  if (now - t < MS_WAIT) continue;\n\n  const chat_id = String(row.chat_id || row.phone || '').trim();\n  if (!chat_id) continue;\n\n  const nombre = String(row.nombre || row.lead_name || 'Cliente').trim() || 'Cliente';\n  const zona = String(row.zona || '').trim() || 'tu zona de interés';\n  const canal_origen = String(row.canal_origen || row.source || 'telegram').trim().toLowerCase();\n\n  out.push({\n    json: {\n      chat_id,\n      nombre,\n      zona,\n      canal_origen,\n      estado_seguimiento: estado,\n      ultima_actualizacion: rawDate,\n      mensaje:\n        'Hola ' +\n        nombre +\n        '! ¿Seguís interesado en propiedades en ' +\n        zona +\n        '? Contame si necesitás más información o si ya no te interesa, así libero la conversación.',\n    },\n  });\n}\nreturn out;\n"
+        "jsCode": "const rows = $input.all().map((i) => i.json);\nconst now = Date.now();\nconst MS_WAIT = 20 * 60 * 1000; // 20 min desde último mensaje\nconst blocked = new Set(['cerrado', 'respondido', 'cerrado_sin_respuesta']);\n\nfunction lastMessageTs(row) {\n  const candidates = [];\n  for (const key of ['ultima_actualizacion', 'last_interaction_at', 'updated_at', 'fecha']) {\n    const raw = row[key];\n    if (raw == null || raw === '') continue;\n    const t = new Date(raw).getTime();\n    if (!Number.isNaN(t)) candidates.push(t);\n  }\n  const histRaw = row.historial_json || row.historial || '';\n  if (histRaw) {\n    try {\n      const parsed = typeof histRaw === 'string' ? JSON.parse(histRaw) : histRaw;\n      if (Array.isArray(parsed)) {\n        for (const m of parsed) {\n          if (!m || typeof m !== 'object') continue;\n          const raw = m.ts || m.timestamp || m.fecha || m.date || m.created_at;\n          if (raw == null || raw === '') continue;\n          const t = new Date(raw).getTime();\n          if (!Number.isNaN(t)) candidates.push(t);\n        }\n      }\n    } catch (_) {\n      const matches = String(histRaw).match(/\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z?/g) || [];\n      for (const m of matches) {\n        const t = new Date(m).getTime();\n        if (!Number.isNaN(t)) candidates.push(t);\n      }\n    }\n  }\n  if (!candidates.length) return { t: NaN, raw: '' };\n  const t = Math.max(...candidates);\n  return { t, raw: new Date(t).toISOString() };\n}\n\nconst out = [];\nfor (const row of rows) {\n  if (!row || row.error) continue;\n  let estado = String(row.estado_seguimiento ?? 'ninguno').trim().toLowerCase();\n  if (!estado) estado = 'ninguno';\n  if (blocked.has(estado)) continue;\n  if (estado !== 'ninguno' && estado !== 'enviado_1') continue;\n\n  const { t, raw: rawDate } = lastMessageTs(row);\n  if (!rawDate || Number.isNaN(t)) continue;\n  if (now - t < MS_WAIT) continue;\n\n  const chat_id = String(row.chat_id || row.phone || '').trim();\n  if (!chat_id) continue;\n\n  const nombre = String(row.nombre || row.lead_name || 'Cliente').trim() || 'Cliente';\n  const zona = String(row.zona || '').trim() || 'tu zona de interés';\n  const canal_origen = String(row.canal_origen || row.source || 'telegram').trim().toLowerCase();\n  const interes = String(row.temperature || row.temperatura || row.interes || '').trim();\n  const telefono = String(row.phone || row.telefono || '').trim();\n  const last_message = String(row.last_message || row.ultimo_mensaje || '').trim();\n\n  let mensaje;\n  if (estado === 'enviado_1') {\n    mensaje =\n      'Hola ' + nombre + ', te escribo porque tengo opciones frescas en ' + zona +\n      '. Si me contás presupuesto o qué estás buscando (depto, casa, etc.), te acerco las mejores. ¿Seguimos?';\n  } else {\n    mensaje =\n      'Hola ' + nombre + '! ¿Seguís buscando en ' + zona +\n      '? Puedo mostrarte más opciones o armarte un presupuesto a medida. Decime zona, tipo o presupuesto y te ayudo.';\n  }\n\n  out.push({\n    json: {\n      chat_id,\n      nombre,\n      zona,\n      canal_origen,\n      estado_seguimiento: estado,\n      ultima_actualizacion: rawDate,\n      interes,\n      telefono,\n      last_message,\n      mensaje,\n      es_ultimo_seguimiento: estado === 'enviado_1',\n    },\n  });\n}\nreturn out;\n"
       }
     },
     {
       "id": "s04-n04",
       "name": "IF Hay Candidatos",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
+      "typeVersion": 2.3,
       "position": [
         780,
         300
@@ -133,7 +131,7 @@
       "id": "s04-n06",
       "name": "Switch Canal",
       "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.2,
+      "typeVersion": 3.4,
       "position": [
         1300,
         200
@@ -225,37 +223,37 @@
         40
       ],
       "parameters": {
+        "additionalFields": {
+          "appendAttribution": false
+        },
+        "chatId": "={{ String($json.chat_id) }}",
         "operation": "sendMessage",
-        "chatId": "={{ $json.chat_id }}",
-        "text": "={{ $json.mensaje }}",
-        "additionalFields": {}
+        "text": "={{ $json.mensaje }}"
       },
       "credentials": {
         "telegramApi": {
-          "id": "y7Csd64HC2GLm8WY",
+          "id": "__SET_TELEGRAM_CREDENTIAL_ID__",
           "name": "Telegram Bot Inmobiliaria"
         }
       },
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "webhookId": "0e9f2b5c-d819-4d02-8536-c44137bb2991"
     },
     {
       "id": "s04-n08",
       "name": "Enviar WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "typeVersion": 4.4,
       "position": [
         1580,
         200
       ],
       "parameters": {
-        "method": "POST",
-        "url": "http://host.docker.internal:3002/api/sendText",
-        "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "X-Api-Key",
-              "value": "__SET_WAHA_API_KEY__"
+              "value": "c0273aea132c4a0bbd25a4af073b09be"
             },
             {
               "name": "Content-Type",
@@ -263,19 +261,21 @@
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ session: 'nodo', chatId: String($json.chat_id).includes('@') ? String($json.chat_id) : (String($json.chat_id) + '@c.us'), text: String($json.mensaje) }) }}",
-        "options": {}
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "url": "http://host.docker.internal:3002/api/sendText"
       },
-      "onError": "continueRegularOutput",
-      "notes": "WAHA local. Reemplazar __SET_WAHA_API_KEY__ o usar header desde credencial. Alternativa Meta: graph.facebook.com + placeholders __SET_META_*__"
+      "onError": "continueRegularOutput"
     },
     {
       "id": "s04-n09",
       "name": "Enviar Messenger",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "typeVersion": 4.4,
       "position": [
         1580,
         360
@@ -307,43 +307,97 @@
       "id": "s04-n10",
       "name": "Google Sheets - Update",
       "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
+      "typeVersion": 4.7,
       "position": [
         1860,
         200
       ],
       "parameters": {
-        "operation": "update",
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "Leads_Bot"
-        },
         "columns": {
+          "attemptToConvertTypes": false,
+          "ignoreTypeMismatch": false,
           "mappingMode": "defineBelow",
           "matchingColumns": [
             "chat_id"
           ],
+          "schema": [],
           "value": {
             "chat_id": "={{ $('Split In Batches').item.json.chat_id }}",
+            "nombre": "={{ $('Split In Batches').item.json.nombre }}",
+            "zona": "={{ $('Split In Batches').item.json.zona }}",
+            "canal_origen": "={{ $('Split In Batches').item.json.canal_origen }}",
             "estado_seguimiento": "={{ $('Split In Batches').item.json.estado_seguimiento === 'enviado_1' ? 'enviado_2' : 'enviado_1' }}",
-            "ultima_actualizacion": "={{ $now.toISO() }}"
+            "status": "={{ $('Split In Batches').item.json.estado_seguimiento === 'enviado_1' ? 'cerrado_sin_respuesta' : 'seguimiento' }}",
+            "ultima_actualizacion": "={{ $now.toISO() }}",
+            "temperature": "={{ $('Split In Batches').item.json.interes || '' }}",
+            "phone": "={{ $('Split In Batches').item.json.telefono || '' }}",
+            "last_message": "={{ $('Split In Batches').item.json.last_message || '' }}"
           }
         },
-        "options": {}
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__SET_GOOGLE_SHEET_ID__"
+        },
+        "operation": "appendOrUpdate",
+        "options": {},
+        "resource": "sheet",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads_Bot"
+        }
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "WBM00QjQj4q8xjLF",
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
           "name": "Cuenta de Google Sheets"
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "s04-wh",
+      "name": "Webhook Test",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        140
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "simple04-test",
+        "responseMode": "onReceived"
+      },
+      "webhookId": "dbf8b626-2617-4f0c-917a-f0ccf714a9a1"
+    },
+    {
+      "id": "emit-panel-realtime",
+      "name": "Emit Panel Realtime",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2100,
+        360
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/panel-realtime-emit",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'leads.refresh', payload: { source: 'seguimiento' } }) }}",
+        "options": {
+          "timeout": 3000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
     }
   ],
   "connections": {
@@ -399,20 +453,7 @@
             "type": "main",
             "index": 0
           }
-        ],
-        []
-      ]
-    },
-    "Split In Batches": {
-      "main": [
-        [
-          {
-            "node": "Switch Canal",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        []
+        ]
       ]
     },
     "Switch Canal": {
@@ -480,9 +521,46 @@
             "node": "Split In Batches",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Emit Panel Realtime",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
+    },
+    "Webhook Test": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Switch Canal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Argentina/Buenos_Aires"
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
     }
   }
 }

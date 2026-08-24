@@ -126,7 +126,7 @@
         "documentId": {
           "__rl": true,
           "mode": "id",
-          "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
+          "value": "__SET_GOOGLE_SHEET_ID__"
         },
         "sheetName": {
           "__rl": true,
@@ -147,7 +147,7 @@
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "WBM00QjQj4q8xjLF",
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
           "name": "Cuenta de Google Sheets"
         }
       }
@@ -196,7 +196,7 @@
         "documentId": {
           "__rl": true,
           "mode": "id",
-          "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
+          "value": "__SET_GOOGLE_SHEET_ID__"
         },
         "sheetName": {
           "__rl": true,
@@ -273,7 +273,7 @@
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "WBM00QjQj4q8xjLF",
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
           "name": "Cuenta de Google Sheets"
         }
       }
@@ -292,7 +292,7 @@
         "documentId": {
           "__rl": true,
           "mode": "id",
-          "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
+          "value": "__SET_GOOGLE_SHEET_ID__"
         },
         "sheetName": {
           "__rl": true,
@@ -425,7 +425,7 @@
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "WBM00QjQj4q8xjLF",
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
           "name": "Cuenta de Google Sheets"
         }
       }
@@ -481,7 +481,7 @@
         520
       ],
       "parameters": {
-        "model": "llama-3.3-70b-versatile",
+        "model": "openai/gpt-oss-120b",
         "options": {
           "baseURL": "https://api.groq.com/openai/v1"
         }
@@ -520,7 +520,7 @@
         "documentId": {
           "__rl": true,
           "mode": "id",
-          "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
+          "value": "__SET_GOOGLE_SHEET_ID__"
         },
         "sheetName": {
           "__rl": true,
@@ -581,7 +581,7 @@
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "WBM00QjQj4q8xjLF",
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
           "name": "Cuenta de Google Sheets"
         }
       }

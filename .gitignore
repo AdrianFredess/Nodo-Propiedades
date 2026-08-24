@@ -30,6 +30,8 @@ desktop.ini
 node_modules/
 npm-debug.log*
 package-lock.json
+front/dist/
+front/.env
 
 # Editor / IDE
 .vscode/
@@ -50,6 +52,31 @@ waha-data/
 # Tesis / temporales locales
 _tmp_tesis*
 _tmp_tesis_docx/
+docs/Devolucion_*.pdf
+docs/INFORME-CLAUDE-*.md
+docs/Nodo_Propiedades_Tesis_v*.docx
+!docs/Nodo_Propiedades_Tesis_v73.docx
+docs/Nodo_Propiedades_Tesis_v*.pdf
+
+# Python / scripts temporales de parcheo
+scripts/__pycache__/
+scripts/_ops*.json
+scripts/_import_ops.json
+scripts/_mcp*.json
+scripts/_n8n*.json
+scripts/_op*.json
+scripts/_wf_*.json
+scripts/_emit_*.json
+scripts/_write_*.json
+scripts/_docker_*.js
+scripts/_formatear_*.js
+scripts/_build_import_*.js
+scripts/_extract_tesis.js
+scripts/_build_wa_ops.js
+scripts/_wa_armar_prompt.js
+scripts/_wa_procesar_ia.js
+scripts/evo-extract-qr.js
+scripts/evo-wait-qr.js
 
 # Dumps/QR de sesión WhatsApp (no versionar)
 scripts/evo-*.json

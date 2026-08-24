@@ -1,6 +1,13 @@
 ﻿# Arranque local — Nodo Propiedades
 
-## Requisitos
+## Nube local (3 pasos)
+
+```bat
+D:\Dev\Nodo-Propiedades\ARRANQUE.bat
+```
+
+Ver también `docs/ARRANQUE-NUBE-LOCAL.md`.
+
 - Docker Desktop
 - Credenciales en n8n (Google Sheets, Groq, Telegram) — **no** están en los JSON del repo
 - Archivos `.env` locales (copiá los `*.example`)
@@ -21,6 +28,16 @@ docker compose -f docker-compose.waha.yml --env-file .env.waha up -d
 
 n8n: http://localhost:5678  
 WAHA dashboard: http://localhost:3002  
+
+## Panel comercial (frontend)
+
+```bash
+cd front
+pnpm install --ignore-workspace
+pnpm --ignore-workspace run dev
+```
+
+Por defecto usa datos demo (`VITE_USE_MOCK=true`). Para datos reales: importá `workflows/PANEL-01 API Leads.json` + `PANEL-02 Envio Masivo Telegram.json`, activá, y poné `VITE_USE_MOCK=false` en `front/.env`.
 
 ## Google Sheets (runtime)
 

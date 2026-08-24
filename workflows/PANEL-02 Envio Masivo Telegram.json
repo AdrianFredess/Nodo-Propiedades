@@ -1,0 +1,482 @@
+{
+  "name": "PANEL-02 Envio Masivo Telegram",
+  "nodes": [
+    {
+      "id": "panel02-webhook",
+      "name": "Webhook Envio Masivo",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "envio-masivo",
+        "responseMode": "responseNode"
+      },
+      "position": [
+        200,
+        300
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "envio-masivo-tg"
+    },
+    {
+      "id": "panel02-prep",
+      "name": "Preparar Destinos",
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst text = String(body.text || '').trim();\nconst rawIds = Array.isArray(body.chat_ids) ? body.chat_ids : [];\nconst chat_ids = [...new Set(rawIds.map((id) => String(id).trim()).filter(Boolean))];\nif (!text) return [{ json: { ok: false, error: 'text_requerido', results: [] } }];\nif (!chat_ids.length) return [{ json: { ok: false, error: 'chat_ids_requeridos', results: [] } }];\nreturn chat_ids.map((chat_id) => ({ json: { chat_id, text, _batch_size: chat_ids.length } }));"
+      },
+      "position": [
+        440,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "panel02-if",
+      "name": "IF Payload Valido",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.chat_id }}",
+              "operator": {
+                "operation": "notEmpty",
+                "singleValue": true,
+                "type": "string"
+              }
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        }
+      },
+      "position": [
+        680,
+        300
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2
+    },
+    {
+      "id": "panel02-send",
+      "name": "Telegram sendMessage",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "additionalFields": {
+          "appendAttribution": false
+        },
+        "chatId": "={{ $json.chat_id }}",
+        "operation": "sendMessage",
+        "resource": "message",
+        "text": "={{ $json.text }}"
+      },
+      "position": [
+        920,
+        200
+      ],
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "webhookId": "48c49cd1-2219-4653-9984-5997198ed910",
+      "credentials": {
+        "telegramApi": {
+          "id": "__SET_TELEGRAM_CREDENTIAL_ID__",
+          "name": "__SET_TELEGRAM_CREDENTIAL_NAME__"
+        }
+      }
+    },
+    {
+      "id": "panel02-map",
+      "name": "Mapear Resultado",
+      "parameters": {
+        "jsCode": "const prep = $('Preparar Destinos').item.json;\nconst res = $input.first().json;\nconst messageId = res.message_id ?? (res.result && res.result.message_id);\nconst ok = Boolean(messageId) || (res.ok === true && res.result != null);\nreturn [{ json: { chat_id: prep.chat_id, text: prep.text, ok, description: ok ? 'enviado' : String(res.description || res.error || (res.result && res.result.description) || 'error') } }];"
+      },
+      "position": [
+        1160,
+        200
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "panel02-agg",
+      "name": "Agregar Resultados",
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "position": [
+        1400,
+        200
+      ],
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1
+    },
+    {
+      "id": "panel02-wrap",
+      "name": "Envelope OK",
+      "parameters": {
+        "jsCode": "const items = $input.first().json.data || $input.all().map((i) => i.json);\nconst results = Array.isArray(items) ? items : [items];\nconst sent = results.filter((r) => r.ok).length;\nreturn [{ json: { ok: true, sent, failed: results.length - sent, results } }];"
+      },
+      "position": [
+        1640,
+        200
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "panel02-err",
+      "name": "Responder Error",
+      "parameters": {
+        "options": {
+          "responseCode": 400,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        },
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "position": [
+        920,
+        420
+      ],
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1
+    },
+    {
+      "id": "panel02-ok",
+      "name": "Responder OK",
+      "parameters": {
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        },
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "position": [
+        1880,
+        200
+      ],
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1
+    },
+    {
+      "id": "panel02-emit-if",
+      "name": "IF Emit OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1160,
+        420
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "ok1",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "panel02-emit",
+      "name": "Emit Chat Realtime",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2120,
+        420
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3099/emit",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'chat.message', payload: { chatId: String($('Mapear Resultado').item.json.chat_id || ''), text: String($('Mapear Resultado').item.json.text || ''), side: 'bot', source: 'panel' } }) }}",
+        "options": {
+          "timeout": 3000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "panel02-leer-hist",
+      "name": "Leer Historial Panel",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1400,
+        420
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1r7EIzgF8vB3PdS2__m3qC-eSB2W9b4rC4v8Ajs8iAoo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Hoja 1",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "chat_id",
+              "lookupValue": "={{ $json.chat_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Cuenta de Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "panel02-append-hist",
+      "name": "Append Historial Asesor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1640,
+        420
+      ],
+      "parameters": {
+        "jsCode": "const mapped = $('Mapear Resultado').item.json;\nconst chatId = String(mapped.chat_id || '').trim();\nconst text = String(mapped.text || '').trim();\nconst rows = $input.all().map((i) => i.json).filter((r) => r && !r.error);\nconst row = rows.find((r) => String(r.chat_id || '').trim() === chatId) || rows[0] || {};\n\nlet hist = [];\nconst raw = row.historial_json;\ntry {\n  if (typeof raw === 'string' && raw.trim()) hist = JSON.parse(raw);\n  else if (Array.isArray(raw)) hist = raw;\n} catch (e) {\n  hist = [];\n}\nif (!Array.isArray(hist)) hist = [];\n\nconst already = hist.some(\n  (m) =>\n    m &&\n    String(m.role || '').toLowerCase() === 'assistant' &&\n    String(m.content || '').trim() === text,\n);\nif (text && !already) {\n  hist.push({\n    role: 'assistant',\n    content: text,\n    ts: new Date().toISOString(),\n    source: 'panel',\n  });\n}\nif (hist.length > 60) hist = hist.slice(hist.length - 60);\n\nconst ahora = new Date().toISOString();\nreturn [\n  {\n    json: {\n      chat_id: chatId,\n      text,\n      ok: Boolean(mapped.ok),\n      nombre: String(row.nombre || row.nombre_usuario || ''),\n      historial_json: JSON.stringify(hist),\n      ultima_actualizacion: ahora,\n      turno: row.turno != null && row.turno !== '' ? row.turno : hist.length,\n      propiedad_seguimiento: String(row.propiedad_seguimiento || ''),\n      temperatura: String(row.temperatura || ''),\n    },\n  },\n];"
+      }
+    },
+    {
+      "id": "panel02-update-hist",
+      "name": "Actualizar Historial Panel",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1880,
+        420
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1r7EIzgF8vB3PdS2__m3qC-eSB2W9b4rC4v8Ajs8iAoo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Hoja 1",
+          "mode": "name"
+        },
+        "columns": {
+          "ignoreTypeMismatch": false,
+          "matchingColumns": [
+            "chat_id"
+          ],
+          "schema": [],
+          "mappingMode": "defineBelow",
+          "attemptToConvertTypes": false,
+          "value": {
+            "chat_id": "={{ $json.chat_id }}",
+            "ultima_actualizacion": "={{ $json.ultima_actualizacion }}",
+            "nombre": "={{ $json.nombre }}",
+            "historial_json": "={{ $json.historial_json }}",
+            "turno": "={{ $json.turno }}",
+            "propiedad_seguimiento": "={{ $json.propiedad_seguimiento }}",
+            "temperatura": "={{ $json.temperatura }}"
+          }
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Cuenta de Google Sheets"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Agregar Resultados": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Envelope OK",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Envelope OK": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Responder OK",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "IF Payload Valido": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Telegram sendMessage",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Responder Error",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Mapear Resultado": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Agregar Resultados",
+            "type": "main"
+          },
+          {
+            "node": "IF Emit OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Destinos": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "IF Payload Valido",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Telegram sendMessage": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Mapear Resultado",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Webhook Envio Masivo": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Preparar Destinos",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "IF Emit OK": {
+      "main": [
+        [
+          {
+            "node": "Leer Historial Panel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Leer Historial Panel": {
+      "main": [
+        [
+          {
+            "node": "Append Historial Asesor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Historial Asesor": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Historial Panel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Historial Panel": {
+      "main": [
+        [
+          {
+            "node": "Emit Chat Realtime",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

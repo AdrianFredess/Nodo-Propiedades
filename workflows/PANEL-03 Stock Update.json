@@ -1,0 +1,183 @@
+{
+  "name": "PANEL-03 Stock Update",
+  "nodes": [
+    {
+      "id": "panel03-webhook",
+      "name": "Webhook Stock Update",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "webhookId": "panel-stock-update",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "panel-stock-update",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "panel03-prep",
+      "name": "Preparar Patch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300],
+      "parameters": {
+        "jsCode": "const root = $input.first().json;\nconst body = root.body && typeof root.body === 'object' ? root.body : root;\nconst id = String(body.id || body.ID || body.codigo || '').trim();\nif (!id) {\n  return [{ json: { ok: false, error: 'id_requerido' } }];\n}\n\nconst ALLOWED = new Set([\n  'zona', 'tipo', 'operacion', 'precio', 'ambientes', 'estado', 'descripcion',\n  'honorarios', 'reserva', 'medios_pago', 'alias_cbu', 'requisitos',\n]);\n\nconst FIELD_ALIAS = {\n  mediosPago: 'medios_pago',\n  aliasCbu: 'alias_cbu',\n};\n\nconst patch = {};\nif (body.patch && typeof body.patch === 'object') {\n  for (const [k, v] of Object.entries(body.patch)) {\n    const key = FIELD_ALIAS[k] || k;\n    if (!ALLOWED.has(key)) continue;\n    patch[key] = v == null ? '' : String(v);\n  }\n} else {\n  let field = String(body.field || body.columna || body.column || '').trim();\n  field = FIELD_ALIAS[field] || field;\n  if (!ALLOWED.has(field)) {\n    return [{ json: { ok: false, error: 'field_invalido', field } }];\n  }\n  patch[field] = body.value == null ? '' : String(body.value);\n}\n\nif (!Object.keys(patch).length) {\n  return [{ json: { ok: false, error: 'patch_vacio' } }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    id,\n    patch,\n    sheetRow: { id, ...patch },\n  },\n}];"
+      }
+    },
+    {
+      "id": "panel03-if",
+      "name": "IF Patch Valido",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [680, 300],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "ok1",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "panel03-map-row",
+      "name": "Mapear Fila Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 180],
+      "parameters": {
+        "jsCode": "const prep = $('Preparar Patch').first().json;\nreturn [{ json: { ...prep.sheetRow } }];"
+      }
+    },
+    {
+      "id": "panel03-sheets",
+      "name": "Actualizar Stock",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1120, 180],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Cuenta de Google Sheets"
+        }
+      },
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1sAXgJDFkFbiLPDdqw4vYyCeVC4heWAJ3n92jlrIW-SU"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Hoja 1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": ["id"],
+          "schema": [],
+          "value": {}
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "panel03-emit",
+      "name": "Emit WS stock.updated",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 180],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3099/emit",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'stock.updated', payload: { id: $('Preparar Patch').first().json.id, patch: $('Preparar Patch').first().json.patch, source: 'panel' } }) }}",
+        "options": {
+          "timeout": 3000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "panel03-ok",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1560, 180],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, id: $('Preparar Patch').first().json.id, patch: $('Preparar Patch').first().json.patch }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "*" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "panel03-err",
+      "name": "Responder Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 420],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 400,
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "*" }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Stock Update": {
+      "main": [[{ "node": "Preparar Patch", "type": "main", "index": 0 }]]
+    },
+    "Preparar Patch": {
+      "main": [[{ "node": "IF Patch Valido", "type": "main", "index": 0 }]]
+    },
+    "IF Patch Valido": {
+      "main": [
+        [{ "node": "Mapear Fila Input", "type": "main", "index": 0 }],
+        [{ "node": "Responder Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Mapear Fila Input": {
+      "main": [[{ "node": "Actualizar Stock", "type": "main", "index": 0 }]]
+    },
+    "Actualizar Stock": {
+      "main": [[{ "node": "Emit WS stock.updated", "type": "main", "index": 0 }]]
+    },
+    "Emit WS stock.updated": {
+      "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

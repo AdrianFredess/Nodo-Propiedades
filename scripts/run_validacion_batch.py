@@ -214,40 +214,70 @@ def write_guion_csv():
 SYSTEM_MIN = (
     "Sos Matías, asesor inmobiliario de Nodo Propiedades (Argentina). "
     "Clasificá el mensaje del cliente y respondé en español argentino profesional (sin 'che'). "
-    "Si tenés nombre, zona, presupuesto y compra/alquiler con interés real, al FINAL agregá exactamente:\n"
+    "Al FINAL agregá exactamente este bloque (obligatorio en esta validación):\n"
     "###LEAD_COMPLETO###\n"
-    '{"nombre":"...","zona":"...","presupuesto":"...","operacion":"compra|alquiler","temperatura":"caliente|tibio|frio","resumen":"..."}\n'
+    '{"nombre":"...","zona":"...","presupuesto":"...","operacion":"compra|alquiler|consulta","temperatura":"caliente|tibio|frio","resumen":"..."}\n'
     "###FIN_LEAD###\n"
-    "temperatura: caliente=urgencia o datos claros; tibio=interés sin urgencia; frio=curiosidad.\n"
-    "Si no alcanza para el lead, respondé normal SIN el bloque."
+    "Si falta un dato usá \"\" o \"Cliente\". "
+    "temperatura: caliente=urgencia o datos claros; tibio=interés sin urgencia; frio=curiosidad."
 )
 
 
-def call_groq(api_key: str, user_msg: str) -> tuple[str, int]:
+# Groq retiró llama-3.3-70b-versatile el 2026-08-16 (free/dev).
+# Reemplazo oficial documentado: openai/gpt-oss-120b (o qwen/qwen3.6-27b).
+GROQ_MODEL = "openai/gpt-oss-120b"
+GROQ_MODEL_LEGACY = "llama-3.3-70b-versatile"
+
+
+def call_groq(api_key: str, user_msg: str, model: str = GROQ_MODEL) -> tuple[str, int, str]:
+    import urllib.error
+
     body = {
-        "model": "llama-3.3-70b-versatile",
+        "model": model,
         "messages": [
             {"role": "system", "content": SYSTEM_MIN},
             {"role": "user", "content": user_msg},
         ],
         "temperature": 0.7,
-        "max_tokens": 500,
+        "max_tokens": 1200,
+        # gpt-oss gasta tokens en reasoning; low deja más espacio al bloque LEAD
+        "reasoning_effort": "low",
     }
-    req = urllib.request.Request(
-        "https://api.groq.com/openai/v1/chat/completions",
-        data=json.dumps(body).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-    t0 = time.perf_counter()
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        data = json.loads(resp.read().decode("utf-8"))
-    ms = int((time.perf_counter() - t0) * 1000)
-    text = data["choices"][0]["message"]["content"]
-    return text, ms
+    last_err: Exception | None = None
+    for attempt in range(8):
+        req = urllib.request.Request(
+            "https://api.groq.com/openai/v1/chat/completions",
+            data=json.dumps(body).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                # Sin UA Cloudflare a veces responde 403/1010 desde este host
+                "User-Agent": "n8n",
+            },
+            method="POST",
+        )
+        t0 = time.perf_counter()
+        try:
+            with urllib.request.urlopen(req, timeout=90) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            ms = int((time.perf_counter() - t0) * 1000)
+            msg = data["choices"][0]["message"]
+            text = msg.get("content") or ""
+            if not text and msg.get("reasoning"):
+                text = str(msg.get("reasoning"))
+            return text, ms, model
+        except urllib.error.HTTPError as e:
+            last_err = e
+            body_err = e.read().decode("utf-8", errors="ignore")[:180]
+            if e.code in (429, 500, 502, 503):
+                time.sleep(3.0 * (attempt + 1))
+                continue
+            raise RuntimeError(f"HTTP {e.code}: {body_err}") from e
+        except Exception as e:
+            last_err = e
+            time.sleep(2.0 * (attempt + 1))
+    assert last_err is not None
+    raise last_err
 
 
 def run_classification(api_key: str | None):
@@ -259,9 +289,12 @@ def run_classification(api_key: str | None):
     ]
     rows = []
     mode = "groq_api" if api_key else "pending_real_bot"
+    # IDs alineados al guion CSV: CAL-01..10, TIB-11..20, FRI-21..30
+    seq = 1
     for perfil, msgs in GUION.items():
-        for idx, m in enumerate(msgs, 1):
-            rid = f"{perfil[:3].upper()}-{idx:02d}"
+        for m in msgs:
+            rid = f"{perfil[:3].upper()}-{seq:02d}"
+            seq += 1
             if not api_key:
                 rows.append({
                     "id": rid,
@@ -279,7 +312,7 @@ def run_classification(api_key: str | None):
                 })
                 continue
             try:
-                text, ms = call_groq(api_key, m)
+                text, ms, used_model = call_groq(api_key, m)
                 parsed = parsear_respuesta_mitigada(text)
                 temp = (parsed["temperatura"] or "").lower().strip()
                 if temp not in ("caliente", "tibio", "frio"):
@@ -305,10 +338,13 @@ def run_classification(api_key: str | None):
                     "tiempo_ms": ms,
                     "respuesta_preview": (text or "").replace("\n", " ")[:160],
                     "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-                    "modo_ejecucion": mode,
-                    "notas": "mismo modelo/prompt simplificado del bot (llama-3.3-70b)",
+                    "modo_ejecucion": f"groq_api:{used_model}",
+                    "notas": (
+                        f"parser mitigado + SYSTEM_MIN(lead_obligatorio_validacion); "
+                        f"modelo={used_model}; {GROQ_MODEL_LEGACY} retirado Groq 2026-08-16"
+                    ),
                 })
-                time.sleep(0.4)
+                time.sleep(1.6)
             except Exception as e:
                 rows.append({
                     "id": rid,
@@ -492,7 +528,11 @@ def main():
     p_guion = write_guion_csv()
     # try env
     api_key = None
-    for envp in [ROOT / ".env", Path.home() / ".n8n" / ".env"]:
+    for envp in [
+        ROOT / ".env",
+        Path.home() / ".n8n" / ".env",
+        Path(r"D:\DevCaches\Temp\groq_key_runtime.env"),  # local-only, never commit
+    ]:
         if envp.exists():
             for line in envp.read_text(encoding="utf-8", errors="ignore").splitlines():
                 if line.startswith("GROQ_API_KEY="):

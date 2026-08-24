@@ -1,0 +1,435 @@
+{
+  "name": "PANEL-01 API Leads",
+  "nodes": [
+    {
+      "id": "panel01-webhook",
+      "name": "Webhook Leads",
+      "parameters": {
+        "httpMethod": "GET",
+        "options": {},
+        "path": "panel-leads",
+        "responseMode": "responseNode"
+      },
+      "position": [
+        200,
+        300
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "panel-leads-api"
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Cuenta de Google Sheets"
+        }
+      },
+      "id": "panel01-leads",
+      "name": "Leer Leads_Bot",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__SET_GOOGLE_SHEET_ID__"
+        },
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads_Bot"
+        }
+      },
+      "position": [
+        440,
+        220
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Cuenta de Google Sheets"
+        }
+      },
+      "id": "panel01-consultas",
+      "name": "Leer Consultas",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__SET_GOOGLE_SHEET_ID__"
+        },
+        "operation": "read",
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "range": "A1:Z2000",
+              "rangeDefinition": "specifyRangeA1"
+            }
+          }
+        },
+        "resource": "sheet",
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": "2076175790"
+        }
+      },
+      "position": [
+        660,
+        220
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "executeOnce": true
+    },
+    {
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Cuenta de Google Sheets"
+        }
+      },
+      "id": "panel01-stock",
+      "name": "Leer Stock Propiedades",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1sAXgJDFkFbiLPDdqw4vYyCeVC4heWAJ3n92jlrIW-SU"
+        },
+        "operation": "read",
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "range": "A:ZZ",
+              "rangeDefinition": "specifyRangeA1"
+            }
+          }
+        },
+        "range": "'Hoja 1'!A:ZZ",
+        "resource": "sheet",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Hoja 1"
+        }
+      },
+      "position": [
+        880,
+        220
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7
+    },
+    {
+      "id": "panel01-code",
+      "name": "Armar Payload Panel",
+      "parameters": {
+        "jsCode": "const STOCK_TTL_MS = 3 * 60 * 1000;\r\n\r\nconst leadsRaw = $('Leer Leads_Bot')\r\n  .all()\r\n  .map((i) => i.json)\r\n  .filter(\r\n    (r) =>\r\n      r &&\r\n      !r.error &&\r\n      (r.chat_id || r.dedupe_key || r.nombre || r.lead_name),\r\n  );\r\nconst consultasRaw = $('Leer Consultas')\r\n  .all()\r\n  .map((i) => i.json)\r\n  .filter(\r\n    (r) =>\r\n      r &&\r\n      !r.error &&\r\n      (r.consulta_id || r.mensaje_cliente || r.chat_id),\r\n  );\r\n\r\nlet historialChatRaw = [];\r\ntry {\r\n  historialChatRaw = $('Leer Historial Chat')\r\n    .all()\r\n    .map((i) => i.json)\r\n    .filter((r) => r && !r.error && (r.chat_id || r.historial_json));\r\n} catch (e) {\r\n  historialChatRaw = [];\r\n}\r\n\r\nfunction historialFromJson(raw, chatId) {\r\n  let arr = [];\r\n  try {\r\n    if (typeof raw === 'string') arr = JSON.parse(raw);\r\n    else if (Array.isArray(raw)) arr = raw;\r\n  } catch (e) {\r\n    return [];\r\n  }\r\n  if (!Array.isArray(arr)) return [];\r\n  const out = [];\r\n  for (let i = 0; i < arr.length; i++) {\r\n    const m = arr[i] || {};\r\n    const role = String(m.role || '').toLowerCase();\r\n    const content = String(m.content || '').trim();\r\n    if (!content) continue;\r\n    if (role === 'user') {\r\n      out.push({\r\n        id: chatId + '-hj-' + i,\r\n        fecha: '',\r\n        mensajeCliente: content,\r\n        respuestaBot: '',\r\n      });\r\n    } else if (role === 'assistant') {\r\n      if (out.length && !out[out.length - 1].respuestaBot) {\r\n        out[out.length - 1].respuestaBot = content;\r\n      } else {\r\n        out.push({\r\n          id: chatId + '-hj-' + i,\r\n          fecha: '',\r\n          mensajeCliente: '',\r\n          respuestaBot: content,\r\n        });\r\n      }\r\n    }\r\n  }\r\n  return out;\r\n}\r\n\r\nconst histJsonByChat = new Map();\r\nconst histMetaByChat = new Map();\r\nfor (const h of historialChatRaw) {\r\n  const id = String(h.chat_id || '').trim();\r\n  if (!id || !h.historial_json) continue;\r\n  histJsonByChat.set(id, h.historial_json);\r\n  histMetaByChat.set(id, h);\r\n}\r\n\r\nconst staticData = $getWorkflowStaticData('global');\r\nconst now = Date.now();\r\n\r\nlet stockRaw = [];\r\nlet stockError = '';\r\nlet stockSource = 'none';\r\n\r\nfunction isRateLimitError(msg) {\r\n  return /too many requests|quota|rate.?limit|429/i.test(String(msg || ''));\r\n}\r\n\r\nfunction loadLiveStock() {\r\n  const stockItems = $('Leer Stock Propiedades').all().map((i) => i.json);\r\n  const err = stockItems.find((r) => r && r.error);\r\n  if (err) {\r\n    return {\r\n      rows: [],\r\n      error: String(err.error),\r\n    };\r\n  }\r\n  return {\r\n    rows: stockItems.filter((r) => r && typeof r === 'object' && !r.error),\r\n    error: '',\r\n  };\r\n}\r\n\r\ntry {\r\n  let gate = { needStockRead: true, stockFromCache: [] };\r\n  try {\r\n    gate = $('Stock Cache Gate').first().json || gate;\r\n  } catch (e) {\r\n    gate = { needStockRead: true, stockFromCache: [] };\r\n  }\r\n\r\n  if (!gate.needStockRead && Array.isArray(gate.stockFromCache)) {\r\n    stockRaw = gate.stockFromCache;\r\n    stockSource = 'cache';\r\n  } else {\r\n    const live = loadLiveStock();\r\n    stockError = live.error;\r\n    if (!stockError) {\r\n      stockRaw = live.rows;\r\n      stockSource = 'live';\r\n      staticData.stockCache = {\r\n        at: now,\r\n        rows: stockRaw,\r\n      };\r\n    } else if (\r\n      staticData.stockCache &&\r\n      Array.isArray(staticData.stockCache.rows) &&\r\n      staticData.stockCache.rows.length\r\n    ) {\r\n      stockRaw = staticData.stockCache.rows;\r\n      stockSource = 'stale-cache';\r\n    } else {\r\n      stockRaw = [];\r\n      stockSource = 'error';\r\n    }\r\n  }\r\n} catch (e) {\r\n  stockError = String(e && e.message ? e.message : e);\r\n  if (\r\n    staticData.stockCache &&\r\n    Array.isArray(staticData.stockCache.rows) &&\r\n    staticData.stockCache.rows.length\r\n  ) {\r\n    stockRaw = staticData.stockCache.rows;\r\n    stockSource = 'stale-cache';\r\n  } else {\r\n    stockRaw = [];\r\n    stockSource = 'error';\r\n  }\r\n}\r\n\r\nlet leadsError = '';\r\ntry {\r\n  const leadProbe = $('Leer Leads_Bot').all().map((i) => i.json);\r\n  const err = leadProbe.find((r) => r && r.error);\r\n  if (err) leadsError = String(err.error);\r\n} catch (e) {}\r\n\r\nconst normTemp = (v) => {\r\n  const t = String(v || '').trim().toLowerCase();\r\n  if (!t) return '';\r\n  if (t === 'caliente' || t === 'hot') return 'caliente';\r\n  if (t === 'tibio' || t === 'warm') return 'tibio';\r\n  if (t === 'frio' || t === 'cold') return 'frio';\r\n  return '';\r\n};\r\nconst pickRawTemp = (...vals) => {\r\n  for (const v of vals) {\r\n    if (v == null || v === '') continue;\r\n    const n = normTemp(v);\r\n    if (n) return n;\r\n  }\r\n  return '';\r\n};\r\nconst tempFromEstadoActual = (text) => {\r\n  const m = String(text || '').match(/###ESTADO_ACTUAL:(frio|tibio|caliente)###/i);\r\n  return m ? String(m[1]).toLowerCase() : '';\r\n};\r\nconst tempFromHistorialJson = (raw) => {\r\n  let arr = [];\r\n  try {\r\n    if (typeof raw === 'string') arr = JSON.parse(raw);\r\n    else if (Array.isArray(raw)) arr = raw;\r\n  } catch (e) {\r\n    return '';\r\n  }\r\n  if (!Array.isArray(arr)) return '';\r\n  for (let i = arr.length - 1; i >= 0; i--) {\r\n    const m = arr[i] || {};\r\n    const fromField = pickRawTemp(m.temperatura, m.temperature, m.estado);\r\n    if (fromField) return fromField;\r\n    const fromTag = tempFromEstadoActual(m.content || m.respuesta || '');\r\n    if (fromTag) return fromTag;\r\n  }\r\n  return '';\r\n};\r\nconst normCanal = (v) => {\r\n  const c = String(v || 'telegram').trim().toLowerCase();\r\n  if (c === 'whatsapp' || c === 'wa') return 'whatsapp';\r\n  if (c === 'messenger') return 'messenger';\r\n  return 'telegram';\r\n};\r\nconst resolveLeadCompleto = (row) => {\r\n  const v = String(row.lead_completo ?? '').trim().toLowerCase();\r\n  if (v === 'si' || v === 'true' || v === 'yes' || v === '1') return true;\r\n  if (v === 'no' || v === 'false' || v === '0') return false;\r\n  return true;\r\n};\r\nconst parsePropSeg = (raw) => {\r\n  const s = String(raw || '').trim();\r\n  if (!s) return { id: '', referencia: '' };\r\n  try {\r\n    const o = JSON.parse(s);\r\n    if (o && typeof o === 'object') {\r\n      return {\r\n        id: String(o.id || o.codigo || '').trim(),\r\n        referencia: String(o.referencia || o.ref || '').trim(),\r\n      };\r\n    }\r\n  } catch (e) {}\r\n  return { id: '', referencia: s };\r\n};\r\nconst normKey = (s) =>\r\n  String(s || '')\r\n    .toLowerCase()\r\n    .normalize('NFD')\r\n    .replace(/[\\u0300-\\u036f]/g, '')\r\n    .replace(/[^a-z0-9]+/g, ' ')\r\n    .trim();\r\n\r\nconst byChat = new Map();\r\nfor (const c of consultasRaw) {\r\n  const id = String(c.chat_id || '').trim();\r\n  if (!id) continue;\r\n  if (!byChat.has(id)) byChat.set(id, []);\r\n  // Preferir fecha_local (AR) cuando ISO de Sheets llega mal parseada\r\n  const fechaRaw = String(c.fecha_local || c.fecha || '').trim();\r\n  byChat.get(id).push({\r\n    id: String(c.consulta_id || id + '-' + (c.fecha || '')),\r\n    fecha: fechaRaw,\r\n    mensajeCliente: String(c.mensaje_cliente || ''),\r\n    respuestaBot: String(c.respuesta_bot || c.respuesta_wa || ''),\r\n    temperatura: pickRawTemp(c.temperature, c.temperatura) || 'frio',\r\n    canal: String(c.canal_origen || c.canal || '').toLowerCase() || undefined,\r\n    leadCompletoFila: String(c.lead_completo || '').trim().toLowerCase(),\r\n  });\r\n}\r\nfunction fechaSortKey(s) {\r\n  const t = Date.parse(String(s || '').replace(' ', 'T'));\r\n  return Number.isFinite(t) ? t : 0;\r\n}\r\nfor (const [, list] of byChat) {\r\n  list.sort((a, b) => fechaSortKey(a.fecha) - fechaSortKey(b.fecha));\r\n}\r\n\r\nconst leadsMap = new Map();\r\nfor (const row of leadsRaw) {\r\n  const chatId = String(row.chat_id || row.phone || '').trim();\r\n  if (!chatId) continue;\r\n  const canal = normCanal(row.canal_origen || row.source || 'telegram');\r\n  let historial = (byChat.get(chatId) || []).map(\r\n    ({ leadCompletoFila, ...rest }) => rest,\r\n  );\r\n  if (!historial.length && histJsonByChat.has(chatId)) {\r\n    historial = historialFromJson(histJsonByChat.get(chatId), chatId);\r\n  }\r\n  const fromRow = parsePropSeg(\r\n    row.propiedad_seguimiento || row.propiedad_id || row.propiedad,\r\n  );\r\n  leadsMap.set(chatId, {\r\n    id: String(row.dedupe_key || canal + ':' + chatId),\r\n    chatId,\r\n    nombre: String(row.nombre || row.lead_name || 'Cliente').trim() || 'Cliente',\r\n    zona: String(row.zona || '').trim(),\r\n    presupuesto: String(row.presupuesto || '').trim(),\r\n    canalOrigen: canal,\r\n    temperatura:\r\n      pickRawTemp(\r\n        row.temperature,\r\n        row.temperatura,\r\n        (histMetaByChat.get(chatId) || {}).temperatura,\r\n        (histMetaByChat.get(chatId) || {}).temperature,\r\n      ) ||\r\n      pickRawTemp(\r\n        ...(historial || []).map((h) => h.temperatura || h.temperature).reverse(),\r\n      ) ||\r\n      tempFromHistorialJson(histJsonByChat.get(chatId)) ||\r\n      'frio',\r\n    leadCompleto: resolveLeadCompleto(row),\r\n    estadoSeguimiento:\r\n      String(row.estado_seguimiento || 'ninguno').trim().toLowerCase() ||\r\n      'ninguno',\r\n    status: String(row.status || 'abierto').trim(),\r\n    tipoOperacion: String(row.tipo_operacion || row.operacion || '').trim(),\r\n    ultimaActualizacion: String(\r\n      row.ultima_actualizacion ||\r\n        row.last_interaction_at ||\r\n        row.updated_at ||\r\n        '',\r\n    ),\r\n    lastMessage: String(row.last_message || ''),\r\n    historial,\r\n    propiedadId: fromRow.id,\r\n    propiedadReferencia: fromRow.referencia,\r\n  });\r\n}\r\n\r\nfor (const [chatId, histFull] of byChat.entries()) {\r\n  if (leadsMap.has(chatId)) continue;\r\n  if (!histFull.length) continue;\r\n  const last = histFull[histFull.length - 1];\r\n  const algunaCompleta = histFull.some(\r\n    (h) => h.leadCompletoFila === 'si' || h.leadCompletoFila === 'true',\r\n  );\r\n  const canal = normCanal(last.canal || 'telegram');\r\n  leadsMap.set(chatId, {\r\n    id: canal + ':' + chatId,\r\n    chatId,\r\n    nombre: 'Cliente',\r\n    zona: '',\r\n    presupuesto: '',\r\n    canalOrigen: canal,\r\n    temperatura:\r\n      pickRawTemp(last.temperatura, last.temperature) ||\r\n      tempFromHistorialJson(histJsonByChat.get(chatId)) ||\r\n      'frio',\r\n    leadCompleto: algunaCompleta,\r\n    estadoSeguimiento: 'ninguno',\r\n    status: 'abierto',\r\n    tipoOperacion: '',\r\n    ultimaActualizacion: String(last.fecha || ''),\r\n    lastMessage: String(last.mensajeCliente || ''),\r\n    historial: histFull.map(({ leadCompletoFila, ...rest }) => rest),\r\n    propiedadId: '',\r\n    propiedadReferencia: '',\r\n  });\r\n}\r\n\r\nconst leads = Array.from(leadsMap.values());\r\n\r\nconst propiedadesBase = stockRaw\r\n  .map((row) => {\r\n    const id = String(row.id ?? row.ID ?? row.codigo ?? '').trim();\r\n    const zona = String(row.zona ?? row.Zona ?? row.barrio ?? '').trim();\r\n    const tipo = String(row.tipo ?? row.Tipo ?? row.tipologia ?? '').trim();\r\n    const precio = String(\r\n      row.precio ?? row.Precio ?? row.precio_usd ?? '',\r\n    ).trim();\r\n    const ambientes = String(\r\n      row.ambientes ?? row.Ambientes ?? row.dormitorios ?? row.Dormitorios ?? '',\r\n    ).trim();\r\n    const operacion = String(\r\n      row.operacion ?? row.Operacion ?? row.tipo_operacion ?? '',\r\n    ).trim();\r\n    const estado = String(row.estado ?? row.Estado ?? '').trim();\r\n    const descripcion = String(\r\n      row.descripcion ?? row.Descripcion ?? row.detalle ?? '',\r\n    ).trim();\r\n    const honorarios = String(\r\n      row.honorarios ?? row.Honorarios ?? row.comision ?? '',\r\n    ).trim();\r\n    const reserva = String(\r\n      row.reserva ?? row.Reserva ?? row.sena ?? row['seña'] ?? '',\r\n    ).trim();\r\n    const mediosPago = String(\r\n      row.medios_pago ?? row.mediosPago ?? row.forma_pago ?? '',\r\n    ).trim();\r\n    const aliasCbu = String(\r\n      row.alias_cbu ?? row.alias ?? row.cbu ?? row.CBU ?? '',\r\n    ).trim();\r\n    const requisitos = String(\r\n      row.requisitos ?? row.Requisitos ?? '',\r\n    ).trim();\r\n    if (!id && !zona && !tipo && !precio) return null;\r\n    return {\r\n      id: id || (zona + '-' + tipo + '-' + precio).slice(0, 48) || 'sin-id',\r\n      zona,\r\n      tipo,\r\n      precio,\r\n      ambientes,\r\n      operacion,\r\n      estado: estado || undefined,\r\n      descripcion: descripcion || undefined,\r\n      honorarios: honorarios || undefined,\r\n      reserva: reserva || undefined,\r\n      mediosPago: mediosPago || undefined,\r\n      aliasCbu: aliasCbu || undefined,\r\n      requisitos: requisitos || undefined,\r\n    };\r\n  })\r\n  .filter(Boolean);\r\n\r\nfunction leadMatchesProp(lead, prop) {\r\n  const pid = normKey(lead.propiedadId);\r\n  const pref = normKey(lead.propiedadReferencia);\r\n  const propId = normKey(prop.id);\r\n  const propZona = normKey(prop.zona);\r\n  const propTipo = normKey(prop.tipo);\r\n  if (\r\n    pid &&\r\n    propId &&\r\n    (pid === propId || pid.includes(propId) || propId.includes(pid))\r\n  )\r\n    return true;\r\n  if (pref && propId && pref.includes(propId)) return true;\r\n  if (\r\n    pref &&\r\n    propZona &&\r\n    pref.includes(propZona) &&\r\n    (!propTipo || pref.includes(propTipo))\r\n  )\r\n    return true;\r\n  return false;\r\n}\r\n\r\nconst propiedades = propiedadesBase.map((prop) => {\r\n  const interesados = leads\r\n    .filter((l) => leadMatchesProp(l, prop))\r\n    .map((l) => ({\r\n      id: l.id,\r\n      chatId: l.chatId,\r\n      nombre: l.nombre,\r\n      temperatura: l.temperatura,\r\n      canalOrigen: l.canalOrigen,\r\n      leadCompleto: l.leadCompleto,\r\n      zona: l.zona,\r\n      presupuesto: l.presupuesto,\r\n      ultimaActualizacion: l.ultimaActualizacion,\r\n    }));\r\n  return { ...prop, interesadosCount: interesados.length, interesados };\r\n});\r\n\r\nconst warnings = [];\r\nif (leadsError) warnings.push('leads: ' + leadsError);\r\nif (stockError) {\r\n  if (stockSource === 'stale-cache') {\r\n    warnings.push(\r\n      'stock: cuota/Sheets limitado — mostrando caché reciente. ' + stockError,\r\n    );\r\n  } else {\r\n    warnings.push('stock: ' + stockError);\r\n  }\r\n}\r\n\r\n// Si leads fallaron por cuota pero hay caché completa, usarla\r\nif (\r\n  (!leads.length || !propiedades.length) &&\r\n  staticData.fullCache &&\r\n  staticData.fullCache.payload &&\r\n  (leadsError || stockError)\r\n) {\r\n  const stale = staticData.fullCache.payload;\r\n  return [\r\n    {\r\n      json: {\r\n        generatedAt: new Date().toISOString(),\r\n        leads: leads.length ? leads : stale.leads || [],\r\n        propiedades: propiedades.length\r\n          ? propiedades\r\n          : stale.propiedades || [],\r\n        stockSource: stockSource === 'none' ? 'stale-full-cache' : stockSource,\r\n        stockCachedAt: staticData.stockCache?.at\r\n          ? new Date(staticData.stockCache.at).toISOString()\r\n          : undefined,\r\n        stockTtlMs: STOCK_TTL_MS,\r\n        warning: warnings.length\r\n          ? warnings.join(' | ') + ' | usando caché previa'\r\n          : 'usando caché previa',\r\n      },\r\n    },\r\n  ];\r\n}\r\n\r\nconst payloadOut = {\r\n  generatedAt: new Date().toISOString(),\r\n  leads,\r\n  propiedades,\r\n  stockSource,\r\n  stockCachedAt: staticData.stockCache?.at\r\n    ? new Date(staticData.stockCache.at).toISOString()\r\n    : undefined,\r\n  stockTtlMs: STOCK_TTL_MS,\r\n  warning: warnings.length ? warnings.join(' | ') : undefined,\r\n};\r\n\r\nif (leads.length || propiedades.length) {\r\n  staticData.fullCache = {\r\n    at: now,\r\n    payload: {\r\n      leads: payloadOut.leads,\r\n      propiedades: payloadOut.propiedades,\r\n      warning: payloadOut.warning,\r\n      stockSource: payloadOut.stockSource,\r\n      stockCachedAt: payloadOut.stockCachedAt,\r\n      stockTtlMs: STOCK_TTL_MS,\r\n    },\r\n  };\r\n}\r\n\r\nreturn [{ json: payloadOut }];\r\n"
+      },
+      "position": [
+        1100,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "panel01-respond",
+      "name": "Responder JSON",
+      "parameters": {
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        },
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "position": [
+        1320,
+        300
+      ],
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1
+    },
+    {
+      "id": "panel01-cache-gate",
+      "name": "Payload Cache Gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const TTL_FULL_MS = 45 * 1000;\nconst TTL_STOCK_MS = 3 * 60 * 1000;\nconst sd = $getWorkflowStaticData('global');\nconst now = Date.now();\nif (!sd._tempColFixV2) { sd._tempColFixV2 = true; sd.fullCache = null; }\nif (!sd._tempColFixV1) { sd._tempColFixV1 = true; sd.fullCache = null; }\nif (!sd._histJsonFixV1c) { sd._histJsonFixV1c = true; sd.fullCache = null; }\n// Bust cache once after Consultas read fix (empty historial was sticky)\nif (sd.fullCache && !sd._histJsonFixV1) {\n  sd._histJsonFixV1 = true;\n  sd.fullCache = null;\n}\nconst full = sd.fullCache;\nconst fullAge = full && full.at ? now - full.at : Infinity;\nif (full && full.payload && fullAge < TTL_FULL_MS) {\n  return [{ json: { cacheHit: true, needStockRead: false, ...full.payload, stockSource: 'full-cache', generatedAt: new Date().toISOString(), warning: full.payload.warning ? String(full.payload.warning) : undefined } }];\n}\nconst stock = sd.stockCache;\nconst stockAge = stock && stock.at ? now - stock.at : Infinity;\nconst stockOk = stock && Array.isArray(stock.rows) && stockAge < TTL_STOCK_MS;\nreturn [{ json: { cacheHit: false, needStockRead: !stockOk, stockFromCache: stockOk ? stock.rows : [], stockCachedAt: stock && stock.at ? stock.at : null } }];"
+      }
+    },
+    {
+      "id": "panel01-if-cache",
+      "name": "IF Cache Hit",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        520,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cache-hit",
+              "leftValue": "={{ Boolean($json.cacheHit) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "panel01-stock-gate",
+      "name": "Stock Cache Gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        380
+      ],
+      "parameters": {
+        "jsCode": "let gate = { needStockRead: true, stockFromCache: [] };\ntry { gate = $('Payload Cache Gate').first().json || gate; } catch (e) {}\nreturn [{ json: { needStockRead: gate.needStockRead !== false, stockFromCache: Array.isArray(gate.stockFromCache) ? gate.stockFromCache : [] } }];"
+      }
+    },
+    {
+      "id": "panel01-if-stock",
+      "name": "IF Need Stock Read",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        380
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "need-stock",
+              "leftValue": "={{ Boolean($json.needStockRead) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "panel01-historial",
+      "name": "Leer Historial Chat",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        780,
+        220
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1r7EIzgF8vB3PdS2__m3qC-eSB2W9b4rC4v8Ajs8iAoo"
+        },
+        "operation": "read",
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "range": "A:ZZ",
+              "rangeDefinition": "specifyRangeA1"
+            }
+          }
+        },
+        "resource": "sheet",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Hoja 1"
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Cuenta de Google Sheets"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    }
+  ],
+  "connections": {
+    "Armar Payload Panel": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Responder JSON",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Leer Leads_Bot": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Leer Consultas",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Webhook Leads": {
+      "main": [
+        [
+          {
+            "node": "Payload Cache Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payload Cache Gate": {
+      "main": [
+        [
+          {
+            "node": "IF Cache Hit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Cache Hit": {
+      "main": [
+        [
+          {
+            "node": "Responder JSON",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Leer Leads_Bot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stock Cache Gate": {
+      "main": [
+        [
+          {
+            "node": "IF Need Stock Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Need Stock Read": {
+      "main": [
+        [
+          {
+            "node": "Leer Stock Propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Armar Payload Panel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Stock Propiedades": {
+      "main": [
+        [
+          {
+            "node": "Armar Payload Panel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Consultas": {
+      "main": [
+        [
+          {
+            "node": "Leer Historial Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Historial Chat": {
+      "main": [
+        [
+          {
+            "node": "Stock Cache Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": true
+}

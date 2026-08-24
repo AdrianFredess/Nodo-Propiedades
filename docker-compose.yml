@@ -4,6 +4,9 @@ services:
     restart: always
     ports:
       - "5678:5678"
+    # Permite que nodos HTTP lleguen al ws-bridge del host (Windows/Mac Docker).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - N8N_HOST=${N8N_HOST}
       - N8N_PORT=5678
@@ -24,7 +27,7 @@ services:
       - TZ=America/Argentina/Buenos_Aires
     volumes:
       # Carpeta del HOST con database.sqlite y config (no uses N8N_USER_FOLDER aquí: en CLI es el *padre* de .n8n)
-      - ${N8N_HOST_DATA_DIR:-C:/Users/adrian/.n8n}:/home/node/.n8n
+      - ${N8N_HOST_DATA_DIR:?Definir N8N_HOST_DATA_DIR en .env}:/home/node/.n8n
       - ./workflows:/workflows:ro
       - ./ai:/ai:ro
     healthcheck:

@@ -1,0 +1,10 @@
+clave,valor
+transferencia,Alias: EDITAR_EN_SHEETS | CBU: EDITAR_EN_SHEETS | Titular: EDITAR_EN_SHEETS | Banco: EDITAR_EN_SHEETS
+efectivo,Se acepta en oficina con comprobante. Coordinar dia y monto de sena/reserva.
+reserva,La reserva/sena se acredita y se confirma por escrito. No garantiza la operacion hasta validacion.
+cuotas,Planes en cuotas solo si la propiedad lo indica en stock. Si no figura derivar a asesor.
+honorarios_venta,Honorarios de venta: ver columna honorarios del inmueble o confirmar con asesor.
+honorarios_alquiler,Honorarios de alquiler: ver columna honorarios del inmueble o confirmar con asesor.
+requisitos_alquiler,DNI | recibos de sueldo | garantia o seguro de caucion (confirmar en Sheets)
+requisitos_compra,DNI | sena/reserva | operatoria con escribano (confirmar en Sheets)
+oficina,Atencion en Mendoza — horario y direccion: EDITAR_EN_SHEETS

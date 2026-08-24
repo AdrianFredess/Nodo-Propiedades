@@ -1,0 +1,14 @@
+{
+  "name": "nodo-ws-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Bridge WebSocket + HTTP emit para el panel Nodo Propiedades",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}

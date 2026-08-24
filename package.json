@@ -4,7 +4,9 @@
   "private": true,
   "description": "Scripts y workflows Nodo Propiedades (n8n)",
   "scripts": {
-    "import-stock": "node scripts/importar_30_propiedades_stock.js"
+    "import-stock": "node scripts/importar_30_propiedades_stock.js",
+    "ws-bridge": "pnpm --dir ws-bridge --ignore-workspace start",
+    "patch-emit": "node scripts/patch-emit-realtime.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.6.0",

@@ -9,7 +9,7 @@ const bcrypt = require('C:/Users/adrian/AppData/Roaming/npm/node_modules/n8n/nod
 
 const dir = process.env.N8N_HOST_DATA_DIR || 'C:/Users/adrian/.n8n';
 const dbPath = `${dir.replace(/\/$/, '')}/database.sqlite`;
-const email = (process.argv[2] || 'adrianfredes12@gmail.com').toLowerCase().trim();
+const email = (process.argv[2] || '__SET_NOTIFY_EMAIL__').toLowerCase().trim();
 const plain = process.argv[3] || 'adriann8n10f';
 
 const db = new Database(dbPath);

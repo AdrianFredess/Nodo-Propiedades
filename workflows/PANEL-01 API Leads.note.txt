@@ -1,0 +1,1 @@
+Cache nodes live in n8n TfGR4Uhq2TnSBFLw — re-export from UI if needed. Deployed: Payload Cache Gate + IF Cache Hit + Stock Cache Gate + IF Need Stock Read.

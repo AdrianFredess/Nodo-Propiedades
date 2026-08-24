@@ -44,7 +44,7 @@ const nodes = [
       range: "'Hoja 1'!A:ZZ",
     },
     credentials: {
-      googleSheetsOAuth2Api: { id: 'WBM00QjQj4q8xjLF', name: 'Cuenta de Google Sheets' },
+      googleSheetsOAuth2Api: { id: '__SET_GOOGLE_SHEETS_CREDENTIAL_ID__', name: 'Cuenta de Google Sheets' },
     },
     alwaysOutputData: true,
     onError: 'continueRegularOutput',
@@ -71,7 +71,7 @@ const nodes = [
       additionalFields: { appendAttribution: false },
     },
     credentials: {
-      telegramApi: { id: 'y7Csd64HC2GLm8WY', name: 'Telegram Bot Inmobiliaria' },
+      telegramApi: { id: '__SET_TELEGRAM_CREDENTIAL_ID__', name: 'Telegram Bot Inmobiliaria' },
     },
   },
   {
@@ -98,7 +98,7 @@ const nodes = [
       options: {},
     },
     credentials: {
-      googleSheetsOAuth2Api: { id: 'WBM00QjQj4q8xjLF', name: 'Cuenta de Google Sheets' },
+      googleSheetsOAuth2Api: { id: '__SET_GOOGLE_SHEETS_CREDENTIAL_ID__', name: 'Cuenta de Google Sheets' },
     },
     onError: 'continueRegularOutput',
   },

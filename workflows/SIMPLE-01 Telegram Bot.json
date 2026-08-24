@@ -84,7 +84,7 @@
       "position": [1160, 300],
       "parameters": {
         "operation": "append",
-        "documentId": { "__rl": true, "mode": "id", "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ" },
+        "documentId": { "__rl": true, "mode": "id", "value": "__SET_GOOGLE_SHEET_ID__" },
         "sheetName": { "__rl": true, "mode": "name", "value": "Leads" },
         "columns": {
           "mappingMode": "defineBelow",
@@ -121,7 +121,7 @@
         }
       },
       "credentials": {
-        "googleSheetsOAuth2Api": { "id": "WBM00QjQj4q8xjLF", "name": "Cuenta de Google Sheets" }
+        "googleSheetsOAuth2Api": { "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__", "name": "Cuenta de Google Sheets" }
       }
     },
     {

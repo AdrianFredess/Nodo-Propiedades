@@ -19,7 +19,7 @@
       "type": "n8n-nodes-base.telegramTrigger",
       "credentials": {
         "telegramApi": {
-          "id": "y7Csd64HC2GLm8WY",
+          "id": "__SET_TELEGRAM_CREDENTIAL_ID__",
           "name": "Telegram Bot Inmobiliaria"
         }
       }
@@ -102,7 +102,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "WBM00QjQj4q8xjLF",
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
           "name": "Cuenta de Google Sheets"
         }
       },
@@ -110,7 +110,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const setVars = $('Set Variables').first().json;\nconst chatId = setVars.chat_id;\nconst textoUsuario = setVars.texto_usuario;\nconst nombreUsuario = setVars.nombre_usuario;\n\nlet historialItems = [];\ntry {\n  historialItems = $('Leer Historial').all();\n} catch (e) {\n  historialItems = [];\n}\n\nlet stockItems = [];\ntry {\n  stockItems = $('Leer Stock Propiedades')\n    .all()\n    .map((item) => item.json)\n    .filter(\n      (row) =>\n        row &&\n        typeof row === 'object' &&\n        !(\n          typeof row.error === 'string' &&\n          /authorization grant|invalid_grant|token is invalid|OAuth2/i.test(row.error)\n        ) &&\n        !(Object.keys(row).length === 1 && Object.prototype.hasOwnProperty.call(row, 'error')),\n    );\n} catch (e) {\n  stockItems = [];\n}\n\nfunction rowToStockLine(row) {\n  const id = row.id ?? row.ID ?? row.codigo ?? '';\n  const tipo = row.tipo ?? row.Tipo ?? row.tipologia ?? '';\n  const zona = row.zona ?? row.Zona ?? row.barrio ?? '';\n  const precio = row.precio ?? row.Precio ?? row.precio_usd ?? '';\n  const desc = row.descripcion ?? row.Descripcion ?? row.detalle ?? '';\n  const estado = row.estado ?? row.Estado ?? row.stock ?? 'disponible';\n  const bits = [tipo, zona, precio ? String(precio) : '', desc].filter(Boolean);\n  const head = id ? '[' + id + '] ' : '';\n  return head + bits.join(' | ') + (estado ? ' (' + estado + ')' : '');\n}\n\nlet stockText = '';\nif (stockItems.length) {\n  stockText = stockItems.map(rowToStockLine).map((l) => '- ' + l).join('\\n');\n} else {\n  stockText =\n    '- (Sin filas en la planilla de stock (propiedades) o no se pudo leer. Ofrece ayuda humana o pedir cargar stock.)';\n}\n\nconst matchRow = historialItems.find(\n  (item) => item.json && String(item.json.chat_id) === String(chatId),\n);\nconst historialItemsFiltered = matchRow ? [matchRow] : [];\n\nlet historialJson = [];\nlet turno = 1;\nlet rowExists = false;\nlet propiedadSeguimientoPrev = '';\nlet ultimaActualizacionStr = '';\nlet diasSinContacto = 0;\n\nif (historialItemsFiltered.length > 0 && historialItemsFiltered[0].json && historialItemsFiltered[0].json.chat_id) {\n  const row = historialItemsFiltered[0].json;\n  rowExists = true;\n  turno = parseInt(row.turno || 0) + 1;\n  propiedadSeguimientoPrev = String(row.propiedad_seguimiento || '').trim();\n  ultimaActualizacionStr = String(row.ultima_actualizacion || '').trim();\n  try {\n    historialJson = JSON.parse(row.historial_json || '[]');\n  } catch (e) {\n    historialJson = [];\n  }\n  if (ultimaActualizacionStr) {\n    const t = new Date(ultimaActualizacionStr);\n    if (!isNaN(t.getTime())) {\n      diasSinContacto = Math.floor((Date.now() - t.getTime()) / 86400000);\n    }\n  }\n}\n\nlet refSeg = '';\nif (propiedadSeguimientoPrev) {\n  try {\n    const o = JSON.parse(propiedadSeguimientoPrev);\n    if (o && typeof o === 'object' && o.referencia) refSeg = String(o.referencia);\n    else if (o && typeof o === 'object' && o.id) refSeg = String(o.id);\n  } catch (e) {\n    refSeg = propiedadSeguimientoPrev.length > 120 ? propiedadSeguimientoPrev.slice(0, 117) + '…' : propiedadSeguimientoPrev;\n  }\n}\n\nconst contextoCliente =\n  '- Días aproximados desde el último registro en CRM (ultima_actualizacion): ' +\n  (ultimaActualizacionStr ? diasSinContacto : 'sin_dato') +\n  '\\n' +\n  '- Propiedad en seguimiento guardada (si existe): ' +\n  (refSeg || '(ninguna)') +\n  '\\n' +\n  '- Si hay varios días sin contacto y hay propiedad en seguimiento, está bien retomar con una sola frase breve y cordial al inicio; no insistir ni presionar.';\n\nconst systemPrompt =\n  'Sos Matías, asesor inmobiliario de Nodo Propiedades (Argentina). Tu trabajo es solo atender consultas sobre inmuebles: disponibilidad, precios en el stock, zonas, tipología, visitas y derivaciones relacionadas con el catálogo.\\n\\n' +\n  'ALCANCE: Si el mensaje no tiene relación con inmuebles o el stock (otros temas, bromas, política, tecnología, vida personal, etc.), respondé en 1–2 frases cordiales y profesionales aclarando que solo podés orientar sobre propiedades y el catálogo, y ofrecé continuar si tiene una consulta inmobiliaria. No des datos ni opiniones fuera de ese marco.\\n\\n' +\n  'PROHIBICIÓN ESTRICTA: No uses en ningún caso la palabra \"che\" (ni como saludo ni como interjección). Usá un trato profesional directo: \"Hola\", \"Buenos días\", o el nombre si lo tenés.\\n\\n' +\n  'CONTEXTO_CLIENTE (uso interno; no lo repitas literal ni digas que venís de un CRM):\\n' +\n  contextoCliente +\n  '\\n\\n' +\n  'SEGUIMIENTO EN CONVERSACIÓN:\\n' +\n  '- Si CONTEXTO_CLIENTE muestra ~3 días o más sin registro previo y había propiedad en seguimiento, podés empezar con UNA sola línea corta retomando el interés; después respondé al mensaje actual.\\n' +\n  '- No hagas seguimiento agresivo: una mención suave; si el cliente cambió de tema, priorizá lo que preguntó ahora.\\n\\n' +\n  'STOCK (solo ofrecé propiedades de esta lista; si no hay match, ofrecé las más cercanas o pedí más datos):\\n' +\n  stockText +\n  '\\n\\n' +\n  'ESTILO Y FORMATO:\\n' +\n  '- Español claro, profesional y cercano (podés usar voseo si resulta natural).\\n' +\n  '- Cuando convenga, ordená la respuesta con viñetas o pasos breves; evitá muros de texto largos en Telegram.\\n' +\n  '- Priorizá una intención o una pregunta por mensaje cuando pida información al cliente.\\n' +\n  '- No inventes inmuebles fuera del stock; podés parafrasear la lista.\\n\\n' +\n  'PROPIEDAD EN SEGUIMIENTO (para recordatorios posteriores):\\n' +\n  '- Si el usuario se enfoca claramente en UNA propiedad del stock (detalle, visita, reserva, \"me interesa la de…\"), al FINAL del mensaje agregá exactamente este bloque (una sola línea JSON dentro):\\n\\n' +\n  '###PROPIEDAD_SEGUIMIENTO###\\n' +\n  '{\"id\":\"id_o_codigo_stock\",\"referencia\":\"breve texto para recordatorios (zona + tipo o codigo)\"}\\n' +\n  '###FIN_PROP###\\n\\n' +\n  '- Si no hay una propiedad clara o es solo una consulta general, NO incluyas este bloque (deja el seguimiento anterior sin cambios en el sistema).\\n\\n' +\n  'CUANDO TENGAS OPORTUNIDAD DE VENTA (nombre, zona, presupuesto aproximado y compra o alquiler), al FINAL del mensaje (después del bloque de propiedad si lo hubo) pegá exactamente este bloque:\\n\\n' +\n  '  ###LEAD_COMPLETO###\\n' +\n  '  {\"nombre\":\"...\",\"zona\":\"...\",\"presupuesto\":\"...\",\"operacion\":\"compra|alquiler\",\"temperatura\":\"caliente|tibio|frio\",\"resumen\":\"...\"}\\n' +\n  '  ###FIN_LEAD###\\n\\n' +\n  '- temperatura: caliente = urgencia o presupuesto claro; tibio = interés sin fecha; frío = curiosidad.\\n' +\n  '- Si falta información para cerrar el lead, seguí la conversación SIN el bloque JSON.';\n\nconst messages = [{ role: 'system', content: systemPrompt }];\n\nfor (const msg of historialJson) {\n  messages.push(msg);\n}\n\nmessages.push({ role: 'user', content: textoUsuario });\n\nreturn [\n  {\n    json: {\n      chat_id: chatId,\n      texto_usuario: textoUsuario,\n      nombre_usuario: nombreUsuario,\n      messages: messages,\n      historial_json: historialJson,\n      turno: turno,\n      row_exists: rowExists,\n      propiedad_seguimiento_actual: propiedadSeguimientoPrev,\n      dias_sin_contacto: diasSinContacto,\n    },\n  },\n];\n"
+        "jsCode": "/**\r\n * Bot Telegram — Construir Prompt\r\n * Incluye stock + políticas de pago (Sheets) + instrucción de presupuestos.\r\n * Tags ###ESTADO_ACTUAL### y ###LEAD_COMPLETO### se mantienen.\r\n */\r\nconst setVars = $('Set Variables').first().json;\r\nconst chatId = setVars.chat_id;\r\nconst textoUsuario = setVars.texto_usuario;\r\nconst nombreUsuario = setVars.nombre_usuario;\r\n\r\nlet historialItems = [];\r\ntry {\r\n  historialItems = $('Leer Historial').all();\r\n} catch (e) {\r\n  historialItems = [];\r\n}\r\n\r\nlet stockItems = [];\r\ntry {\r\n  stockItems = $('Leer Stock Propiedades')\r\n    .all()\r\n    .map((item) => item.json)\r\n    .filter(\r\n      (row) =>\r\n        row &&\r\n        typeof row === 'object' &&\r\n        !(\r\n          typeof row.error === 'string' &&\r\n          /authorization grant|invalid_grant|token is invalid|OAuth2/i.test(\r\n            row.error,\r\n          )\r\n        ) &&\r\n        !(\r\n          Object.keys(row).length === 1 &&\r\n          Object.prototype.hasOwnProperty.call(row, 'error')\r\n        ),\r\n    );\r\n} catch (e) {\r\n  stockItems = [];\r\n}\r\n\r\nlet politicasRows = [];\r\ntry {\r\n  politicasRows = $('Leer Politicas Pago')\r\n    .all()\r\n    .map((item) => item.json)\r\n    .filter(\r\n      (row) =>\r\n        row &&\r\n        typeof row === 'object' &&\r\n        !row.error &&\r\n        (row.clave || row.key || row.tema || row.concepto),\r\n    );\r\n} catch (e) {\r\n  politicasRows = [];\r\n}\r\n\r\nfunction pick(row, keys) {\r\n  for (const k of keys) {\r\n    if (row[k] != null && String(row[k]).trim()) return String(row[k]).trim();\r\n  }\r\n  return '';\r\n}\r\n\r\nfunction rowToStockLine(row) {\r\n  const id = pick(row, ['id', 'ID', 'codigo']);\r\n  const tipo = pick(row, ['tipo', 'Tipo', 'tipologia']);\r\n  const zona = pick(row, ['zona', 'Zona', 'barrio']);\r\n  const precio = pick(row, ['precio', 'Precio', 'precio_usd']);\r\n  const operacion = pick(row, ['operacion', 'Operacion', 'tipo_operacion']);\r\n  const desc = pick(row, ['descripcion', 'Descripcion', 'detalle']);\r\n  const estado = pick(row, ['estado', 'Estado', 'stock']) || 'disponible';\r\n  const honorarios = pick(row, ['honorarios', 'Honorarios', 'comision']);\r\n  const reserva = pick(row, ['reserva', 'Reserva', 'seña', 'sena']);\r\n  const medios = pick(row, ['medios_pago', 'mediosPago', 'forma_pago']);\r\n  const alias = pick(row, ['alias_cbu', 'alias', 'cbu', 'CBU']);\r\n  const requisitos = pick(row, ['requisitos', 'Requisitos']);\r\n\r\n  const bits = [\r\n    tipo,\r\n    zona,\r\n    operacion ? 'op:' + operacion : '',\r\n    precio ? String(precio) : '',\r\n    desc,\r\n  ].filter(Boolean);\r\n  const pagoBits = [\r\n    honorarios ? 'honorarios:' + honorarios : '',\r\n    reserva ? 'reserva:' + reserva : '',\r\n    medios ? 'medios:' + medios : '',\r\n    alias ? 'alias/CBU:' + alias : '',\r\n    requisitos ? 'req:' + requisitos : '',\r\n  ].filter(Boolean);\r\n  const head = id ? '[' + id + '] ' : '';\r\n  return (\r\n    head +\r\n    bits.join(' | ') +\r\n    (pagoBits.length ? ' || PAGO: ' + pagoBits.join(' · ') : '') +\r\n    (estado ? ' (' + estado + ')' : '')\r\n  );\r\n}\r\n\r\nlet stockText = '';\r\nif (stockItems.length) {\r\n  stockText = stockItems\r\n    .map(rowToStockLine)\r\n    .map((l) => '- ' + l)\r\n    .join('\\n');\r\n} else {\r\n  stockText =\r\n    '- (Sin filas en la planilla de stock (propiedades) o no se pudo leer. Ofrece ayuda humana o pedir cargar stock.)';\r\n}\r\n\r\nconst FALLBACK_POLITICAS = [\r\n  'transferencia: Alias/CBU EDITAR_EN_SHEETS (hoja Politicas_Pago, clave transferencia). Titular EDITAR_EN_SHEETS.',\r\n  'efectivo: Se acepta en oficina con comprobante; coordinar visita.',\r\n  'reserva: Seña típica a confirmar según operación; no garantiza hasta acreditación.',\r\n  'cuotas: Solo si la propiedad/operación lo indica en stock; no inventar planes.',\r\n  'honorarios: Ver columna honorarios del inmueble o valor de Politicas_Pago; si falta, decir que lo confirma un asesor.',\r\n  'requisitos_alquiler: DNI, recibos, garantía o seguro caución (confirmar en Sheets).',\r\n  'requisitos_compra: DNI, reservar con seña, escritura con escribano (confirmar en Sheets).',\r\n].join('\\n');\r\n\r\nlet politicasText = '';\r\nif (politicasRows.length) {\r\n  politicasText = politicasRows\r\n    .map((row) => {\r\n      const clave = pick(row, ['clave', 'key', 'tema', 'concepto']);\r\n      const valor = pick(row, ['valor', 'value', 'detalle', 'descripcion']);\r\n      if (!clave) return '';\r\n      return '- ' + clave + ': ' + (valor || '(sin detalle)');\r\n    })\r\n    .filter(Boolean)\r\n    .join('\\n');\r\n}\r\nif (!politicasText) {\r\n  politicasText =\r\n    FALLBACK_POLITICAS.split('\\n')\r\n      .map((l) => '- ' + l)\r\n      .join('\\n') +\r\n    '\\n- (Fuente: placeholders. Cargá la hoja Politicas_Pago en Sheets para valores reales.)';\r\n}\r\n\r\nconst matchRow = historialItems.find(\r\n  (item) => item.json && String(item.json.chat_id) === String(chatId),\r\n);\r\nconst historialItemsFiltered = matchRow ? [matchRow] : [];\r\n\r\nlet historialJson = [];\r\nlet turno = 1;\r\nlet rowExists = false;\r\nlet propiedadSeguimientoPrev = '';\r\nlet ultimaActualizacionStr = '';\r\nlet diasSinContacto = 0;\r\n\r\nif (\r\n  historialItemsFiltered.length > 0 &&\r\n  historialItemsFiltered[0].json &&\r\n  historialItemsFiltered[0].json.chat_id\r\n) {\r\n  const row = historialItemsFiltered[0].json;\r\n  rowExists = true;\r\n  turno = parseInt(row.turno || 0) + 1;\r\n  propiedadSeguimientoPrev = String(row.propiedad_seguimiento || '').trim();\r\n  ultimaActualizacionStr = String(row.ultima_actualizacion || '').trim();\r\n  try {\r\n    historialJson = JSON.parse(row.historial_json || '[]');\r\n  } catch (e) {\r\n    historialJson = [];\r\n  }\r\n  if (ultimaActualizacionStr) {\r\n    const t = new Date(ultimaActualizacionStr);\r\n    if (!isNaN(t.getTime())) {\r\n      diasSinContacto = Math.floor((Date.now() - t.getTime()) / 86400000);\r\n    }\r\n  }\r\n}\r\n\r\nlet refSeg = '';\r\nlet idSeg = '';\r\nif (propiedadSeguimientoPrev) {\r\n  try {\r\n    const o = JSON.parse(propiedadSeguimientoPrev);\r\n    if (o && typeof o === 'object') {\r\n      if (o.referencia) refSeg = String(o.referencia);\r\n      if (o.id) idSeg = String(o.id);\r\n      if (!refSeg && o.id) refSeg = String(o.id);\r\n    }\r\n  } catch (e) {\r\n    refSeg =\r\n      propiedadSeguimientoPrev.length > 120\r\n        ? propiedadSeguimientoPrev.slice(0, 117) + '…'\r\n        : propiedadSeguimientoPrev;\r\n  }\r\n}\r\n\r\nconst contextoCliente =\r\n  '- Días aproximados desde el último registro en CRM (ultima_actualizacion): ' +\r\n  (ultimaActualizacionStr ? diasSinContacto : 'sin_dato') +\r\n  '\\n' +\r\n  '- Propiedad en seguimiento guardada (si existe): ' +\r\n  (refSeg || '(ninguna)') +\r\n  (idSeg ? ' [id=' + idSeg + ']' : '') +\r\n  '\\n' +\r\n  '- Si hay varios días sin contacto y hay propiedad en seguimiento, está bien retomar con una sola frase breve y cordial al inicio; no insistir ni presionar.';\r\n\r\nconst systemPrompt =\r\n  'Sos Matías, asesor inmobiliario de Nodo Propiedades (Argentina). Tu trabajo es solo atender consultas sobre inmuebles: disponibilidad, precios en el stock, zonas, tipología, visitas, presupuestos, medios de pago y derivaciones relacionadas con el catálogo.\\n\\n' +\r\n  'ALCANCE: Si el mensaje no tiene relación con inmuebles o el stock (otros temas, bromas, política, tecnología, vida personal, etc.), respondé en 1–2 frases cordiales y profesionales aclarando que solo podés orientar sobre propiedades y el catálogo, y ofrecé continuar si tiene una consulta inmobiliaria. No des datos ni opiniones fuera de ese marco.\\n\\n' +\r\n  'PROHIBICIÓN ESTRICTA: No uses en ningún caso la palabra \"che\" (ni como saludo ni como interjección). Usá un trato profesional directo: \"Hola\", \"Buenos días\", o el nombre si lo tenés.\\n\\n' +\r\n  'CONTEXTO_CLIENTE (uso interno; no lo repitas literal ni digas que venís de un CRM):\\n' +\r\n  contextoCliente +\r\n  '\\n\\n' +\r\n  'SEGUIMIENTO EN CONVERSACIÓN:\\n' +\r\n  '- Si CONTEXTO_CLIENTE muestra ~3 días o más sin registro previo y había propiedad en seguimiento, podés empezar con UNA sola línea corta retomando el interés; después respondé al mensaje actual.\\n' +\r\n  '- No hagas seguimiento agresivo: una mención suave; si el cliente cambió de tema, priorizá lo que preguntó ahora.\\n\\n' +\r\n  'STOCK (solo ofrecé propiedades de esta lista; si no hay match, ofrecé las más cercanas o pedí más datos):\\n' +\r\n  stockText +\r\n  '\\n\\n' +\r\n  'POLITICAS_PAGO (fuente Sheets Politicas_Pago o placeholders editables; NO inventes CBU/alias reales):\\n' +\r\n  politicasText +\r\n  '\\n\\n' +\r\n  'PRESUPUESTOS Y MEDIOS DE PAGO:\\n' +\r\n  '- Si el cliente pide presupuesto, cotización, \"cómo pago\", reserva, seña, honorarios, o hay propiedad en seguimiento clara, armá un PRESUPUESTO LEGIBLE en chat con este formato (adaptá campos faltantes):\\n' +\r\n  '  *Presupuesto — [id/código]*\\n' +\r\n  '  · Propiedad: tipo · zona\\n' +\r\n  '  · Operación: venta|alquiler\\n' +\r\n  '  · Precio: …\\n' +\r\n  '  · Honorarios: … (si no está en stock/políticas, decí que lo confirma un asesor)\\n' +\r\n  '  · Reserva/seña: …\\n' +\r\n  '  · Medios de pago: transferencia (alias/CBU solo si figura en POLITICAS_PAGO o stock), efectivo, etc.\\n' +\r\n  '  · Requisitos: …\\n' +\r\n  '  · Resumen: 1–2 líneas\\n' +\r\n  '- Si el alias/CBU dice EDITAR_EN_SHEETS, explicá que el dato bancario lo confirma la inmobiliaria y ofrecé derivar; no inventes números.\\n' +\r\n  '- No generes PDF; el formato en chat alcanza.\\n\\n' +\r\n  'ESTILO Y FORMATO:\\n' +\r\n  '- Español claro, profesional y cercano (podés usar voseo si resulta natural).\\n' +\r\n  '- Cuando convenga, ordená la respuesta con viñetas o pasos breves; evitá muros de texto largos en Telegram.\\n' +\r\n  '- Priorizá una intención o una pregunta por mensaje cuando pida información al cliente.\\n' +\r\n  '- No inventes inmuebles fuera del stock; podés parafrasear la lista.\\n\\n' +\r\n  'PROPIEDAD EN SEGUIMIENTO (para recordatorios posteriores):\\n' +\r\n  '- Si el usuario se enfoca claramente en UNA propiedad del stock (detalle, visita, reserva, presupuesto, \"me interesa la de…\"), al FINAL del mensaje agregá exactamente este bloque (una sola línea JSON dentro):\\n\\n' +\r\n  '###PROPIEDAD_SEGUIMIENTO###\\n' +\r\n  '{\"id\":\"id_o_codigo_stock\",\"referencia\":\"breve texto para recordatorios (zona + tipo o codigo)\"}\\n' +\r\n  '###FIN_PROP###\\n\\n' +\r\n  '- Si no hay una propiedad clara o es solo una consulta general, NO incluyas este bloque (deja el seguimiento anterior sin cambios en el sistema).\\n\\n' +\r\n  'ESTADO DE INTERÉS (obligatorio en CADA respuesta):\\n' +\r\n  '- Al FINAL del texto para el cliente (antes de bloques opcionales ###PROPIEDAD_SEGUIMIENTO### / ###LEAD_COMPLETO###), agregá exactamente UNA línea con el tag:\\n' +\r\n  '###ESTADO_ACTUAL:frio###\\n' +\r\n  'o ###ESTADO_ACTUAL:tibio### o ###ESTADO_ACTUAL:caliente###\\n' +\r\n  '- frio = curiosidad / sin datos claros; tibio = interés sin urgencia; caliente = urgencia o datos claros de compra/alquiler.\\n' +\r\n  '- Este tag convive con ###LEAD_COMPLETO###: cuando cierres el lead, incluí AMBOS (estado + bloque lead). No inventes el bloque lead si faltan datos.\\n\\n' +\r\n  'CUANDO TENGAS OPORTUNIDAD DE VENTA (nombre, zona, presupuesto aproximado y compra o alquiler), al FINAL del mensaje (después del bloque de propiedad si lo hubo) pegá exactamente este bloque:\\n\\n' +\r\n  '  ###LEAD_COMPLETO###\\n' +\r\n  '  {\"nombre\":\"...\",\"zona\":\"...\",\"presupuesto\":\"...\",\"operacion\":\"compra|alquiler\",\"temperatura\":\"caliente|tibio|frio\",\"resumen\":\"...\"}\\n' +\r\n  '  ###FIN_LEAD###\\n\\n' +\r\n  '- temperatura: caliente = urgencia o presupuesto claro; tibio = interés sin fecha; frío = curiosidad.\\n' +\r\n  '- Si falta información para cerrar el lead, seguí la conversación SIN el bloque JSON.';\r\n\r\nconst messages = [{ role: 'system', content: systemPrompt }];\r\n\r\nfor (const msg of historialJson) {\r\n  messages.push(msg);\r\n}\r\n\r\nmessages.push({ role: 'user', content: textoUsuario });\r\n\r\nreturn [\r\n  {\r\n    json: {\r\n      chat_id: chatId,\r\n      texto_usuario: textoUsuario,\r\n      nombre_usuario: nombreUsuario,\r\n      messages: messages,\r\n      historial_json: historialJson,\r\n      turno: turno,\r\n      row_exists: rowExists,\r\n      propiedad_seguimiento_actual: propiedadSeguimientoPrev,\r\n      dias_sin_contacto: diasSinContacto,\r\n      politicas_source: politicasRows.length ? 'sheets' : 'fallback',\r\n    },\r\n  },\r\n];\r\n"
       },
       "name": "Construir Prompt",
       "id": "a1b2c3d4-0004-0004-0004-000000000004",
@@ -129,7 +129,7 @@
         "nodeCredentialType": "openAiApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { model: 'llama-3.3-70b-versatile', messages: $json.messages, temperature: 0.7, max_tokens: 500 } }}",
+        "jsonBody": "={{ { model: 'openai/gpt-oss-120b', messages: $json.messages, temperature: 0.7, max_tokens: 1200, reasoning_effort: 'low' } }}",
         "options": {
           "response": {
             "response": {
@@ -155,7 +155,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const groqData = $input.first().json;\nconst promptData = $('Construir Prompt').first().json;\n\nconst respuestaCompleta = groqData.choices[0].message.content;\nconst chatId = promptData.chat_id;\nconst textoUsuario = promptData.texto_usuario;\nconst nombreUsuario = promptData.nombre_usuario;\nlet historialJson = Array.isArray(promptData.historial_json) ? promptData.historial_json : [];\nconst turno = promptData.turno;\nconst rowExists = promptData.row_exists;\nconst propiedadPrevRaw = String(promptData.propiedad_seguimiento_actual || '').trim();\n\nfunction quitarMuletillaChe(texto) {\n  if (!texto || typeof texto !== 'string') return texto;\n  let s = texto.replace(/\\b[Cc]he\\b[,.;:!?]*\\s*/g, '');\n  s = s.replace(/\\s{2,}/g, ' ').trim();\n  return s;\n}\n\nconst leadRegex = /###LEAD_COMPLETO###[\\s\\S]*?({[\\s\\S]*?})[\\s\\S]*?###FIN_LEAD###/;\nconst propRegex = /###PROPIEDAD_SEGUIMIENTO###[\\s\\S]*?({[\\s\\S]*?})[\\s\\S]*?###FIN_PROP###/;\n\nlet working = respuestaCompleta;\n\nconst propMatch = working.match(propRegex);\nlet propiedadSeguimiento = propiedadPrevRaw;\n\nif (propMatch) {\n  try {\n    const obj = JSON.parse(propMatch[1].trim());\n    const idP = obj.id != null ? String(obj.id).trim() : '';\n    const refP = obj.referencia != null ? String(obj.referencia).trim() : '';\n    if (idP || refP) {\n      propiedadSeguimiento = JSON.stringify({ id: idP, referencia: refP });\n    } else {\n      propiedadSeguimiento = propiedadPrevRaw;\n    }\n  } catch (e) {\n    propiedadSeguimiento = propiedadPrevRaw;\n  }\n  working = working.replace(/###PROPIEDAD_SEGUIMIENTO###[\\s\\S]*?###FIN_PROP###/, '').trim();\n}\n\nconst match = working.match(leadRegex);\n\nlet leadCompleto = false;\nlet leadData = {};\nlet respuestaBot = working;\n\nif (match) {\n  try {\n    leadData = JSON.parse(match[1].trim());\n    leadCompleto = true;\n    respuestaBot = working.replace(/###LEAD_COMPLETO###[\\s\\S]*?###FIN_LEAD###/, '').trim();\n  } catch (e) {\n    leadCompleto = false;\n  }\n}\n\nrespuestaBot = quitarMuletillaChe(respuestaBot);\n\nhistorialJson.push({ role: 'user', content: textoUsuario });\nhistorialJson.push({ role: 'assistant', content: respuestaBot });\n\nif (historialJson.length > 40) {\n  historialJson = historialJson.slice(historialJson.length - 40);\n}\n\nconst ahora = new Date().toISOString();\n\nreturn [\n  {\n    json: {\n      chat_id: chatId,\n      nombre_usuario: nombreUsuario,\n      lead_completo: leadCompleto,\n      respuesta_bot:\n        respuestaBot ||\n        'Hola, soy Matías de Nodo Propiedades. ¿En qué puedo ayudarte con propiedades o el catálogo?',\n      historial_json: JSON.stringify(historialJson),\n      turno: turno,\n      row_exists: rowExists,\n      fecha: ahora,\n      nombre: leadData.nombre || nombreUsuario,\n      zona: leadData.zona || '',\n      presupuesto: leadData.presupuesto || '',\n      tipo_operacion: leadData.operacion || '',\n      temperatura: leadData.temperatura || '',\n      resumen: leadData.resumen || '',\n      propiedad_seguimiento: propiedadSeguimiento,\n    },\n  },\n];\n"
+        "jsCode": "const groqData = $input.first().json;\nconst promptData = $('Construir Prompt').first().json;\n\nconst msgGroq = groqData.choices[0].message || {};\nconst respuestaCompleta = (msgGroq.content && String(msgGroq.content).trim()) || String(msgGroq.reasoning || msgGroq.reasoning_content || '').trim();\nconst chatId = promptData.chat_id;\nconst textoUsuario = promptData.texto_usuario;\nconst nombreUsuario = promptData.nombre_usuario;\nlet historialJson = Array.isArray(promptData.historial_json) ? promptData.historial_json : [];\nconst turno = promptData.turno;\nconst rowExists = promptData.row_exists;\nconst propiedadPrevRaw = String(promptData.propiedad_seguimiento_actual || '').trim();\n\nfunction quitarMuletillaChe(texto) {\n  if (!texto || typeof texto !== 'string') return texto;\n  let s = texto.replace(/\\b[Cc]he\\b[,.;:!?]*\\s*/g, '');\n  s = s.replace(/\\s{2,}/g, ' ').trim();\n  return s;\n}\n\nconst estadoRegex = /###ESTADO_ACTUAL:(frio|tibio|caliente)###/i;\nconst leadRegex = /###LEAD_COMPLETO###[\\s\\S]*?({[\\s\\S]*?})[\\s\\S]*?###FIN_LEAD###/;\nconst propRegex = /###PROPIEDAD_SEGUIMIENTO###[\\s\\S]*?({[\\s\\S]*?})[\\s\\S]*?###FIN_PROP###/;\n\nlet working = respuestaCompleta;\n\nconst estadoMatch = working.match(estadoRegex);\nlet estadoActual = '';\nif (estadoMatch) {\n  estadoActual = String(estadoMatch[1] || '').toLowerCase();\n  working = working.replace(/###ESTADO_ACTUAL:(frio|tibio|caliente)###/gi, '').trim();\n}\n\nconst propMatch = working.match(propRegex);\nlet propiedadSeguimiento = propiedadPrevRaw;\n\nif (propMatch) {\n  try {\n    const obj = JSON.parse(propMatch[1].trim());\n    const idP = obj.id != null ? String(obj.id).trim() : '';\n    const refP = obj.referencia != null ? String(obj.referencia).trim() : '';\n    if (idP || refP) {\n      propiedadSeguimiento = JSON.stringify({ id: idP, referencia: refP });\n    } else {\n      propiedadSeguimiento = propiedadPrevRaw;\n    }\n  } catch (e) {\n    propiedadSeguimiento = propiedadPrevRaw;\n  }\n  working = working.replace(/###PROPIEDAD_SEGUIMIENTO###[\\s\\S]*?###FIN_PROP###/, '').trim();\n}\n\nconst match = working.match(leadRegex);\n\nlet leadCompleto = false;\nlet leadData = {};\nlet respuestaBot = working;\n\nif (match) {\n  try {\n    leadData = JSON.parse(match[1].trim());\n    leadCompleto = true;\n    respuestaBot = working.replace(/###LEAD_COMPLETO###[\\s\\S]*?###FIN_LEAD###/, '').trim();\n  } catch (e) {\n    leadCompleto = false;\n  }\n}\n\nrespuestaBot = quitarMuletillaChe(respuestaBot);\n\nlet temperatura = '';\nif (leadCompleto && leadData.temperatura) {\n  temperatura = String(leadData.temperatura).toLowerCase();\n} else if (estadoActual) {\n  temperatura = estadoActual;\n} else if (leadData.temperatura) {\n  temperatura = String(leadData.temperatura).toLowerCase();\n}\nif (!['frio', 'tibio', 'caliente'].includes(temperatura)) {\n  temperatura = estadoActual || 'frio';\n}\n\nhistorialJson.push({ role: 'user', content: textoUsuario });\nhistorialJson.push({ role: 'assistant', content: respuestaBot });\n\nif (historialJson.length > 40) {\n  historialJson = historialJson.slice(historialJson.length - 40);\n}\n\nconst ahora = new Date().toISOString();\n\nreturn [\n  {\n    json: {\n      chat_id: chatId,\n      nombre_usuario: nombreUsuario,\n      lead_completo: leadCompleto,\n      respuesta_bot:\n        respuestaBot ||\n        'Hola, soy Matías de Nodo Propiedades. ¿En qué puedo ayudarte con propiedades o el catálogo?',\n      historial_json: JSON.stringify(historialJson),\n      turno: turno,\n      row_exists: rowExists,\n      fecha: ahora,\n      nombre: leadData.nombre || nombreUsuario,\n      zona: leadData.zona || '',\n      presupuesto: leadData.presupuesto || '',\n      tipo_operacion: leadData.operacion || '',\n      temperatura: temperatura,\n      resumen: leadData.resumen || '',\n      texto_usuario: textoUsuario,\n      propiedad_seguimiento: propiedadSeguimiento,\n    },\n  },\n];\n"
       },
       "name": "Parsear Respuesta",
       "id": "a1b2c3d4-0006-0006-0006-000000000006",
@@ -243,7 +243,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "WBM00QjQj4q8xjLF",
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
           "name": "Cuenta de Google Sheets"
         }
       },
@@ -276,7 +276,8 @@
             "nombre": "={{ $json.nombre_usuario }}",
             "historial_json": "={{ $json.historial_json }}",
             "turno": "={{ $json.turno }}",
-            "propiedad_seguimiento": "={{ $json.propiedad_seguimiento }}"
+            "propiedad_seguimiento": "={{ $json.propiedad_seguimiento }}",
+            "temperatura": "={{ $json.temperatura }}"
           }
         },
         "options": {}
@@ -291,7 +292,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "WBM00QjQj4q8xjLF",
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
           "name": "Cuenta de Google Sheets"
         }
       },
@@ -318,7 +319,7 @@
       "webhookId": "a52fd1c0-4a56-4cb5-9d42-98f1ff949ae1",
       "credentials": {
         "telegramApi": {
-          "id": "y7Csd64HC2GLm8WY",
+          "id": "__SET_TELEGRAM_CREDENTIAL_ID__",
           "name": "Telegram Bot Inmobiliaria"
         }
       }
@@ -360,7 +361,7 @@
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "WBM00QjQj4q8xjLF",
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
           "name": "Cuenta de Google Sheets"
         }
       },
@@ -377,7 +378,8 @@
         304
       ],
       "parameters": {
-        "mode": "append"
+        "mode": "append",
+        "numberInputs": 3
       }
     },
     {
@@ -410,13 +412,15 @@
             "temperature": "={{ $('Parsear Respuesta').first().json.temperatura }}",
             "tipo_operacion": "={{ $('Parsear Respuesta').first().json.tipo_operacion }}",
             "ultima_actualizacion": "={{ $now.toISO() }}",
-            "zona": "={{ $('Parsear Respuesta').first().json.zona }}"
+            "zona": "={{ $('Parsear Respuesta').first().json.zona }}",
+            "lead_completo": "={{ String($('Parsear Respuesta').first().json.lead_completo ? 'si' : 'no') }}",
+            "propiedad_seguimiento": "={{ $('Parsear Respuesta').first().json.propiedad_seguimiento || '' }}"
           }
         },
         "documentId": {
           "__rl": true,
           "mode": "id",
-          "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
+          "value": "__SET_GOOGLE_SHEET_ID__"
         },
         "operation": "appendOrUpdate",
         "options": {},
@@ -429,7 +433,7 @@
       "onError": "continueRegularOutput",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "WBM00QjQj4q8xjLF",
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
           "name": "Cuenta de Google Sheets"
         }
       }
@@ -494,7 +498,7 @@
         "sendBody": true,
         "sendHeaders": true,
         "specifyBody": "json",
-        "url": "https://formsubmit.co/ajax/adrianfredes12@gmail.com"
+        "url": "https://formsubmit.co/ajax/__SET_NOTIFY_EMAIL__"
       },
       "onError": "continueRegularOutput"
     },
@@ -553,7 +557,7 @@
         "documentId": {
           "__rl": true,
           "mode": "id",
-          "value": "1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ"
+          "value": "__SET_GOOGLE_SHEET_ID__"
         },
         "operation": "append",
         "options": {
@@ -568,8 +572,104 @@
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "WBM00QjQj4q8xjLF",
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
           "name": "Cuenta de Google Sheets"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "bot-leer-politicas-pago",
+      "name": "Leer Politicas Pago",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        576,
+        520
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1sAXgJDFkFbiLPDdqw4vYyCeVC4heWAJ3n92jlrIW-SU"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Politicas_Pago"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "range": "A:ZZ",
+              "rangeDefinition": "specifyRangeA1"
+            }
+          }
+        },
+        "resource": "sheet",
+        "operation": "read",
+        "range": "'Politicas_Pago'!A:ZZ"
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Cuenta de Google Sheets"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "emit-panel-realtime",
+      "name": "Emit Panel Realtime",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1792,
+        520
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/panel-realtime-emit",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'chat.message', payload: { chatId: String(($('Parsear Respuesta').first().json.chat_id || $('Set Variables').first().json.chat_id || '')), mensajeCliente: String(($('Set Variables').first().json.texto_usuario || '')), respuestaBot: String(($('Parsear Respuesta').first().json.respuesta_bot || '')), source: 'telegram' } }) }}",
+        "options": {
+          "timeout": 3000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "emit-lead-updated",
+      "name": "Emit Lead Updated",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2260,
+        280
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/panel-realtime-emit",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'lead.updated', payload: { chatId: String($json.chat_id || $('Parsear Respuesta').first().json.chat_id || ''), temperatura: String($json.temperature || $json.temperatura || $('Parsear Respuesta').first().json.temperatura || ''), source: 'telegram-sync' } }) }}",
+        "options": {
+          "timeout": 3000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
       "onError": "continueRegularOutput"
@@ -616,6 +716,11 @@
             "node": "Guardar Lead",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "IF Temperatura Caliente",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -630,6 +735,11 @@
           },
           {
             "node": "Leer Historial",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Leer Politicas Pago",
             "type": "main",
             "index": 0
           }
@@ -691,26 +801,30 @@
             "node": "Registrar Consulta Telegram",
             "type": "main",
             "index": 0
-          }
-        ]
-      ]
-    },
-    "Guardar Lead": {
-      "main": [
-        [
+          },
           {
             "node": "Sync Leads_Bot",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Emit Panel Realtime",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
+    "Guardar Lead": {
+      "main": [
+        []
+      ]
+    },
     "Sync Leads_Bot": {
       "main": [
         [
           {
-            "node": "IF Temperatura Caliente",
+            "node": "Emit Lead Updated",
             "type": "main",
             "index": 0
           }
@@ -732,6 +846,17 @@
           }
         ]
       ]
+    },
+    "Leer Politicas Pago": {
+      "main": [
+        [
+          {
+            "node": "Esperar Lecturas",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -740,10 +865,5 @@
     "availableInMCP": false,
     "binaryMode": "separate"
   },
-  "staticData": null,
-  "meta": null,
-  "pinData": {},
-  "versionId": "83091469-804f-4d42-b86f-1dc2f4ee8d67",
-  "id": "8JoSfkcn3pE1f0av",
-  "active": true
+  "staticData": null
 }

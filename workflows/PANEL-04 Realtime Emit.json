@@ -1,0 +1,84 @@
+{
+  "name": "PANEL-04 Realtime Emit",
+  "nodes": [
+    {
+      "id": "panel04-webhook",
+      "name": "Webhook Realtime Emit",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "webhookId": "panel-realtime-emit",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "panel-realtime-emit",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "panel04-prep",
+      "name": "Normalizar Evento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300],
+      "parameters": {
+        "jsCode": "const root = $input.first().json;\nconst body = root.body && typeof root.body === 'object' ? root.body : root;\nconst type = String(body.type || body.event || 'leads.refresh').trim();\nconst payload =\n  body.payload !== undefined\n    ? body.payload\n    : (() => {\n        const { type: _t, event: _e, payload: _p, ...rest } = body;\n        return rest;\n      })();\nreturn [{ json: { type, payload, at: new Date().toISOString() } }];"
+      }
+    },
+    {
+      "id": "panel04-http",
+      "name": "Forward WS Bridge",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3099/emit",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: $json.type, payload: $json.payload }) }}",
+        "options": {
+          "timeout": 3000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "panel04-ok",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [920, 300],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, type: $('Normalizar Evento').first().json.type, bridge: $json }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "*" }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Realtime Emit": {
+      "main": [[{ "node": "Normalizar Evento", "type": "main", "index": 0 }]]
+    },
+    "Normalizar Evento": {
+      "main": [[{ "node": "Forward WS Bridge", "type": "main", "index": 0 }]]
+    },
+    "Forward WS Bridge": {
+      "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
