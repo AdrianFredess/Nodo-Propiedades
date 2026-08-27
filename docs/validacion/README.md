@@ -10,7 +10,8 @@ Ampliar la muestra del capítulo 5 **sin pseudorreplicación**, registrando cada
 | `guion_conversaciones_perfil.csv` | **30 mensajes distintos**: 10 caliente + 10 tibio + 10 frío (redacciones diferentes) |
 | `resultados_F3_mitigado_crudo.csv` | **20 ejecuciones F3** sobre el parser mitigado (puerto Python del `Parsear Respuesta` de n8n). Cada fila = un input malformado |
 | `resultados_clasificacion_PENDIENTE.csv` | Plantilla de 30 filas del guion, columnas de result vacías. Completar con bot real o Groq |
-| `resultados_clasificacion_crudo.csv` | (Se genera solo si `GROQ_API_KEY` está en el entorno) |
+| `resultados_clasificacion_crudo.csv` | Campaña ampliada: 30 ejecuciones reales (Groq API / bot) |
+| `comparacion_simple01_vs_ia_crudo.csv` | Comparación SIMPLE-01 (keywords) vs clasificador IA sobre las mismas 30 filas del guion |
 
 ## Cómo ejecutar la clasificación “contra el bot real”
 
