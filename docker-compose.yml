@@ -25,6 +25,12 @@ services:
       - N8N_BASIC_AUTH_PASSWORD=
       - GENERIC_TIMEZONE=America/Argentina/Buenos_Aires
       - TZ=America/Argentina/Buenos_Aires
+      # Token opcional para webhooks del panel (X-Panel-Token). Vacío = auth off (dev).
+      - PANEL_API_TOKEN=${PANEL_API_TOKEN:-}
+      # demo = tiempos cortos (tesis); prod = ~5 días + ~10 días
+      - SEGUIMIENTO_MODE=${SEGUIMIENTO_MODE:-demo}
+      # Permite leer PANEL_API_TOKEN / SEGUIMIENTO_MODE desde nodos Code ($env.*)
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
     volumes:
       # Carpeta del HOST con database.sqlite y config (no uses N8N_USER_FOLDER aquí: en CLI es el *padre* de .n8n)
       - ${N8N_HOST_DATA_DIR:?Definir N8N_HOST_DATA_DIR en .env}:/home/node/.n8n

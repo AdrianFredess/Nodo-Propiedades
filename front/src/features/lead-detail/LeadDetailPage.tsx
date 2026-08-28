@@ -1,6 +1,11 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { emitRealtime, sendTelegramBroadcast } from '../../shared/api/client';
+import {
+  emitRealtime,
+  sendTelegramBroadcast,
+  sendWhatsAppMessage,
+  updateLeadSeguimiento,
+} from '../../shared/api/client';
 import {
   CANAL_LABEL,
   PIPELINE_COLUMNA_LABEL,
@@ -9,7 +14,7 @@ import {
 } from '../../shared/lib/labels';
 import { formatDateTime, relativeTimeFrom } from '../../shared/lib/time';
 import type { AppendChatMessageInput } from '../../shared/hooks/useLeads';
-import type { Lead } from '../../shared/types/lead';
+import type { EstadoSeguimiento, Lead } from '../../shared/types/lead';
 import { ChatMessages } from './ChatMessages';
 
 interface LeadDetailPageProps {
@@ -18,6 +23,7 @@ interface LeadDetailPageProps {
   highlightKeys?: Set<string>;
   onClearHighlight?: () => void;
   appendChatMessage?: (input: AppendChatMessageInput) => boolean;
+  onLeadPatch?: (leadId: string, patch: Partial<Lead>) => void;
 }
 
 export function LeadDetailPage({
@@ -26,9 +32,11 @@ export function LeadDetailPage({
   highlightKeys,
   onClearHighlight,
   appendChatMessage,
+  onLeadPatch,
 }: LeadDetailPageProps) {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [updatingSeg, setUpdatingSeg] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
 
@@ -58,6 +66,9 @@ export function LeadDetailPage({
 
   const canSendTelegram =
     lead.canalOrigen === 'telegram' && Boolean(lead.chatId);
+  const canSendWhatsApp =
+    lead.canalOrigen === 'whatsapp' && Boolean(lead.chatId);
+  const canSend = canSendTelegram || canSendWhatsApp;
 
   async function handleSend() {
     const body = text.trim();
@@ -65,21 +76,32 @@ export function LeadDetailPage({
       setError('Escribí un mensaje antes de enviar.');
       return;
     }
-    if (!canSendTelegram || !lead) {
-      setError('Solo se pueden enviar mensajes a contactos de Telegram.');
+    if (!canSend || !lead) {
+      setError('Este canal no admite envío manual desde el panel.');
       return;
     }
     setSending(true);
     setError(null);
     setOkMsg(null);
     try {
-      const result = await sendTelegramBroadcast({
-        chat_ids: [lead.chatId],
-        text: body,
-      });
-      if (!result.ok) {
-        setError(result.error ?? 'No se pudo enviar el mensaje.');
-        return;
+      if (canSendTelegram) {
+        const result = await sendTelegramBroadcast({
+          chat_ids: [lead.chatId],
+          text: body,
+        });
+        if (!result.ok) {
+          setError(result.error ?? 'No se pudo enviar el mensaje.');
+          return;
+        }
+      } else {
+        const result = await sendWhatsAppMessage({
+          chatId: lead.chatId,
+          text: body,
+        });
+        if (!result.ok) {
+          setError(result.error ?? 'No se pudo enviar por WhatsApp.');
+          return;
+        }
       }
       appendChatMessage?.({
         leadId: lead.id,
@@ -93,15 +115,53 @@ export function LeadDetailPage({
         leadId: lead.id,
         text: body,
         side: 'bot',
-        source: 'panel',
+        source: canSendTelegram ? 'panel' : 'panel-wa',
       });
-      setOkMsg('Enviado');
+      setOkMsg(canSendTelegram ? 'Enviado por Telegram' : 'Enviado por WhatsApp');
       setText('');
       window.setTimeout(() => setOkMsg(null), 2200);
     } catch {
       setError('Error de conexión al enviar.');
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleSeguimiento(
+    estadoSeguimiento: EstadoSeguimiento,
+    status?: string,
+  ) {
+    if (!lead?.chatId) return;
+    setUpdatingSeg(true);
+    setError(null);
+    setOkMsg(null);
+    try {
+      const result = await updateLeadSeguimiento({
+        chatId: lead.chatId,
+        estadoSeguimiento,
+        status,
+      });
+      if (!result.ok) {
+        setError(result.error ?? 'No se pudo actualizar el seguimiento.');
+        return;
+      }
+      onLeadPatch?.(lead.id, {
+        estadoSeguimiento,
+        ...(status ? { status } : {}),
+      });
+      void emitRealtime('lead.updated', {
+        chatId: lead.chatId,
+        leadId: lead.id,
+        estadoSeguimiento,
+        status,
+        source: 'panel',
+      });
+      setOkMsg('Seguimiento actualizado');
+      window.setTimeout(() => setOkMsg(null), 2200);
+    } catch {
+      setError('Error de conexión al actualizar seguimiento.');
+    } finally {
+      setUpdatingSeg(false);
     }
   }
 
@@ -175,15 +235,38 @@ export function LeadDetailPage({
 
           <div className="detail-send detail-send--compact">
             <h2 className="detail-section-title detail-section-title--spaced">
+              Seguimiento automático
+            </h2>
+            <p className="detail-send__hint" style={{ marginBottom: '0.6rem' }}>
+              Si el cliente responde, el bot lo detecta solo y corta los
+              recordatorios. Este botón es solo para frenarlos vos a mano.
+            </p>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              disabled={updatingSeg}
+              title="Cortar el seguimiento automático (no molestar más)"
+              onClick={() => void handleSeguimiento('cerrado', 'cerrado')}
+            >
+              Pausar recordatorios
+            </button>
+          </div>
+
+          <div className="detail-send detail-send--compact">
+            <h2 className="detail-section-title detail-section-title--spaced">
               Enviar
             </h2>
-            {canSendTelegram ? (
+            {canSend ? (
               <>
                 <textarea
                   className="detail-send__textarea"
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  placeholder="Mensaje Telegram…"
+                  placeholder={
+                    canSendTelegram
+                      ? 'Mensaje Telegram…'
+                      : 'Mensaje WhatsApp…'
+                  }
                   aria-label="Mensaje a este lead"
                   rows={2}
                   onKeyDown={(e) => {
@@ -199,12 +282,16 @@ export function LeadDetailPage({
                   disabled={sending}
                   onClick={() => void handleSend()}
                 >
-                  {sending ? 'Enviando…' : 'Enviar Telegram'}
+                  {sending
+                    ? 'Enviando…'
+                    : canSendTelegram
+                      ? 'Enviar Telegram'
+                      : 'Enviar WhatsApp'}
                 </button>
               </>
             ) : (
               <p className="detail-send__hint">
-                Envío manual solo para Telegram.
+                Envío manual no disponible para este canal.
               </p>
             )}
           </div>

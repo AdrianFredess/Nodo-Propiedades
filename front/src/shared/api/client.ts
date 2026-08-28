@@ -40,6 +40,12 @@ export const config = {
     'VITE_STOCK_UPDATE_URL',
     'http://localhost:5678/webhook/panel-stock-update',
   ),
+  leadActionsUrl: envUrl(
+    'VITE_LEAD_ACTIONS_URL',
+    'http://localhost:5678/webhook/panel-lead-actions',
+  ),
+  /** Header X-Panel-Token — vacío = no enviar (auth off en n8n si PANEL_API_TOKEN vacío) */
+  panelApiToken: envUrl('VITE_PANEL_API_TOKEN', ''),
   /** ws://localhost:3099/ws — vacío desactiva realtime */
   wsUrl: envUrl('VITE_WS_URL', 'ws://127.0.0.1:3099/ws'),
   /** http://127.0.0.1:3099/emit — el panel puede emitir tras enviar */
@@ -48,7 +54,35 @@ export const config = {
   /** Polling suave mientras el WS está conectado (ahorra cuota Sheets). */
   pollIntervalWsMs:
     Number(import.meta.env.VITE_POLL_INTERVAL_WS_MS) || 120_000,
+  /** off | edge | browser | elevenlabs — voz del asistente (edge = argentino real) */
+  ttsMode: envUrl('VITE_TTS_MODE', 'edge') as
+    | 'off'
+    | 'browser'
+    | 'edge'
+    | 'elevenlabs',
+  /** POST /tts del ws-bridge — voz neural es-AR-TomasNeural */
+  ttsUrl: envUrl('VITE_TTS_URL', 'http://127.0.0.1:3099/tts'),
+  elevenLabsApiKey: envUrl('VITE_ELEVENLABS_API_KEY', ''),
+  elevenLabsVoiceId: envUrl('VITE_ELEVENLABS_VOICE_ID', ''),
+  assistantApiUrl: envUrl(
+    'VITE_ASSISTANT_API_URL',
+    'http://localhost:5678/webhook/panel-assistant',
+  ),
+  assistantHumanize: envFlag('VITE_ASSISTANT_HUMANIZE', true),
+  /** Subcadena para forzar voz del navegador (ej: pablo, es-ar) */
+  ttsVoiceHint: envUrl('VITE_TTS_VOICE_HINT', 'pablo'),
 };
+
+function panelHeaders(extra?: Record<string, string>): HeadersInit {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    ...(extra ?? {}),
+  };
+  if (config.panelApiToken) {
+    headers['X-Panel-Token'] = config.panelApiToken;
+  }
+  return headers;
+}
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === 'object'
@@ -58,6 +92,58 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function mapHistorial(raw: unknown): HistorialMensaje[] {
   if (!Array.isArray(raw)) return [];
+
+  // Formato rol/content (historial_json canónico) → pares cliente/bot
+  const looksRoleBased = raw.some((item) => {
+    const r = asRecord(item);
+    return Boolean(r.role || r.content);
+  });
+  if (looksRoleBased) {
+    const paired: HistorialMensaje[] = [];
+    let pendingUser = '';
+    let pendingFecha = '';
+    let idx = 0;
+    for (const item of raw) {
+      const r = asRecord(item);
+      const role = String(r.role ?? '').toLowerCase();
+      const content = String(r.content ?? r.mensaje ?? '').trim();
+      const fecha = String(
+        r.fecha ?? r.ts ?? r.timestamp ?? r.date ?? r.created_at ?? '',
+      );
+      if (!content) continue;
+      if (role === 'user' || role === 'cliente') {
+        if (pendingUser) {
+          paired.push({
+            id: String(r.id ?? `h-${idx++}`),
+            fecha: pendingFecha,
+            mensajeCliente: pendingUser,
+            respuestaBot: '',
+          });
+        }
+        pendingUser = content;
+        pendingFecha = fecha;
+      } else if (role === 'assistant' || role === 'bot') {
+        paired.push({
+          id: String(r.id ?? `h-${idx++}`),
+          fecha: fecha || pendingFecha,
+          mensajeCliente: pendingUser,
+          respuestaBot: content,
+        });
+        pendingUser = '';
+        pendingFecha = '';
+      }
+    }
+    if (pendingUser) {
+      paired.push({
+        id: `h-${idx++}`,
+        fecha: pendingFecha,
+        mensajeCliente: pendingUser,
+        respuestaBot: '',
+      });
+    }
+    return paired;
+  }
+
   return raw.map((item, index) => {
     const r = asRecord(item);
     return {
@@ -212,7 +298,7 @@ export async function fetchLeads(): Promise<LeadsPayload> {
 
   const response = await fetch(config.leadsApiUrl, {
     method: 'GET',
-    headers: { Accept: 'application/json' },
+    headers: panelHeaders(),
   });
 
   if (!response.ok) {
@@ -251,10 +337,7 @@ export async function updateStockCell(
 
   const response = await fetch(config.stockUpdateUrl, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
+    headers: panelHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),
   });
 
@@ -318,10 +401,7 @@ export async function sendTelegramBroadcast(
 
   const response = await fetch(config.envioMasivoUrl, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
+    headers: panelHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),
   });
 
@@ -346,5 +426,90 @@ export async function sendTelegramBroadcast(
     results: Array.isArray(parsed.results)
       ? (parsed.results as EnvioMasivoResponse['results'])
       : [],
+  };
+}
+
+export interface LeadActionResponse {
+  ok: boolean;
+  error?: string;
+  action?: string;
+  chat_id?: string;
+  estado_seguimiento?: string | null;
+  status?: string | null;
+}
+
+export async function sendWhatsAppMessage(input: {
+  chatId: string;
+  text: string;
+}): Promise<LeadActionResponse> {
+  if (config.useMock) {
+    await new Promise((r) => setTimeout(r, 400));
+    return { ok: true, action: 'send_whatsapp', chat_id: input.chatId };
+  }
+  const response = await fetch(config.leadActionsUrl, {
+    method: 'POST',
+    headers: panelHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({
+      action: 'send_whatsapp',
+      chat_id: input.chatId,
+      text: input.text,
+    }),
+  });
+  const data: unknown = await response.json().catch(() => ({}));
+  const parsed = asRecord(data);
+  if (!response.ok || parsed.ok === false) {
+    return {
+      ok: false,
+      error: String(parsed.error ?? `HTTP ${response.status}`),
+    };
+  }
+  return {
+    ok: true,
+    action: 'send_whatsapp',
+    chat_id: parsed.chat_id ? String(parsed.chat_id) : input.chatId,
+  };
+}
+
+export async function updateLeadSeguimiento(input: {
+  chatId: string;
+  estadoSeguimiento?: string;
+  status?: string;
+}): Promise<LeadActionResponse> {
+  if (config.useMock) {
+    await new Promise((r) => setTimeout(r, 250));
+    return {
+      ok: true,
+      action: 'update_seguimiento',
+      chat_id: input.chatId,
+      estado_seguimiento: input.estadoSeguimiento ?? null,
+      status: input.status ?? null,
+    };
+  }
+  const response = await fetch(config.leadActionsUrl, {
+    method: 'POST',
+    headers: panelHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({
+      action: 'update_seguimiento',
+      chat_id: input.chatId,
+      estado_seguimiento: input.estadoSeguimiento,
+      status: input.status,
+    }),
+  });
+  const data: unknown = await response.json().catch(() => ({}));
+  const parsed = asRecord(data);
+  if (!response.ok || parsed.ok === false) {
+    return {
+      ok: false,
+      error: String(parsed.error ?? `HTTP ${response.status}`),
+    };
+  }
+  return {
+    ok: true,
+    action: 'update_seguimiento',
+    chat_id: parsed.chat_id ? String(parsed.chat_id) : input.chatId,
+    estado_seguimiento: parsed.estado_seguimiento
+      ? String(parsed.estado_seguimiento)
+      : input.estadoSeguimiento ?? null,
+    status: parsed.status ? String(parsed.status) : input.status ?? null,
   };
 }

@@ -33,12 +33,14 @@ function LeadDetailRoute({
   getHighlightKeys,
   clearHighlight,
   appendChatMessage,
+  patchLead,
 }: {
   findLead: ReturnType<typeof useLeads>['findLead'];
   loading: boolean;
   getHighlightKeys: (leadId: string) => Set<string>;
   clearHighlight: (leadId: string) => void;
   appendChatMessage: ReturnType<typeof useLeads>['appendChatMessage'];
+  patchLead: ReturnType<typeof useLeads>['patchLead'];
 }) {
   const { leadId } = useParams();
   const decoded = leadId ? decodeURIComponent(leadId) : '';
@@ -50,6 +52,7 @@ function LeadDetailRoute({
       highlightKeys={lead ? getHighlightKeys(lead.id) : undefined}
       onClearHighlight={lead ? () => clearHighlight(lead.id) : undefined}
       appendChatMessage={appendChatMessage}
+      onLeadPatch={patchLead}
     />
   );
 }
@@ -85,8 +88,10 @@ export default function App() {
     lastUpdated,
     findLead,
     patchPropiedad,
+    patchLead,
     appendChatMessage,
     realtimeStatus,
+    refresh,
   } = useLeads();
 
   const { toasts, dismiss, markAllRead, unreadCount } =
@@ -113,11 +118,13 @@ export default function App() {
           <AppShell
             payload={payload}
             lastUpdated={lastUpdated}
+            leads={leads}
             tempToasts={toasts}
             tempUnread={unreadCount}
             onDismissTemp={dismiss}
             onMarkTempRead={markAllRead}
             realtimeStatus={realtimeStatus}
+            onRefreshLeads={refresh}
           />
         }
       >
@@ -179,6 +186,7 @@ export default function App() {
               getHighlightKeys={getHighlightKeys}
               clearHighlight={clearHighlight}
               appendChatMessage={appendChatMessage}
+              patchLead={patchLead}
             />
           }
         />

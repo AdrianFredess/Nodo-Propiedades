@@ -1,19 +1,22 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { VoiceAssistant } from '../../features/assistant/VoiceAssistant';
 import { TempNotifications } from '../../features/notifications/TempNotifications';
 import { config } from '../../shared/api/client';
 import type { RealtimeStatus } from '../../shared/hooks/useRealtime';
 import type { TempToast } from '../../shared/hooks/useTempNotifications';
-import type { LeadsPayload } from '../../shared/types/lead';
+import type { Lead, LeadsPayload } from '../../shared/types/lead';
 import { formatDateTime } from '../../shared/lib/time';
 
 interface AppShellProps {
   payload: LeadsPayload | null;
   lastUpdated: string | null;
+  leads: Lead[];
   tempToasts?: TempToast[];
   tempUnread?: number;
   onDismissTemp?: (id: string) => void;
   onMarkTempRead?: () => void;
   realtimeStatus?: RealtimeStatus;
+  onRefreshLeads?: () => Promise<Lead[]>;
 }
 
 const links = [
@@ -32,11 +35,13 @@ function realtimeText(status: RealtimeStatus | undefined): string {
 export function AppShell({
   payload,
   lastUpdated,
+  leads,
   tempToasts = [],
   tempUnread = 0,
   onDismissTemp,
   onMarkTempRead,
   realtimeStatus = 'off',
+  onRefreshLeads,
 }: AppShellProps) {
   const location = useLocation();
   const source = payload?.source ?? (config.useMock ? 'mock' : 'live');
@@ -104,6 +109,11 @@ export function AppShell({
         <div className="shell__content">
           <Outlet />
         </div>
+        <VoiceAssistant
+          leads={leads}
+          realtimeStatus={realtimeStatus}
+          onRefreshLeads={onRefreshLeads}
+        />
       </main>
     </div>
   );

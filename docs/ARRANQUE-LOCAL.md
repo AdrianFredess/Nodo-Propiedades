@@ -1,4 +1,4 @@
-﻿# Arranque local — Nodo Propiedades
+# Arranque local — Nodo Propiedades
 
 ## Nube local (3 pasos)
 

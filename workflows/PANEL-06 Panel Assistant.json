@@ -1,0 +1,104 @@
+{
+  "name": "PANEL-06 Panel Assistant",
+  "nodes": [
+    {
+      "id": "panel06-webhook",
+      "name": "Webhook Assistant",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "webhookId": "panel-assistant",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "panel-assistant",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "panel06-prep",
+      "name": "Armar Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300],
+      "parameters": {
+        "jsCode": "const root = $input.first().json;\nconst body = root.body && typeof root.body === 'object' ? root.body : root;\n\nconst userCommand = String(body.userCommand || '').trim();\nconst draftSpeech = String(body.draftSpeech || '').trim();\nconst intent = String(body.intent || 'unknown').trim();\nconst traits = Array.isArray(body.traits) ? body.traits.map(String) : [];\nconst styleSamples = Array.isArray(body.styleSamples) ? body.styleSamples.map(String).slice(0, 4) : [];\nconst systemPrompt = String(body.systemPrompt || '').trim();\n\nif (!draftSpeech) {\n  return [{ json: { error: 'missing_draft', speech: '' } }];\n}\n\nconst samplesBlock = styleSamples.length\n  ? '\\nMUESTRAS DE TU FORMA DE HABLAR (solo estilo, no copies el tema):\\n' +\n    styleSamples.map((s, i) => `${i + 1}. \"${s}\"`).join('\\n')\n  : '';\n\nconst traitsBlock = traits.length\n  ? '\\nREGLAS DE ESTILO:\\n- ' + traits.join('\\n- ')\n  : '';\n\nconst system =\n  (systemPrompt ||\n    'Sos el asistente de voz de Adrian en Nodo Propiedades (Mendoza). Hablá como argentino criollo educado, cálido y profesional.') +\n  traitsBlock +\n  samplesBlock +\n  '\\n\\nRespondé SOLO con JSON válido: {\"speech\":\"texto para decir en voz alta\"}.\\n' +\n  'Mantené TODOS los datos del borrador (nombres, números, zonas). 1–2 oraciones. Directo. Sin markdown.';\n\nconst user = [\n  `Comando del usuario: ${userCommand || '(sin comando)'}`,\n  `Intención detectada: ${intent}`,\n  `Borrador factual (reescribí con tu estilo, sin cambiar datos):\\n${draftSpeech}`,\n].join('\\n');\n\nreturn [\n  {\n    json: {\n      messages: [\n        { role: 'system', content: system },\n        { role: 'user', content: user },\n      ],\n      draftSpeech,\n    },\n  },\n];"
+      }
+    },
+    {
+      "id": "panel06-groq",
+      "name": "HTTP Groq",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "__SET_GROQ_CREDENTIAL_ID__",
+          "name": "Groq API"
+        }
+      },
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: 'openai/gpt-oss-120b', messages: $json.messages, temperature: 0.35, max_tokens: 150, reasoning_effort: 'low' } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "panel06-parse",
+      "name": "Parsear Speech",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 300],
+      "parameters": {
+        "jsCode": "const groq = $input.first().json;\nconst prep = $('Armar Prompt').first().json;\nconst draft = String(prep.draftSpeech || '').trim();\n\nconst msg = groq.choices?.[0]?.message || {};\nlet raw =\n  (msg.content && String(msg.content).trim()) ||\n  String(msg.reasoning || msg.reasoning_content || '').trim();\n\nfunction stripChe(t) {\n  return String(t || '')\n    .replace(/\\b[Cc]he\\b[,.;:!?]*\\s*/g, '')\n    .replace(/\\s{2,}/g, ' ')\n    .trim();\n}\n\nlet speech = draft;\ntry {\n  const jsonMatch = raw.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    if (parsed.speech) speech = String(parsed.speech).trim();\n  } else if (raw) {\n    speech = raw.replace(/^[\"']|[\"']$/g, '').trim();\n  }\n} catch (e) {\n  speech = raw || draft;\n}\n\nspeech = stripChe(speech);\nif (!speech) speech = draft;\n\nreturn [{ json: { speech, ok: true } }];"
+      }
+    },
+    {
+      "id": "panel06-respond",
+      "name": "Responder JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1160, 300],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "*" },
+              { "name": "Access-Control-Allow-Headers", "value": "Content-Type, X-Panel-Token" }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Assistant": {
+      "main": [[{ "node": "Armar Prompt", "type": "main", "index": 0 }]]
+    },
+    "Armar Prompt": {
+      "main": [[{ "node": "HTTP Groq", "type": "main", "index": 0 }]]
+    },
+    "HTTP Groq": {
+      "main": [[{ "node": "Parsear Speech", "type": "main", "index": 0 }]]
+    },
+    "Parsear Speech": {
+      "main": [[{ "node": "Responder JSON", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

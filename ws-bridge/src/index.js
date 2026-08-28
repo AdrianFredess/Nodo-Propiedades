@@ -8,6 +8,7 @@
  */
 import http from 'node:http';
 import { WebSocketServer } from 'ws';
+import { synthesizeArgentine, ttsInfo } from './tts.js';
 
 const PORT = Number(process.env.WS_BRIDGE_PORT || 3099);
 const HOST = process.env.WS_BRIDGE_HOST || '0.0.0.0';
@@ -84,7 +85,44 @@ const server = http.createServer(async (req, res) => {
       clients: clients.size,
       port: PORT,
       auth: Boolean(TOKEN),
+      tts: ttsInfo(),
     });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/tts') {
+    let body;
+    try {
+      body = await readBody(req);
+    } catch {
+      json(res, 400, { ok: false, error: 'json_invalido' });
+      return;
+    }
+    const text = String(body.text || '').trim();
+    if (!text) {
+      json(res, 400, { ok: false, error: 'text_requerido' });
+      return;
+    }
+    try {
+      const audio = await synthesizeArgentine(text, {
+        voice: body.voice,
+        rate: typeof body.rate === 'number' ? body.rate : undefined,
+        pitch: typeof body.pitch === 'string' ? body.pitch : undefined,
+      });
+      res.writeHead(200, {
+        'Content-Type': 'audio/webm',
+        'Content-Length': audio.length,
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Bridge-Token',
+        'Cache-Control': 'no-store',
+      });
+      res.end(audio);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'tts_error';
+      console.error('[tts]', msg);
+      json(res, 500, { ok: false, error: msg });
+    }
     return;
   }
 
@@ -152,4 +190,5 @@ server.listen(PORT, HOST, () => {
   console.log(`[ws-bridge] http://${HOST}:${PORT}/health`);
   console.log(`[ws-bridge] ws://${HOST}:${PORT}/ws`);
   console.log(`[ws-bridge] POST /emit  auth=${TOKEN ? 'on' : 'off'}`);
+  console.log(`[ws-bridge] POST /tts   voz=${ttsInfo().voice}`);
 });

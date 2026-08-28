@@ -3,7 +3,7 @@ const bcrypt = require('/usr/local/lib/node_modules/n8n/node_modules/.pnpm/bcryp
 const sqlite3 = require('/usr/local/lib/node_modules/n8n/node_modules/.pnpm/sqlite3@5.1.7/node_modules/sqlite3');
 
 const dbPath = '/home/node/.n8n/database.sqlite';
-const email = (process.argv[2] || 'adrianfredes12@gmail.com').toLowerCase().trim();
+const email = (process.argv[2] || '__SET_NOTIFY_EMAIL__').toLowerCase().trim();
 const plain = process.argv[3] || 'adriann8n10f';
 
 const db = new sqlite3.Database(dbPath);

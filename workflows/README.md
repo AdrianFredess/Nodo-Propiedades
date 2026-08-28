@@ -16,6 +16,9 @@
 | **PANEL-02 Envio Masivo Telegram.json** | `POST /webhook/envio-masivo` body `{ chat_ids, text }`. Token: `__SET_TELEGRAM_BOT_TOKEN__`. |
 | **PANEL-03 Stock Update.json** | `POST /webhook/panel-stock-update` body `{ id, field, value }` o `{ id, patch }` — escribe stock + emite `stock.updated` al WS bridge. |
 | **PANEL-04 Realtime Emit.json** | `POST /webhook/panel-realtime-emit` body `{ type, payload }` — reenvía al bridge `http://host.docker.internal:3099/emit`. |
+| **PANEL-05 Acciones Lead** (n8n vivo) | `POST /webhook/panel-lead-actions` — `send_whatsapp` o `update_seguimiento`. Auth `X-Panel-Token`. |
+| **PANEL-06 Panel Assistant.json** | `POST /webhook/panel-assistant` — humaniza respuestas del asistente de voz (Groq + estilo Instagram). |
+| **CITA-01 Formulario Visita** (n8n vivo) | `GET /webhook/cita-form` + `POST /webhook/cita-submit` — turnos libres de `Agenda_Visitas` → `a_confirmar` + Gmail. |
 
 ## Legacy / no reemplazan prod
 

@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { pushAssistantActivity, getActivityDedupeKeys } from '../../features/assistant/assistantActivity';
+import {
+  getCatchUpSinceIso,
+  seedActivityFromLeads,
+} from '../../features/assistant/assistantCatchUp';
 import { config, fetchLeads } from '../api/client';
 import type { HistorialMensaje, Lead, LeadsPayload, Propiedad } from '../types/lead';
 import {
@@ -118,6 +123,7 @@ interface UseLeadsResult {
   refresh: () => Promise<void>;
   findLead: (leadId: string) => Lead | undefined;
   patchPropiedad: (id: string, patch: Partial<Propiedad>) => void;
+  patchLead: (id: string, patch: Partial<Lead>) => void;
   appendChatMessage: (input: AppendChatMessageInput) => boolean;
   realtimeStatus: RealtimeStatus;
 }
@@ -167,6 +173,20 @@ export function useLeads(): UseLeadsResult {
         };
       }
       return { ...prev, propiedades: nextProps };
+    });
+  }, []);
+
+  const patchLead = useCallback((id: string, patch: Partial<Lead>) => {
+    setPayload((prev) => {
+      if (!prev) return prev;
+      const nextLeads = prev.leads.map((lead) => {
+        if (lead.id !== id && lead.chatId !== id) return lead;
+        const merged = { ...lead, ...patch };
+        leadCache.current.set(merged.id, merged);
+        if (merged.chatId) leadCache.current.set(`chat:${merged.chatId}`, merged);
+        return merged;
+      });
+      return { ...prev, leads: nextLeads };
     });
   }, []);
 
@@ -242,11 +262,14 @@ export function useLeads(): UseLeadsResult {
     return applied;
   }, []);
 
-  const refresh = useCallback(async () => {
-    if (Date.now() < backoffUntil.current) return;
+  const refresh = useCallback(async (): Promise<Lead[]> => {
+    if (Date.now() < backoffUntil.current) {
+      return payload?.leads ?? [];
+    }
+    let result: Lead[] = payload?.leads ?? [];
     try {
       const next = await fetchLeads();
-      if (!mounted.current) return;
+      if (!mounted.current) return result;
 
       const rateLimited = Boolean(
         next.warning &&
@@ -282,15 +305,17 @@ export function useLeads(): UseLeadsResult {
             leadCache.current.set(`chat:${lead.chatId}`, lead);
           }
         }
+        result = merged.leads;
         return merged;
       });
+      seedActivityFromLeads(result, getCatchUpSinceIso(), getActivityDedupeKeys());
       setError(
         rateLimited
           ? 'Google Sheets limitó lecturas. Reintento suave en ~90s; se mantiene la última data buena.'
           : null,
       );
     } catch (err) {
-      if (!mounted.current) return;
+      if (!mounted.current) return result;
       const message =
         err instanceof Error ? err.message : 'Error al actualizar leads';
       const is429 = /429|too many|quota/i.test(message);
@@ -305,7 +330,8 @@ export function useLeads(): UseLeadsResult {
     } finally {
       if (mounted.current) setLoading(false);
     }
-  }, []);
+    return result;
+  }, [payload?.leads]);
 
   refreshRef.current = refresh;
 
@@ -336,7 +362,36 @@ export function useLeads(): UseLeadsResult {
         const text = String(p.text ?? p.message ?? p.mensaje ?? '').trim();
         const sideRaw = String(p.side ?? p.from ?? '').toLowerCase();
 
+        const cached =
+          (leadId ? leadCache.current.get(leadId) : undefined) ??
+          (chatId ? leadCache.current.get(`chat:${chatId}`) : undefined);
+        const leadName =
+          String(p.leadName ?? p.nombre ?? cached?.nombre ?? '').trim() ||
+          'Cliente';
+        const canal =
+          String(p.canal ?? p.canalOrigen ?? cached?.canalOrigen ?? '').trim() ||
+          (source.includes('whatsapp')
+            ? 'whatsapp'
+            : source.includes('messenger')
+              ? 'messenger'
+              : 'telegram');
+
+        const pushLive = (preview: string, side: 'client' | 'bot') => {
+          if (!preview.trim()) return;
+          pushAssistantActivity({
+            at: at ?? new Date().toISOString(),
+            type: 'chat.message',
+            canal,
+            leadId: leadId ?? cached?.id,
+            leadName,
+            side,
+            preview: preview.trim(),
+            source,
+          });
+        };
+
         if (cliente) {
+          pushLive(cliente, 'client');
           appendChatMessage({
             chatId,
             leadId,
@@ -347,6 +402,7 @@ export function useLeads(): UseLeadsResult {
           });
         }
         if (botReply) {
+          pushLive(botReply, 'bot');
           appendChatMessage({
             chatId,
             leadId,
@@ -363,6 +419,7 @@ export function useLeads(): UseLeadsResult {
             sideRaw === 'cliente'
               ? 'client'
               : 'bot';
+          pushLive(text, side);
           appendChatMessage({
             chatId,
             leadId,
@@ -382,6 +439,22 @@ export function useLeads(): UseLeadsResult {
         return;
       }
       if (event.type === 'leads.refresh' || event.type === 'lead.updated') {
+        const p =
+          event.payload !== null && typeof event.payload === 'object'
+            ? (event.payload as Record<string, unknown>)
+            : {};
+        const leadId = String(p.leadId ?? p.lead_id ?? p.id ?? '').trim();
+        const leadName = String(p.leadName ?? p.nombre ?? 'Lead').trim();
+        pushAssistantActivity({
+          at: typeof event.at === 'string' ? event.at : new Date().toISOString(),
+          type: event.type === 'lead.updated' ? 'lead.updated' : 'leads.refresh',
+          canal: String(p.canal ?? p.canalOrigen ?? 'panel'),
+          leadId: leadId || undefined,
+          leadName,
+          side: 'system',
+          preview: String(p.preview ?? p.summary ?? 'Actualización en el panel'),
+          source: 'realtime',
+        });
         void refreshRef.current();
       }
     },
@@ -449,6 +522,7 @@ export function useLeads(): UseLeadsResult {
     refresh,
     findLead,
     patchPropiedad,
+    patchLead,
     appendChatMessage,
     realtimeStatus,
   };

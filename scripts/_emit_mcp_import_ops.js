@@ -7,7 +7,7 @@ const path = require('path');
 
 const jsCode = fs.readFileSync(path.join(__dirname, '_tmp_n8n_code_propiedades.js'), 'utf8');
 const DOC = '1r7EIzgF8vB3PdS2__m3qC-eSB2W9b4rC4v8Ajs8iAoo';
-const CREDS = { googleSheetsOAuth2Api: { id: 'WBM00QjQj4q8xjLF', name: 'Cuenta de Google Sheets' } };
+const CREDS = { googleSheetsOAuth2Api: { id: '__SET_GOOGLE_SHEETS_CREDENTIAL_ID__', name: 'Cuenta de Google Sheets' } };
 
 const ops = [
   {

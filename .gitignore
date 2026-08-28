@@ -33,6 +33,10 @@ package-lock.json
 front/dist/
 front/.env
 
+# Export Instagram / datos personales (no versionar)
+data/instagram-export/
+instagram-*.zip
+
 # Editor / IDE
 .vscode/
 .idea/

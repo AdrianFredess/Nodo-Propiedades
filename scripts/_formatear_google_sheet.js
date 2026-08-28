@@ -17,7 +17,7 @@ const ROOT = path.join(__dirname, '..');
 const CRED_PATH = path.join(ROOT, 'config', 'google-credentials.json');
 const TOKEN_PATH = path.join(ROOT, 'config', 'google-token.json');
 const REDIRECT_URI = 'http://127.0.0.1:34567/oauth2callback';
-const SPREADSHEET_ID = '1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ';
+const SPREADSHEET_ID = '__SET_GOOGLE_SHEET_ID__';
 
 const TECH_BG = '#444444';
 const TECH_FG = '#aaaaaa';
