@@ -51,6 +51,14 @@ export function PropiedadDetailPage({
         </Link>
       </header>
 
+      {propiedad.fotos && propiedad.fotos.length > 0 ? (
+        <div className="prop-gallery">
+          {propiedad.fotos.map((src) => (
+            <img key={src} className="prop-gallery__img" src={src} alt="" loading="lazy" />
+          ))}
+        </div>
+      ) : null}
+
       <div className="detail-layout detail-layout--fill">
         <aside className="detail-side panel-card detail-side--scroll">
           <h2 className="detail-section-title">Ficha</h2>

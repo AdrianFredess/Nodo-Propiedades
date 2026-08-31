@@ -1,4 +1,5 @@
 import { getMockPayload } from '../../data/seed';
+import propiedadMedia from '../../data/propiedadMedia.json';
 import {
   normalizeCanal,
   normalizeEstadoSeguimiento,
@@ -209,6 +210,9 @@ function mapPropiedad(raw: unknown): Propiedad | null {
   const interesados = interesadosRaw
     .map(mapInteresado)
     .filter((i): i is LeadInteresadoResumen => i !== null);
+  const mediaKey = id || '';
+  const media =
+    propiedadMedia[mediaKey as keyof typeof propiedadMedia] ?? undefined;
   return {
     id: id || `${zona}-${tipo}-${precio}`.slice(0, 48) || 'sin-id',
     zona,
@@ -224,6 +228,8 @@ function mapPropiedad(raw: unknown): Propiedad | null {
       String(r.mediosPago ?? r.medios_pago ?? '').trim() || undefined,
     aliasCbu: String(r.aliasCbu ?? r.alias_cbu ?? r.cbu ?? '').trim() || undefined,
     requisitos: String(r.requisitos ?? '').trim() || undefined,
+    fotos: media?.fotos ?? undefined,
+    linkFicha: media?.linkFicha ?? undefined,
     interesados,
     interesadosCount:
       typeof r.interesadosCount === 'number'

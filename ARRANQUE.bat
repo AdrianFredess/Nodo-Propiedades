@@ -43,9 +43,17 @@ echo [4/5] Webhook Telegram -^> ngrok
 node scripts/set-telegram-webhook.js
 if errorlevel 1 echo AVISO: no se pudo re-set webhook TG (revisar red/token)
 
-echo [5/5] Front panel
+echo [5/6] Front panel
 cd front
 start "front-nodo" cmd /c "pnpm --ignore-workspace run dev -- --host 127.0.0.1 --port 5173"
+cd ..
+
+echo [6/6] ngrok catalogo (opcional)
+if not "%NGROK_CATALOG_DOMAIN%"=="" (
+  call scripts\ngrok-catalogo.bat
+) else (
+  echo Sin NGROK_CATALOG_DOMAIN — links de ficha solo en localhost
+)
 
 echo.
 echo Listo:

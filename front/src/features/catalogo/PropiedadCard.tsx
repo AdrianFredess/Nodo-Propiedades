@@ -17,6 +17,14 @@ export function PropiedadCard({ propiedad }: PropiedadCardProps) {
 
   return (
     <Link to={detailPath} className="prop-card panel-card">
+      {propiedad.fotos?.[0] ? (
+        <img
+          className="prop-card__img"
+          src={propiedad.fotos[0]}
+          alt=""
+          loading="lazy"
+        />
+      ) : null}
       <div className="prop-card__top">
         <span className="prop-card__id">#{propiedad.id}</span>
         {propiedad.estado ? (

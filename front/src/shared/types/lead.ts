@@ -70,6 +70,8 @@ export interface Propiedad {
   mediosPago?: string;
   aliasCbu?: string;
   requisitos?: string;
+  fotos?: string[];
+  linkFicha?: string;
   interesadosCount?: number;
   interesados?: LeadInteresadoResumen[];
 }

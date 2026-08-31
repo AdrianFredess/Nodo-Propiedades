@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { pushAssistantActivity, getActivityDedupeKeys } from '../../features/assistant/assistantActivity';
-import {
-  getCatchUpSinceIso,
-  seedActivityFromLeads,
-} from '../../features/assistant/assistantCatchUp';
+import { seedActivityFromLeads } from '../../features/assistant/assistantCatchUp';
+import { getCatchUpSinceIso } from '../../features/assistant/assistantSession';
 import { config, fetchLeads } from '../api/client';
 import type { HistorialMensaje, Lead, LeadsPayload, Propiedad } from '../types/lead';
 import {

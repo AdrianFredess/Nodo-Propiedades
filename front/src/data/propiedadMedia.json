@@ -1,0 +1,512 @@
+{
+  "MZA-001": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=80",
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=900&q=80",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2cd9368?w=900&q=80",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-001",
+    "caption": "Departamento 2 amb · Capital Mendoza · 87000 USD",
+    "titulo": "Departamento 2 amb en Capital Mendoza",
+    "tipo": "Departamento 2 amb",
+    "zona": "Capital Mendoza",
+    "precio": "87000 USD",
+    "precioUsd": 87000,
+    "operacion": "Venta",
+    "descripcion": "Av. San Martin 1450 piso 4 contrafrente balcon a la montaña"
+  },
+  "MZA-002": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=900&q=80",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2cd9368?w=900&q=80",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80",
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-002",
+    "caption": "Departamento 3 amb · Capital Mendoza · 112000 USD",
+    "titulo": "Departamento 3 amb en Capital Mendoza",
+    "tipo": "Departamento 3 amb",
+    "zona": "Capital Mendoza",
+    "precio": "112000 USD",
+    "precioUsd": 112000,
+    "operacion": "Venta",
+    "descripcion": "Belgrano 320 luminoso APTO CREDITO amenities sum"
+  },
+  "MZA-003": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2cd9368?w=900&q=80",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80",
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=80",
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-003",
+    "caption": "Monoambiente · Capital Mendoza · 59000 USD",
+    "titulo": "Monoambiente en Capital Mendoza",
+    "tipo": "Monoambiente",
+    "zona": "Capital Mendoza",
+    "precio": "59000 USD",
+    "precioUsd": 59000,
+    "operacion": "Venta",
+    "descripcion": "Universidad 890 ideal renta estudiantes bajo expensas"
+  },
+  "MZA-004": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1600607687644-c7171b42498f?w=900&q=80",
+      "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=900&q=80",
+      "https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=900&q=80",
+      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-004",
+    "caption": "PH 3 amb · Godoy Cruz · 98500 USD",
+    "titulo": "PH 3 amb en Godoy Cruz",
+    "tipo": "PH 3 amb",
+    "zona": "Godoy Cruz",
+    "precio": "98500 USD",
+    "precioUsd": 98500,
+    "operacion": "Venta",
+    "descripcion": "Paso de los Andes 2100 sin expensas patio chico"
+  },
+  "MZA-005": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900&q=80",
+      "https://images.unsplash.com/photo-1605276374104-dee2afb0f430?w=900&q=80",
+      "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=900&q=80",
+      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-005",
+    "caption": "Casa 4 amb · Las Heras · 135000 USD",
+    "titulo": "Casa 4 amb en Las Heras",
+    "tipo": "Casa 4 amb",
+    "zona": "Las Heras",
+    "precio": "135000 USD",
+    "precioUsd": 135000,
+    "operacion": "Venta",
+    "descripcion": "Panamericana km 8 barrio cerrado jardin parrilla"
+  },
+  "MZA-006": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=900&q=80",
+      "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&q=80",
+      "https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=900&q=80",
+      "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-006",
+    "caption": "Local comercial · Godoy Cruz · 45000 USD",
+    "titulo": "Local comercial en Godoy Cruz",
+    "tipo": "Local comercial",
+    "zona": "Godoy Cruz",
+    "precio": "45000 USD",
+    "precioUsd": 45000,
+    "operacion": "Venta",
+    "descripcion": "Aristobulo del Valle 2100 frente 8m vidriera DOBLE ALTURA"
+  },
+  "MZA-007": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2cd9368?w=900&q=80",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80",
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=80",
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-007",
+    "caption": "Departamento 2 amb · Guaymallen · 72000 USD",
+    "titulo": "Departamento 2 amb en Guaymallen",
+    "tipo": "Departamento 2 amb",
+    "zona": "Guaymallen",
+    "precio": "72000 USD",
+    "precioUsd": 72000,
+    "operacion": "Venta",
+    "descripcion": "Pedro Molina 1200 semipiso vista cordillera"
+  },
+  "MZA-008": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900&q=80",
+      "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=900&q=80",
+      "https://images.unsplash.com/photo-1416331108676-a22ccb276e35?w=900&q=80",
+      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-008",
+    "caption": "Lote 360 m2 · Maipu · 38000 USD",
+    "titulo": "Lote 360 m2 en Maipu",
+    "tipo": "Lote 360 m2",
+    "zona": "Maipu",
+    "precio": "38000 USD",
+    "precioUsd": 38000,
+    "operacion": "Venta",
+    "descripcion": "Barrancas de Dalvian servicios en esquina"
+  },
+  "MZA-009": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=80",
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=900&q=80",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2cd9368?w=900&q=80",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-009",
+    "caption": "Departamento 3 amb · Lujan de Cuyo · 105000 USD",
+    "titulo": "Departamento 3 amb en Lujan de Cuyo",
+    "tipo": "Departamento 3 amb",
+    "zona": "Lujan de Cuyo",
+    "precio": "105000 USD",
+    "precioUsd": 105000,
+    "operacion": "Venta",
+    "descripcion": "Chacras de Coria cercano bodegas cochera fija"
+  },
+  "MZA-010": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900&q=80",
+      "https://images.unsplash.com/photo-1605276374104-dee2afb0f430?w=900&q=80",
+      "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=900&q=80",
+      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-010",
+    "caption": "Duplex 3 amb · Guaymallen · 92000 USD",
+    "titulo": "Duplex 3 amb en Guaymallen",
+    "tipo": "Duplex 3 amb",
+    "zona": "Guaymallen",
+    "precio": "92000 USD",
+    "precioUsd": 92000,
+    "operacion": "Venta",
+    "descripcion": "Villa Nueva cochera patio TECHOS altos"
+  },
+  "MZA-011": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=900&q=80",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2cd9368?w=900&q=80",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80",
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-011",
+    "caption": "Monoambiente · Capital Mendoza · 61000 USD",
+    "titulo": "Monoambiente en Capital Mendoza",
+    "tipo": "Monoambiente",
+    "zona": "Capital Mendoza",
+    "precio": "61000 USD",
+    "precioUsd": 61000,
+    "operacion": "Venta",
+    "descripcion": "Plaza Espana a estrenar amenities SUM laundry"
+  },
+  "MZA-012": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=900&q=80",
+      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=900&q=80",
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900&q=80",
+      "https://images.unsplash.com/photo-1605276374104-dee2afb0f430?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-012",
+    "caption": "Casaquincho 2 amb · Las Heras · 68000 USD",
+    "titulo": "Casaquincho 2 amb en Las Heras",
+    "tipo": "Casaquincho 2 amb",
+    "zona": "Las Heras",
+    "precio": "68000 USD",
+    "precioUsd": 68000,
+    "operacion": "Venta",
+    "descripcion": "El Plumerillo amplio terreno parrilla"
+  },
+  "MZA-013": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80",
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=80",
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=900&q=80",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2cd9368?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-013",
+    "caption": "Departamento 4 amb · Capital Mendoza · 158000 USD",
+    "titulo": "Departamento 4 amb en Capital Mendoza",
+    "tipo": "Departamento 4 amb",
+    "zona": "Capital Mendoza",
+    "precio": "158000 USD",
+    "precioUsd": 158000,
+    "operacion": "Venta",
+    "descripcion": "Quinta Seccion cochera doble baulera familia"
+  },
+  "MZA-014": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=900&q=80",
+      "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=900&q=80",
+      "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&q=80",
+      "https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-014",
+    "caption": "Galpon 240m2 · Godoy Cruz · 79000 USD",
+    "titulo": "Galpon 240m2 en Godoy Cruz",
+    "tipo": "Galpon 240m2",
+    "zona": "Godoy Cruz",
+    "precio": "79000 USD",
+    "precioUsd": 79000,
+    "operacion": "Venta",
+    "descripcion": "Acceso Rapido Mendoza 12m frente trifasica"
+  },
+  "MZA-015": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=900&q=80",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2cd9368?w=900&q=80",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80",
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-015",
+    "caption": "Departamento 2 amb · Lujan de Cuyo · 88000 USD",
+    "titulo": "Departamento 2 amb en Lujan de Cuyo",
+    "tipo": "Departamento 2 amb",
+    "zona": "Lujan de Cuyo",
+    "precio": "88000 USD",
+    "precioUsd": 88000,
+    "operacion": "Venta",
+    "descripcion": "Vistalba entorno vidrieras bajas expensas"
+  },
+  "MZA-016": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=900&q=80",
+      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=900&q=80",
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900&q=80",
+      "https://images.unsplash.com/photo-1605276374104-dee2afb0f430?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-016",
+    "caption": "Casa 5 amb · Chacras de Coria · 198000 USD",
+    "titulo": "Casa 5 amb en Chacras de Coria",
+    "tipo": "Casa 5 amb",
+    "zona": "Chacras de Coria",
+    "precio": "198000 USD",
+    "precioUsd": 198000,
+    "operacion": "Venta",
+    "descripcion": "Pileta quincho guest house escritura lista"
+  },
+  "MZA-017": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80",
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=80",
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=900&q=80",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2cd9368?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-017",
+    "caption": "Cochera cubierta · Capital Mendoza · 22000 USD",
+    "titulo": "Cochera cubierta en Capital Mendoza",
+    "tipo": "Cochera cubierta",
+    "zona": "Capital Mendoza",
+    "precio": "22000 USD",
+    "precioUsd": 22000,
+    "operacion": "Venta",
+    "descripcion": "Microcentro edificio categorio port automatico"
+  },
+  "MZA-018": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=80",
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=900&q=80",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2cd9368?w=900&q=80",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-018",
+    "caption": "Departamento 3 amb · Capital Mendoza · 118000 USD",
+    "titulo": "Departamento 3 amb en Capital Mendoza",
+    "tipo": "Departamento 3 amb",
+    "zona": "Capital Mendoza",
+    "precio": "118000 USD",
+    "precioUsd": 118000,
+    "operacion": "Venta",
+    "descripcion": "Sexta Seccion balcon terraza amenities full"
+  },
+  "MZA-019": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=900&q=80",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2cd9368?w=900&q=80",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80",
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-019",
+    "caption": "Oficina 45m2 · Capital Mendoza · 55000 USD",
+    "titulo": "Oficina 45m2 en Capital Mendoza",
+    "tipo": "Oficina 45m2",
+    "zona": "Capital Mendoza",
+    "precio": "55000 USD",
+    "precioUsd": 55000,
+    "operacion": "Venta",
+    "descripcion": "Sarmiento piso alto recepcion y meeting"
+  },
+  "MZA-020": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1416331108676-a22ccb276e35?w=900&q=80",
+      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=900&q=80",
+      "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900&q=80",
+      "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-020",
+    "caption": "Terreno 500m2 · General Gutierrez · 25000 USD",
+    "titulo": "Terreno 500m2 en General Gutierrez",
+    "tipo": "Terreno 500m2",
+    "zona": "General Gutierrez",
+    "precio": "25000 USD",
+    "precioUsd": 25000,
+    "operacion": "Venta",
+    "descripcion": "Esquina calle Pavimentada luz agua al frente"
+  },
+  "MZA-021": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2cd9368?w=900&q=80",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80",
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=80",
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-021",
+    "caption": "Departamento 2 amb · Godoy Cruz · 76000 USD",
+    "titulo": "Departamento 2 amb en Godoy Cruz",
+    "tipo": "Departamento 2 amb",
+    "zona": "Godoy Cruz",
+    "precio": "76000 USD",
+    "precioUsd": 76000,
+    "operacion": "Venta",
+    "descripcion": "Barrio Bombal 3 cuadras del shopping cerca colectivos"
+  },
+  "MZA-022": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=900&q=80",
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900&q=80",
+      "https://images.unsplash.com/photo-1605276374104-dee2afb0f430?w=900&q=80",
+      "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-022",
+    "caption": "Casa 3 amb · Maipu · 82000 USD",
+    "titulo": "Casa 3 amb en Maipu",
+    "tipo": "Casa 3 amb",
+    "zona": "Maipu",
+    "precio": "82000 USD",
+    "precioUsd": 82000,
+    "operacion": "Venta",
+    "descripcion": "Russell centro mza cochera pasante living comedor"
+  },
+  "MZA-023": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=80",
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=900&q=80",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2cd9368?w=900&q=80",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-023",
+    "caption": "Depto loft · Capital Mendoza · 95000 USD",
+    "titulo": "Depto loft en Capital Mendoza",
+    "tipo": "Depto loft",
+    "zona": "Capital Mendoza",
+    "precio": "95000 USD",
+    "precioUsd": 95000,
+    "operacion": "Venta",
+    "descripcion": "Arquitectura industrial ubicacion gastronomica"
+  },
+  "MZA-024": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=900&q=80",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2cd9368?w=900&q=80",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80",
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-024",
+    "caption": "Departamento 1 amb · Guaymallen · 54000 USD",
+    "titulo": "Departamento 1 amb en Guaymallen",
+    "tipo": "Departamento 1 amb",
+    "zona": "Guaymallen",
+    "precio": "54000 USD",
+    "precioUsd": 54000,
+    "operacion": "Venta",
+    "descripcion": "Dorrego ideal inversion alquiler temporal"
+  },
+  "MZA-025": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=900&q=80",
+      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=900&q=80",
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900&q=80",
+      "https://images.unsplash.com/photo-1605276374104-dee2afb0f430?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-025",
+    "caption": "Casa quinta 6 amb · Lujan de Cuyo · 175000 USD",
+    "titulo": "Casa quinta 6 amb en Lujan de Cuyo",
+    "tipo": "Casa quinta 6 amb",
+    "zona": "Lujan de Cuyo",
+    "precio": "175000 USD",
+    "precioUsd": 175000,
+    "operacion": "Venta",
+    "descripcion": "5000 m2 parral frutales riego presurizado"
+  },
+  "MZA-026": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80",
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=80",
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=900&q=80",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2cd9368?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-026",
+    "caption": "Departamento 3 amb · Maipu · 69000 USD",
+    "titulo": "Departamento 3 amb en Maipu",
+    "tipo": "Departamento 3 amb",
+    "zona": "Maipu",
+    "precio": "69000 USD",
+    "precioUsd": 69000,
+    "operacion": "Venta",
+    "descripcion": "Ciudad cerca universidad Maza APTO CREDITO"
+  },
+  "MZA-027": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=900&q=80",
+      "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=900&q=80",
+      "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&q=80",
+      "https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-027",
+    "caption": "Local 35m2 · Capital Mendoza · 62000 USD",
+    "titulo": "Local 35m2 en Capital Mendoza",
+    "tipo": "Local 35m2",
+    "zona": "Capital Mendoza",
+    "precio": "62000 USD",
+    "precioUsd": 62000,
+    "operacion": "Venta",
+    "descripcion": "Peatonal alta circulacion techos tablaroca"
+  },
+  "MZA-028": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=900&q=80",
+      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=900&q=80",
+      "https://images.unsplash.com/photo-1600607687644-c7171b42498f?w=900&q=80",
+      "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-028",
+    "caption": "PH 4 amb · Capital Mendoza · 102000 USD",
+    "titulo": "PH 4 amb en Capital Mendoza",
+    "tipo": "PH 4 amb",
+    "zona": "Capital Mendoza",
+    "precio": "102000 USD",
+    "precioUsd": 102000,
+    "operacion": "Venta",
+    "descripcion": "Barrio Bombal Sur entrada independiente sin expensas"
+  },
+  "MZA-029": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2cd9368?w=900&q=80",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80",
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=80",
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-029",
+    "caption": "Departamento 2 amb · Las Heras · 71000 USD",
+    "titulo": "Departamento 2 amb en Las Heras",
+    "tipo": "Departamento 2 amb",
+    "zona": "Las Heras",
+    "precio": "71000 USD",
+    "precioUsd": 71000,
+    "operacion": "Venta",
+    "descripcion": "Jardinhipodromo balcon norte vista cerros"
+  },
+  "MZA-030": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=900&q=80",
+      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=900&q=80",
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900&q=80",
+      "https://images.unsplash.com/photo-1605276374104-dee2afb0f430?w=900&q=80"
+    ],
+    "linkFicha": "http://localhost:5173/catalogo/MZA-030",
+    "caption": "Casa 4 amb · Godoy Cruz · 128000 USD",
+    "titulo": "Casa 4 amb en Godoy Cruz",
+    "tipo": "Casa 4 amb",
+    "zona": "Godoy Cruz",
+    "precio": "128000 USD",
+    "precioUsd": 128000,
+    "operacion": "Venta",
+    "descripcion": "Palmares Valle esquina living integrado cochera doble"
+  }
+}

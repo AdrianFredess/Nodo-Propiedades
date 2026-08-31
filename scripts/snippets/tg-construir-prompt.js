@@ -1,12 +1,85 @@
 /**
- * Bot Telegram — Construir Prompt
- * Incluye stock + políticas de pago (Sheets) + instrucción de presupuestos.
- * Tags ###ESTADO_ACTUAL### y ###LEAD_COMPLETO### se mantienen.
+ * Bot Telegram — Construir Prompt (asesor humano + stock + memoria local)
  */
+const PROP_MEDIA = __PROP_MEDIA_JSON__;
+
 const setVars = $('Set Variables').first().json;
-const chatId = setVars.chat_id;
-const textoUsuario = setVars.texto_usuario;
+const chatId = String(setVars.chat_id || '');
+const textoUsuario = String(setVars.texto_usuario || '').trim();
 const nombreUsuario = setVars.nombre_usuario;
+
+const citaBase =
+  'https://deranged-defile-comrade.ngrok-free.dev/webhook/cita-form';
+const citaLink =
+  citaBase +
+  '?chat_id=' +
+  encodeURIComponent(chatId) +
+  '&nombre=' +
+  encodeURIComponent(String(nombreUsuario || '')) +
+  '&canal=telegram';
+
+function pick(row, keys) {
+  for (const k of keys) {
+    if (row[k] != null && String(row[k]).trim()) return String(row[k]).trim();
+  }
+  return '';
+}
+
+function parseUsd(s) {
+  const m = String(s || '')
+    .replace(/\./g, '')
+    .match(/(\d{4,7})/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function extractPresupuestoUsd(text) {
+  const t = String(text || '').toLowerCase();
+  let m = t.match(
+    /(\d{1,3}(?:[.\s]\d{3})+|\d{4,7})\s*(?:usd|u\$s|dolar(?:es)?|dolares)/i,
+  );
+  if (m) return parseInt(m[1].replace(/[.\s]/g, ''), 10);
+  m = t.match(/(\d{2,3})\s*mil\s*(?:usd|u\$s|dolar(?:es)?)?/i);
+  if (m) return parseInt(m[1], 10) * 1000;
+  m = t.match(/\b(\d{2,3})k\b/i);
+  if (m) return parseInt(m[1], 10) * 1000;
+  m = t.match(/por\s+(\d{1,3}(?:[.\s]\d{3})+|\d{4,7})/i);
+  if (m) return parseInt(m[1].replace(/[.\s]/g, ''), 10);
+  return null;
+}
+
+function extractZona(text) {
+  const t = String(text || '').toLowerCase();
+  const zonas = [
+    'godoy cruz',
+    'guaymallen',
+    'guaymallén',
+    'capital',
+    'lujan',
+    'luján',
+    'maipu',
+    'maipú',
+    'las heras',
+    'san martin',
+    'san martín',
+    'mendoza',
+  ];
+  for (const z of zonas) {
+    if (t.includes(z)) return z;
+  }
+  return '';
+}
+
+function extractOperacion(text) {
+  const t = String(text || '').toLowerCase();
+  if (/\b(alquil|rent)/i.test(t)) return 'alquiler';
+  if (/\b(compr|venta|vend)/i.test(t)) return 'compra';
+  return '';
+}
+
+function mediaFor(id) {
+  if (!id) return null;
+  return PROP_MEDIA[id] || PROP_MEDIA[String(id).toUpperCase()] || null;
+}
 
 let historialItems = [];
 try {
@@ -55,13 +128,6 @@ try {
   politicasRows = [];
 }
 
-function pick(row, keys) {
-  for (const k of keys) {
-    if (row[k] != null && String(row[k]).trim()) return String(row[k]).trim();
-  }
-  return '';
-}
-
 function rowToStockLine(row) {
   const id = pick(row, ['id', 'ID', 'codigo']);
   const tipo = pick(row, ['tipo', 'Tipo', 'tipologia']);
@@ -70,54 +136,44 @@ function rowToStockLine(row) {
   const operacion = pick(row, ['operacion', 'Operacion', 'tipo_operacion']);
   const desc = pick(row, ['descripcion', 'Descripcion', 'detalle']);
   const estado = pick(row, ['estado', 'Estado', 'stock']) || 'disponible';
-  const honorarios = pick(row, ['honorarios', 'Honorarios', 'comision']);
-  const reserva = pick(row, ['reserva', 'Reserva', 'seña', 'sena']);
-  const medios = pick(row, ['medios_pago', 'mediosPago', 'forma_pago']);
-  const alias = pick(row, ['alias_cbu', 'alias', 'cbu', 'CBU']);
-  const requisitos = pick(row, ['requisitos', 'Requisitos']);
-
-  const bits = [
-    tipo,
-    zona,
-    operacion ? 'op:' + operacion : '',
-    precio ? String(precio) : '',
-    desc,
-  ].filter(Boolean);
-  const pagoBits = [
-    honorarios ? 'honorarios:' + honorarios : '',
-    reserva ? 'reserva:' + reserva : '',
-    medios ? 'medios:' + medios : '',
-    alias ? 'alias/CBU:' + alias : '',
-    requisitos ? 'req:' + requisitos : '',
-  ].filter(Boolean);
+  const m = mediaFor(id);
+  const linkFicha = m?.linkFicha || pick(row, ['link_ficha', 'linkFicha']);
+  const bits = [tipo, zona, operacion ? 'op:' + operacion : '', precio, desc].filter(Boolean);
   const head = id ? '[' + id + '] ' : '';
-  return (
-    head +
-    bits.join(' | ') +
-    (pagoBits.length ? ' || PAGO: ' + pagoBits.join(' · ') : '') +
-    (estado ? ' (' + estado + ')' : '')
-  );
+  const linkBit = linkFicha ? ' | ficha:' + linkFicha : '';
+  return head + bits.join(' | ') + linkBit + (estado ? ' (' + estado + ')' : '');
+}
+
+function sugerirIds(stock, budgetUsd, zonaHint) {
+  const scored = [];
+  for (const row of stock) {
+    const id = pick(row, ['id', 'ID', 'codigo']);
+    const precio = parseUsd(pick(row, ['precio', 'Precio']));
+    const zona = pick(row, ['zona', 'Zona']).toLowerCase();
+    if (!id || !precio) continue;
+    let score = Math.abs(precio - (budgetUsd || precio));
+    if (budgetUsd && precio > budgetUsd * 1.18) score += 50000;
+    if (budgetUsd && precio < budgetUsd * 0.45) score += 30000;
+    if (zonaHint && zona.includes(zonaHint.split(' ')[0])) score -= 15000;
+    scored.push({ id, score, precio });
+  }
+  scored.sort((a, b) => a.score - b.score);
+  return scored.slice(0, 3).map((x) => x.id);
 }
 
 let stockText = '';
 if (stockItems.length) {
-  stockText = stockItems
-    .map(rowToStockLine)
-    .map((l) => '- ' + l)
-    .join('\n');
+  stockText = stockItems.map(rowToStockLine).map((l) => '- ' + l).join('\n');
 } else {
   stockText =
-    '- (Sin filas en la planilla de stock (propiedades) o no se pudo leer. Ofrece ayuda humana o pedir cargar stock.)';
+    '- (Sin stock cargado. Pedí datos al cliente y ofrecé que un asesor le escribe.)';
 }
 
 const FALLBACK_POLITICAS = [
-  'transferencia: Alias/CBU EDITAR_EN_SHEETS (hoja Politicas_Pago, clave transferencia). Titular EDITAR_EN_SHEETS.',
-  'efectivo: Se acepta en oficina con comprobante; coordinar visita.',
-  'reserva: Seña típica a confirmar según operación; no garantiza hasta acreditación.',
-  'cuotas: Solo si la propiedad/operación lo indica en stock; no inventar planes.',
-  'honorarios: Ver columna honorarios del inmueble o valor de Politicas_Pago; si falta, decir que lo confirma un asesor.',
-  'requisitos_alquiler: DNI, recibos, garantía o seguro caución (confirmar en Sheets).',
-  'requisitos_compra: DNI, reservar con seña, escritura con escribano (confirmar en Sheets).',
+  'transferencia: coordinar con la inmobiliaria.',
+  'efectivo: en oficina con comprobante.',
+  'reserva: seña según operación; no inventar montos.',
+  'honorarios: ver stock o confirmar con asesor.',
 ].join('\n');
 
 let politicasText = '';
@@ -133,17 +189,14 @@ if (politicasRows.length) {
     .join('\n');
 }
 if (!politicasText) {
-  politicasText =
-    FALLBACK_POLITICAS.split('\n')
-      .map((l) => '- ' + l)
-      .join('\n') +
-    '\n- (Fuente: placeholders. Cargá la hoja Politicas_Pago en Sheets para valores reales.)';
+  politicasText = FALLBACK_POLITICAS.split('\n')
+    .map((l) => '- ' + l)
+    .join('\n');
 }
 
 const matchRow = historialItems.find(
-  (item) => item.json && String(item.json.chat_id) === String(chatId),
+  (item) => item.json && String(item.json.chat_id) === chatId,
 );
-const historialItemsFiltered = matchRow ? [matchRow] : [];
 
 let historialJson = [];
 let turno = 1;
@@ -152,14 +205,10 @@ let propiedadSeguimientoPrev = '';
 let ultimaActualizacionStr = '';
 let diasSinContacto = 0;
 
-if (
-  historialItemsFiltered.length > 0 &&
-  historialItemsFiltered[0].json &&
-  historialItemsFiltered[0].json.chat_id
-) {
-  const row = historialItemsFiltered[0].json;
+if (matchRow?.json?.chat_id) {
+  const row = matchRow.json;
   rowExists = true;
-  turno = parseInt(row.turno || 0) + 1;
+  turno = parseInt(row.turno || 0, 10) + 1;
   propiedadSeguimientoPrev = String(row.propiedad_seguimiento || '').trim();
   ultimaActualizacionStr = String(row.ultima_actualizacion || '').trim();
   try {
@@ -175,93 +224,175 @@ if (
   }
 }
 
+const sd = $getWorkflowStaticData('global');
+if (!sd.historialByChat) sd.historialByChat = {};
+const cachedHist = sd.historialByChat[chatId];
+if (Array.isArray(cachedHist) && cachedHist.length > historialJson.length) {
+  historialJson = cachedHist;
+}
+
+const textoHistorial = historialJson
+  .map((m) => String(m?.content || ''))
+  .join('\n');
+const textoCompleto = (textoHistorial + '\n' + textoUsuario).trim();
+
+let presupuestoUsd =
+  extractPresupuestoUsd(textoUsuario) || extractPresupuestoUsd(textoHistorial);
+let zonaDetectada =
+  extractZona(textoUsuario) || extractZona(textoHistorial) || '';
+let operacionDetectada =
+  extractOperacion(textoUsuario) || extractOperacion(textoHistorial) || '';
+
+const pideOpciones =
+  /\b(mandame|mandá|mostrame|mostrá|pasame|pasá|que ten[eé]s|qué ten[eé]s|opciones|ver algo|lo que tengas|lo que tengan|catalogo|catálogo|mostrar|enviame|enviá)\b/i.test(
+    textoUsuario,
+  );
+const esSoloSaludo =
+  textoUsuario.length < 50 &&
+  !/\b(depto|casa|alquil|compr|venta|propiedad|precio|usd|\d|zona|mendoza)\b/i.test(
+    textoUsuario,
+  ) &&
+  /^(hola|buen[oa]s?\s*(d[ií]as|tardes|noches)?|buenas|qué tal|que tal|como est[aá]s)\s*[!.?]*$/i.test(
+    textoUsuario.trim(),
+  );
+const esSaludo =
+  /^(hola|buen[oa]s?\s*(d[ií]as|tardes|noches)?|como est[aá]s|qué tal)/i.test(
+    textoUsuario.trim(),
+  ) && textoUsuario.length < 55;
+const frustrado =
+  /\b(ya te dije|te dije|otra vez|no entend)/i.test(textoUsuario);
+
+const sugerenciasIds =
+  stockItems.length > 0
+    ? sugerirIds(stockItems, presupuestoUsd, zonaDetectada)
+    : [];
+
+const debeMostrarPropiedades =
+  stockItems.length > 0 &&
+  (pideOpciones ||
+    frustrado ||
+    Boolean(presupuestoUsd) ||
+    /\b(propiedad|propiedades|depto|departamento|casa|ten[eé]s|tienen)\b/i.test(
+      textoUsuario,
+    ));
+
 let refSeg = '';
 let idSeg = '';
 if (propiedadSeguimientoPrev) {
   try {
     const o = JSON.parse(propiedadSeguimientoPrev);
-    if (o && typeof o === 'object') {
-      if (o.referencia) refSeg = String(o.referencia);
-      if (o.id) idSeg = String(o.id);
-      if (!refSeg && o.id) refSeg = String(o.id);
-    }
+    if (o?.referencia) refSeg = String(o.referencia);
+    if (o?.id) idSeg = String(o.id);
+    if (!refSeg && o?.id) refSeg = String(o.id);
   } catch (e) {
-    refSeg =
-      propiedadSeguimientoPrev.length > 120
-        ? propiedadSeguimientoPrev.slice(0, 117) + '…'
-        : propiedadSeguimientoPrev;
+    refSeg = propiedadSeguimientoPrev.slice(0, 117);
   }
 }
 
-const contextoCliente =
-  '- Días aproximados desde el último registro en CRM (ultima_actualizacion): ' +
-  (ultimaActualizacionStr ? diasSinContacto : 'sin_dato') +
-  '\n' +
-  '- Propiedad en seguimiento guardada (si existe): ' +
-  (refSeg || '(ninguna)') +
-  (idSeg ? ' [id=' + idSeg + ']' : '') +
-  '\n' +
-  '- Si hay varios días sin contacto y hay propiedad en seguimiento, está bien retomar con una sola frase breve y cordial al inicio; no insistir ni presionar.';
+const datosConocidos = {
+  presupuesto_usd: presupuestoUsd || null,
+  presupuesto_texto: presupuestoUsd ? 'USD ' + presupuestoUsd : '',
+  zona: zonaDetectada || '(no indicó)',
+  operacion: operacionDetectada || '(no indicó)',
+};
 
-const systemPrompt =
-  'Sos Matías, asesor inmobiliario de Nodo Propiedades (Argentina). Tu trabajo es solo atender consultas sobre inmuebles: disponibilidad, precios en el stock, zonas, tipología, visitas, presupuestos, medios de pago y derivaciones relacionadas con el catálogo.\n\n' +
-  'ALCANCE: Si el mensaje no tiene relación con inmuebles o el stock (otros temas, bromas, política, tecnología, vida personal, etc.), respondé en 1–2 frases cordiales y profesionales aclarando que solo podés orientar sobre propiedades y el catálogo, y ofrecé continuar si tiene una consulta inmobiliaria. No des datos ni opiniones fuera de ese marco.\n\n' +
-  'PROHIBICIÓN ESTRICTA: No uses en ningún caso la palabra "che" (ni como saludo ni como interjección). Usá un trato profesional directo: "Hola", "Buenos días", o el nombre si lo tenés.\n\n' +
-  'CONTEXTO_CLIENTE (uso interno; no lo repitas literal ni digas que venís de un CRM):\n' +
-  contextoCliente +
-  '\n\n' +
-  'SEGUIMIENTO EN CONVERSACIÓN:\n' +
-  '- Si CONTEXTO_CLIENTE muestra ~3 días o más sin registro previo y había propiedad en seguimiento, podés empezar con UNA sola línea corta retomando el interés; después respondé al mensaje actual.\n' +
-  '- No hagas seguimiento agresivo: una mención suave; si el cliente cambió de tema, priorizá lo que preguntó ahora.\n\n' +
-  'STOCK (solo ofrecé propiedades de esta lista; si no hay match, ofrecé las más cercanas o pedí más datos):\n' +
-  stockText +
-  '\n\n' +
-  'POLITICAS_PAGO (fuente Sheets Politicas_Pago o placeholders editables; NO inventes CBU/alias reales):\n' +
-  politicasText +
-  '\n\n' +
-  'PRESUPUESTOS Y MEDIOS DE PAGO:\n' +
-  '- Si el cliente pide presupuesto, cotización, "cómo pago", reserva, seña, honorarios, o hay propiedad en seguimiento clara, armá un PRESUPUESTO LEGIBLE en chat con este formato (adaptá campos faltantes):\n' +
-  '  *Presupuesto — [id/código]*\n' +
-  '  · Propiedad: tipo · zona\n' +
-  '  · Operación: venta|alquiler\n' +
-  '  · Precio: …\n' +
-  '  · Honorarios: … (si no está en stock/políticas, decí que lo confirma un asesor)\n' +
-  '  · Reserva/seña: …\n' +
-  '  · Medios de pago: transferencia (alias/CBU solo si figura en POLITICAS_PAGO o stock), efectivo, etc.\n' +
-  '  · Requisitos: …\n' +
-  '  · Resumen: 1–2 líneas\n' +
-  '- Si el alias/CBU dice EDITAR_EN_SHEETS, explicá que el dato bancario lo confirma la inmobiliaria y ofrecé derivar; no inventes números.\n' +
-  '- No generes PDF; el formato en chat alcanza.\n\n' +
-  'ESTILO Y FORMATO:\n' +
-  '- Español claro, profesional y cercano (podés usar voseo si resulta natural).\n' +
-  '- Cuando convenga, ordená la respuesta con viñetas o pasos breves; evitá muros de texto largos en Telegram.\n' +
-  '- Priorizá una intención o una pregunta por mensaje cuando pida información al cliente.\n' +
-  '- No inventes inmuebles fuera del stock; podés parafrasear la lista.\n\n' +
-  'PROPIEDAD EN SEGUIMIENTO (para recordatorios posteriores):\n' +
-  '- Si el usuario se enfoca claramente en UNA propiedad del stock (detalle, visita, reserva, presupuesto, "me interesa la de…"), al FINAL del mensaje agregá exactamente este bloque (una sola línea JSON dentro):\n\n' +
-  '###PROPIEDAD_SEGUIMIENTO###\n' +
-  '{"id":"id_o_codigo_stock","referencia":"breve texto para recordatorios (zona + tipo o codigo)"}\n' +
-  '###FIN_PROP###\n\n' +
-  '- Si no hay una propiedad clara o es solo una consulta general, NO incluyas este bloque (deja el seguimiento anterior sin cambios en el sistema).\n\n' +
-  'ESTADO DE INTERÉS (obligatorio en CADA respuesta):\n' +
-  '- Al FINAL del texto para el cliente (antes de bloques opcionales ###PROPIEDAD_SEGUIMIENTO### / ###LEAD_COMPLETO###), agregá exactamente UNA línea con el tag:\n' +
-  '###ESTADO_ACTUAL:frio###\n' +
-  'o ###ESTADO_ACTUAL:tibio### o ###ESTADO_ACTUAL:caliente###\n' +
-  '- frio = curiosidad / sin datos claros; tibio = interés sin urgencia; caliente = urgencia o datos claros de compra/alquiler.\n' +
-  '- Este tag convive con ###LEAD_COMPLETO###: cuando cierres el lead, incluí AMBOS (estado + bloque lead). No inventes el bloque lead si faltan datos.\n\n' +
-  'CUANDO TENGAS OPORTUNIDAD DE VENTA (nombre, zona, presupuesto aproximado y compra o alquiler), al FINAL del mensaje (después del bloque de propiedad si lo hubo) pegá exactamente este bloque:\n\n' +
-  '  ###LEAD_COMPLETO###\n' +
-  '  {"nombre":"...","zona":"...","presupuesto":"...","operacion":"compra|alquiler","temperatura":"caliente|tibio|frio","resumen":"..."}\n' +
-  '  ###FIN_LEAD###\n\n' +
-  '- temperatura: caliente = urgencia o presupuesto claro; tibio = interés sin fecha; frío = curiosidad.\n' +
-  '- Si falta información para cerrar el lead, seguí la conversación SIN el bloque JSON.';
-
-const messages = [{ role: 'system', content: systemPrompt }];
-
-for (const msg of historialJson) {
-  messages.push(msg);
+let modoObligatorio = '';
+if (debeMostrarPropiedades && sugerenciasIds.length) {
+  modoObligatorio =
+    '\n\nMODO MOSTRAR PROPIEDADES (OBLIGATORIO):\n' +
+    '- El cliente pidió opciones o dio presupuesto. NO listes propiedades en el texto.\n' +
+    '- Tu mensaje visible = SOLO 1 frase intro (ej: "¡Claro! Acá te muestro opciones dentro de tu presupuesto.").\n' +
+    '- Las fichas van en fotos con caption (el sistema las arma). Vos solo intro + bloque técnico.\n' +
+    '- IDs sugeridos del stock real: ' +
+    JSON.stringify(sugerenciasIds) +
+    '\n' +
+    '- Incluí ###MOSTRAR_PROPIEDADES### con esos IDs. PROHIBIDO inventar propiedades o precios.\n' +
+    '- Asumí VENTA/COMPRA salvo que el cliente dijo alquiler explícitamente.\n' +
+    '- NO digas "al año" ni inventes alquiler.\n';
+} else if (esSoloSaludo && turno <= 2) {
+  modoObligatorio =
+    '\n\nMODO SALUDO (OBLIGATORIO — copiá el estilo del ejemplo):\n' +
+    '- Solo saludá y presentate. CERO preguntas de compra/alquiler/venta/zona/presupuesto.\n' +
+    '- CERO urgencia. El cliente recién llegó.\n' +
+    '- PROHIBIDO: "Hey", "¡Hey!", "¿Qué buscás?", listar compra/alquiler/venta.\n' +
+    '- BIEN: "Hola, ¿cómo estás? Soy Matías de Nodo Propiedades. Cuando quieras contame qué necesitás."\n' +
+    '- MAL: "¡Hey! ¿Qué buscás, compra, alquiler o venta?"\n' +
+    '- Una o dos frases tranquilas. Sin signos de exclamación exagerados.\n';
+} else if (esSaludo && turno <= 2) {
+  modoObligatorio =
+    '\n\nMODO SALUDO:\n' +
+    '- Respondé el saludo con calma. No califiques al cliente todavía.\n' +
+    '- No preguntes compra/alquiler/venta en el primer mensaje.\n';
 }
 
+const systemPrompt =
+  'Sos Matías, asesor de Nodo Propiedades en Mendoza. Atendés como una persona real, con paciencia.\n\n' +
+  'VOZ DE ASESOR HUMANO (no vendedor apurado):\n' +
+  '- Tranquilo, cercano, profesional. Como un asesor que tiene tiempo.\n' +
+  '- NUNCA apures al cliente ni hagas cuestionario al inicio.\n' +
+  '- PROHIBIDO: "Hey", "¡Hey!", "¿Qué buscás, compra, alquiler o venta?", múltiples preguntas seguidas.\n' +
+  '- PROHIBIDO: "¿Me podrías indicar...?", sonar a formulario o bot.\n' +
+  '- Si solo te saludan → saludá, presentate, quedá disponible. Nada más.\n' +
+  '- Cuando el cliente cuente qué busca, recién ahí orientá con una pregunta suave si hace falta.\n' +
+  '- Preferí: "Dale", "Perfecto", "Te paso", "Con ese presupuesto tengo...".\n' +
+  '- Sin "che". Sin decir bot/IA.\n' +
+  '- Máximo UNA pregunta por mensaje, y solo cuando ya hubo intercambio real.\n\n' +
+  'EJEMPLOS DE SALUDO:\n' +
+  'Cliente: "hola"\n' +
+  'BIEN: "Hola, ¿cómo estás? Soy Matías de Nodo Propiedades. Cuando quieras contame qué necesitás."\n' +
+  'MAL: "¡Hey! ¿Qué buscás, compra, alquiler o venta?"\n\n' +
+  'DATOS_CONOCIDOS (extraídos del chat — respetalos):\n' +
+  JSON.stringify(datosConocidos, null, 2) +
+  '\n\n' +
+  'CONTEXTO:\n' +
+  '- Turno: ' +
+  turno +
+  '\n' +
+  '- Días sin contacto: ' +
+  (ultimaActualizacionStr ? diasSinContacto : 'sin_dato') +
+  '\n' +
+  '- Propiedad en seguimiento: ' +
+  (refSeg || 'ninguna') +
+  modoObligatorio +
+  '\n\nSTOCK (solo IDs de esta lista):\n' +
+  stockText +
+  '\n\nMOSTRAR PROPIEDADES (estilo asesor humano — como Casa Clic):\n' +
+  '- Cuando muestres opciones: texto intro de 1 frase + bloque ###MOSTRAR_PROPIEDADES###.\n' +
+  '- NO escribas listas con guiones ni párrafos largos con cada propiedad.\n' +
+  '- Las fichas (foto + tipo + precio + link) las envía el sistema automáticamente.\n' +
+  '- Después de las fotos el sistema manda cierre suave ("¿Cuál te interesa?").\n' +
+  '- Solo IDs del STOCK. Nunca inventes direcciones, precios ni m².\n' +
+  '- Default: VENTA en USD. Alquiler solo si el cliente lo pidió.\n' +
+  '###MOSTRAR_PROPIEDADES###\n["MZA-003","MZA-011"]\n###FIN_MOSTRAR###\n\n' +
+  'DETALLE DE UNA PROPIEDAD (si preguntan por una específica):\n' +
+  '- Varias burbujas cortas: ubicación → metros/ambientes → detalles → precio.\n' +
+  '- Cerrá con pregunta suave: "¿Qué te parece?" o "¿Querés que te pase más fotos?"\n\n' +
+  'VISITAS:\n' +
+  '- Link turnos: ' +
+  citaLink +
+  '\n' +
+  '- Si confirma visita con asesor:\n' +
+  '"Perfecto, ya le avisé a un asesor de Nodo Propiedades para que se ponga en contacto con vos en breve y coordinen una visita.\\n\\nCualquier cosa que necesites, estoy acá."\n' +
+  '###SOLICITUD_VISITA###\n{"propiedad_id":"ID","zona":"...","presupuesto":"...","nota":"..."}\n###FIN_VISITA###\n\n' +
+  'POLITICAS_PAGO:\n' +
+  politicasText +
+  '\n\nAl final: ###ESTADO_ACTUAL:frio|tibio|caliente###\n' +
+  'LEAD COMPLETO (si tenés nombre, zona, presupuesto, operación):\n' +
+  '###LEAD_COMPLETO###\n{...}\n###FIN_LEAD###\n' +
+  'SEGUIMIENTO:\n###PROPIEDAD_SEGUIMIENTO###\n{"id":"...","referencia":"..."}\n###FIN_PROP###';
+
+const messages = [{ role: 'system', content: systemPrompt }];
+if (esSoloSaludo) {
+  messages.push({ role: 'user', content: 'hola' });
+  messages.push({
+    role: 'assistant',
+    content:
+      'Hola, ¿cómo estás? Soy Matías de Nodo Propiedades. Cuando quieras contame qué necesitás.',
+  });
+}
+for (const msg of historialJson) {
+  if (msg && msg.role && msg.content) messages.push(msg);
+}
 messages.push({ role: 'user', content: textoUsuario });
 
 return [
@@ -277,6 +408,11 @@ return [
       propiedad_seguimiento_actual: propiedadSeguimientoPrev,
       dias_sin_contacto: diasSinContacto,
       politicas_source: politicasRows.length ? 'sheets' : 'fallback',
+      sugerencias_ids: JSON.stringify(sugerenciasIds),
+      debe_mostrar_propiedades: debeMostrarPropiedades,
+      presupuesto_detectado: presupuestoUsd ? String(presupuestoUsd) : '',
+      pide_opciones: pideOpciones,
+      es_solo_saludo: esSoloSaludo,
     },
   },
 ];

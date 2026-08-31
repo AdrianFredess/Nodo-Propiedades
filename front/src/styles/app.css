@@ -1849,11 +1849,46 @@
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
-  padding: 1rem 1.05rem 0.9rem;
+  padding: 0;
+  overflow: hidden;
   transition:
     transform 0.2s var(--ease),
     box-shadow 0.2s var(--ease);
   animation: np-fade-up 0.4s var(--ease) both;
+}
+
+.prop-card__img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  display: block;
+}
+
+.prop-card > :not(.prop-card__img) {
+  padding-left: 1.05rem;
+  padding-right: 1.05rem;
+}
+
+.prop-card > .prop-card__footer {
+  padding-bottom: 0.9rem;
+}
+
+.prop-card > .prop-card__top {
+  padding-top: 0.75rem;
+}
+
+.prop-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.prop-gallery__img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: var(--radius-sm, 8px);
 }
 
 .prop-card:hover {
