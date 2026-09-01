@@ -1,5 +1,5 @@
 /**
- * SIMPLE-02 — Armar prompt (Matías + stock + bloques fotos/visita)
+ * SIMPLE-02 — Armar prompt (Matías + stock + bloques fotos/visita — formato Casa Clic)
  */
 const PROP_MEDIA = __PROP_MEDIA_JSON__;
 const CITA_BASE = '__CITA_WEBHOOK_BASE__';
@@ -82,6 +82,67 @@ function mediaFor(id) {
   return PROP_MEDIA[id] || PROP_MEDIA[String(id).toUpperCase()] || null;
 }
 
+function parseUsd(s) {
+  const m = String(s || '')
+    .replace(/\./g, '')
+    .match(/(\d{4,7})/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function extractPresupuestoUsd(text) {
+  const t = String(text || '').toLowerCase();
+  let m = t.match(
+    /(\d{1,3}(?:[.\s]\d{3})+|\d{4,7})\s*(?:usd|u\$s|dolar(?:es)?|dolares)/i,
+  );
+  if (m) return parseInt(m[1].replace(/[.\s]/g, ''), 10);
+  m = t.match(/(\d{2,3})\s*mil\s*(?:usd|u\$s|dolar(?:es)?)?/i);
+  if (m) return parseInt(m[1], 10) * 1000;
+  m = t.match(/\b(\d{2,3})k\b/i);
+  if (m) return parseInt(m[1], 10) * 1000;
+  m = t.match(/por\s+(\d{1,3}(?:[.\s]\d{3})+|\d{4,7})/i);
+  if (m) return parseInt(m[1].replace(/[.\s]/g, ''), 10);
+  return null;
+}
+
+function extractZona(text) {
+  const t = String(text || '').toLowerCase();
+  const zonas = [
+    'godoy cruz',
+    'guaymallen',
+    'guaymallén',
+    'capital',
+    'lujan',
+    'luján',
+    'maipu',
+    'maipú',
+    'las heras',
+    'san martin',
+    'san martín',
+    'mendoza',
+  ];
+  for (const z of zonas) {
+    if (t.includes(z)) return z;
+  }
+  return '';
+}
+
+function sugerirIds(stock, budgetUsd, zonaHint) {
+  const scored = [];
+  for (const r of stock) {
+    const id = pick(r, ['id', 'ID', 'codigo']);
+    const precio = parseUsd(pick(r, ['precio', 'Precio']));
+    const zona = pick(r, ['zona', 'Zona']).toLowerCase();
+    if (!id || !precio) continue;
+    let score = Math.abs(precio - (budgetUsd || precio));
+    if (budgetUsd && precio > budgetUsd * 1.18) score += 50000;
+    if (budgetUsd && precio < budgetUsd * 0.45) score += 30000;
+    if (zonaHint && zona.includes(zonaHint.split(' ')[0])) score -= 15000;
+    scored.push({ id, score });
+  }
+  scored.sort((a, b) => a.score - b.score);
+  return scored.slice(0, 3).map((x) => x.id);
+}
+
 let stockItems = [];
 try {
   stockItems = $('Leer Stock Propiedades WA')
@@ -106,12 +167,12 @@ function rowToStockLine(r) {
   const tipo = pick(r, ['tipo', 'Tipo', 'tipologia']);
   const zona = pick(r, ['zona', 'Zona', 'barrio']);
   const precio = pick(r, ['precio', 'Precio', 'precio_usd']);
-  const operacion = pick(r, ['operacion', 'Operacion', 'tipo_operacion']);
+  const operacion = pick(r, ['operacion', 'Operacion', 'tipo_operacion']) || 'venta';
   const desc = pick(r, ['descripcion', 'Descripcion', 'detalle']);
   const dorm = pick(r, ['dormitorios', 'Dormitorios', 'ambientes']);
   const m = mediaFor(id);
   const linkFicha = m?.linkFicha || pick(r, ['link_ficha', 'linkFicha']);
-  const bits = [tipo, zona, dorm ? dorm + ' amb' : '', operacion ? 'op:' + operacion : '', precio].filter(Boolean);
+  const bits = [tipo, zona, dorm ? dorm + ' amb' : '', 'op:' + operacion, precio].filter(Boolean);
   const head = id ? '[' + id + '] ' : '';
   const linkBit = linkFicha ? ' | ficha:' + linkFicha : '';
   return head + bits.join(' | ') + linkBit + (desc ? ' — ' + desc : '');
@@ -123,6 +184,27 @@ if (stockItems.length) {
 } else {
   stockText = '- (Sin stock cargado. Pedí datos y ofrecé que un asesor contacte.)';
 }
+
+const textoCompleto = (historialPrev + '\n' + msg).trim();
+const presupuestoUsd =
+  extractPresupuestoUsd(msg) || extractPresupuestoUsd(historialPrev);
+const zonaDetectada = extractZona(msg) || extractZona(historialPrev) || '';
+
+const pideOpciones =
+  /\b(mandame|mandá|mostrame|mostrá|pasame|pasá|que ten[eé]s|qué ten[eé]s|opciones|ver algo|catalogo|catálogo|mostrar|enviame|enviá|algo para|propiedades para|dentro de|hasta)\b/i.test(
+    msg,
+  ) ||
+  (Boolean(presupuestoUsd) &&
+    /\b(tengo|presupuesto|usd|u\$s|dolar|busco|quiero)\b/i.test(msg));
+
+const debeMostrarPropiedades =
+  stockItems.length > 0 &&
+  (pideOpciones ||
+    Boolean(presupuestoUsd) ||
+    /\b(propiedad|propiedades|depto|departamento|casa|ten[eé]s|tienen)\b/i.test(msg));
+
+const sugerenciasIds =
+  stockItems.length > 0 ? sugerirIds(stockItems, presupuestoUsd, zonaDetectada) : [];
 
 const historialBlock = historialPrev
   ? historialPrev
@@ -140,20 +222,30 @@ const citaLinkWa =
 const prompt = `Sos Matías, asesor inmobiliario de Nodo Propiedades (Mendoza). Persona real: serio, responsable y amable. Atendés por WhatsApp.
 
 VOZ (obligatorio):
-- Profesional y cercano. Sin apodos, sin "che", sin revelar bot/IA/automatización.
-- 2–4 oraciones por turno. Una pregunta por mensaje.
+- Profesional y cercano. Sin apodos, sin "che", sin revelar bot/IA.
+- Burbujas cortas: 1-3 frases por mensaje. Una pregunta por turno.
 - Leé TODO el historial; no repitas ni ignores datos ya dados.
+- Default: VENTA en USD. Alquiler solo si el cliente lo pidió explícitamente.
 
-STOCK (solo IDs de esta lista; máximo 3 por mensaje):
+STOCK (solo IDs de esta lista; nunca inventes):
 ${stockText}
 
-CUANDO RECOMIENDES PROPIEDADES:
-- Texto breve + hasta 3 opciones con tipo, zona, precio, detalle y link ficha del stock.
-- Dentro del campo "respuesta" del JSON, al final agregá (el cliente no ve estos bloques como texto suelto):
+MOSTRAR PROPIEDADES (estilo Casa Clic — OBLIGATORIO cuando recomiendes opciones):
+- Tu "respuesta" visible = SOLO 1 frase intro (ej: "¡Claro! Acá te muestro opciones dentro de tu presupuesto.").
+- NO listes propiedades en texto. Las fichas (foto + tipo + precio + link) las envía el sistema.
+- Al final del campo "respuesta" agregá:
 ###MOSTRAR_PROPIEDADES###
 ["MZA-001","MZA-004"]
 ###FIN_MOSTRAR###
 (solo IDs válidos del stock; 1 a 3)
+- Después de las fotos el sistema manda cierre: "¿Cuál te llama más la atención?"
+${debeMostrarPropiedades && sugerenciasIds.length ? '- IDs sugeridos del stock: ' + JSON.stringify(sugerenciasIds) : ''}
+
+DETALLE DE UNA PROPIEDAD:
+- Usá bloque ###BURBUJAS### con array JSON de mensajes cortos:
+###BURBUJAS###
+["📍 Zona y dirección","Detalle amb/m²","USD X · ¿Querés más fotos?"]
+###FIN_BURBUJAS###
 
 VISITAS:
 - Link turnos: ${citaLinkWa}
@@ -178,7 +270,7 @@ CLIENTE: ${prep.lead_name}
 MENSAJE ACTUAL: "${msg}"
 
 Responde SOLO JSON válido:
-{"temperatura":"frio|tibio|caliente","intencion":"frase corta","operacion":"","tipo_propiedad":"","zona":"","presupuesto":"","dormitorios":"","lead_completo":false,"respuesta":"mensaje para el cliente (puede incluir bloques MOSTRAR/VISITA al final)"}`;
+{"temperatura":"frio|tibio|caliente","intencion":"frase corta","operacion":"","tipo_propiedad":"","zona":"","presupuesto":"","dormitorios":"","lead_completo":false,"respuesta":"mensaje intro + bloques MOSTRAR/BURBUJAS/VISITA al final (invisibles al cliente como texto suelto)"}`;
 
 return [
   {
@@ -197,6 +289,10 @@ return [
       presupuesto_prev: datosPrev.presupuesto,
       dormitorios_prev: datosPrev.dormitorios,
       prompt_groq: prompt,
+      sugerencias_ids: JSON.stringify(sugerenciasIds),
+      debe_mostrar_propiedades: debeMostrarPropiedades,
+      presupuesto_detectado: presupuestoUsd ? String(presupuestoUsd) : '',
+      pide_opciones: pideOpciones,
     },
   },
 ];

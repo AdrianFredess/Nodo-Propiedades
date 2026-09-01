@@ -76,6 +76,32 @@ function extractOperacion(text) {
   return '';
 }
 
+function extractPropiedadId(text, segId) {
+  const m = String(text || '').match(/\b(MZA-\d{3})\b/i);
+  if (m) return m[1].toUpperCase();
+  if (
+    segId &&
+    /\b(esa|esta|la misma|la propiedad|la opción|la opcion)\b/i.test(text)
+  ) {
+    return segId;
+  }
+  return segId || '';
+}
+
+function esPreguntaEspecifica(text) {
+  return /\b(cocina|baño|bano|garage|cochera|luminos|integrad|balc[oó]n|patio|expens|amenit|mascota|cr[eé]dit|escritur|orientaci[oó]n|antig[uü]edad|m2|m²|metros|ambientes|dormitorio|suite|termotanque|calefacci[oó]n|pileta|parrilla|seguridad|portero)\b/i.test(
+    text,
+  );
+}
+
+function esDetalleUnaPropiedad(text, propId) {
+  if (!propId) return false;
+  if (/\b(MZA-\d{3})\b/i.test(text)) return true;
+  return /\b(m[aá]s info|m[aá]s detalle|contame|cu[aá]nto sale|precio de|fotos de|caracter[ií]stica|detalle de|ubicaci[oó]n de|d[oó]nde queda)\b/i.test(
+    text,
+  );
+}
+
 function mediaFor(id) {
   if (!id) return null;
   return PROP_MEDIA[id] || PROP_MEDIA[String(id).toUpperCase()] || null;
@@ -244,9 +270,11 @@ let operacionDetectada =
   extractOperacion(textoUsuario) || extractOperacion(textoHistorial) || '';
 
 const pideOpciones =
-  /\b(mandame|mandá|mostrame|mostrá|pasame|pasá|que ten[eé]s|qué ten[eé]s|opciones|ver algo|lo que tengas|lo que tengan|catalogo|catálogo|mostrar|enviame|enviá)\b/i.test(
+  /\b(mandame|mandá|mostrame|mostrá|pasame|pasá|que ten[eé]s|qué ten[eé]s|opciones|ver algo|lo que tengas|lo que tengan|catalogo|catálogo|mostrar|enviame|enviá|algo para|propiedades para|dentro de|hasta)\b/i.test(
     textoUsuario,
-  );
+  ) ||
+  (Boolean(presupuestoUsd) &&
+    /\b(tengo|presupuesto|usd|u\$s|dolar|busco|quiero)\b/i.test(textoUsuario));
 const esSoloSaludo =
   textoUsuario.length < 50 &&
   !/\b(depto|casa|alquil|compr|venta|propiedad|precio|usd|\d|zona|mendoza)\b/i.test(
@@ -289,6 +317,12 @@ if (propiedadSeguimientoPrev) {
   }
 }
 
+const propiedadConsultada = extractPropiedadId(textoUsuario, idSeg);
+const preguntaEspecifica =
+  esPreguntaEspecifica(textoUsuario) && !pideOpciones && !presupuestoUsd;
+const detalleUnaPropiedad =
+  esDetalleUnaPropiedad(textoUsuario, propiedadConsultada) && !pideOpciones;
+
 const datosConocidos = {
   presupuesto_usd: presupuestoUsd || null,
   presupuesto_texto: presupuestoUsd ? 'USD ' + presupuestoUsd : '',
@@ -297,7 +331,29 @@ const datosConocidos = {
 };
 
 let modoObligatorio = '';
-if (debeMostrarPropiedades && sugerenciasIds.length) {
+if (preguntaEspecifica && (propiedadConsultada || idSeg)) {
+  modoObligatorio =
+    '\n\nMODO PREGUNTA ESPECÍFICA (OBLIGATORIO):\n' +
+    '- El cliente pregunta algo concreto sobre la propiedad ' +
+    (propiedadConsultada || idSeg) +
+    '.\n' +
+    '- Respondé DIRECTO en 1-3 frases. NO re-califiques (zona, presupuesto, operación).\n' +
+    '- PROHIBIDO: "¿Me podrías indicar...?", "Para ayudarte mejor...", cuestionario.\n' +
+    '- Si el dato no está en el STOCK, decilo con honestidad y ofrecé confirmar con asesor.\n' +
+    '- Podés usar ###BURBUJAS### con 2-3 mensajes cortos si ayuda a leer.\n';
+} else if (detalleUnaPropiedad && propiedadConsultada) {
+  modoObligatorio =
+    '\n\nMODO DETALLE UNA PROPIEDAD (OBLIGATORIO):\n' +
+    '- El cliente pide info de ' +
+    propiedadConsultada +
+    '. NO uses ###MOSTRAR_PROPIEDADES###.\n' +
+    '- Usá ###BURBUJAS### con 2-4 mensajes cortos (ubicación → detalle → precio).\n' +
+    '- Ejemplo:\n' +
+    '###BURBUJAS###\n' +
+    '["📍 Belgrano 320, Capital Mendoza","3 amb, luminoso, cocina integrada, SUM","USD 112.000 · ¿Querés más fotos?"]\n' +
+    '###FIN_BURBUJAS###\n' +
+    '- Solo datos del STOCK. Default venta USD.\n';
+} else if (debeMostrarPropiedades && sugerenciasIds.length) {
   modoObligatorio =
     '\n\nMODO MOSTRAR PROPIEDADES (OBLIGATORIO):\n' +
     '- El cliente pidió opciones o dio presupuesto. NO listes propiedades en el texto.\n' +
@@ -365,8 +421,11 @@ const systemPrompt =
   '- Default: VENTA en USD. Alquiler solo si el cliente lo pidió.\n' +
   '###MOSTRAR_PROPIEDADES###\n["MZA-003","MZA-011"]\n###FIN_MOSTRAR###\n\n' +
   'DETALLE DE UNA PROPIEDAD (si preguntan por una específica):\n' +
-  '- Varias burbujas cortas: ubicación → metros/ambientes → detalles → precio.\n' +
-  '- Cerrá con pregunta suave: "¿Qué te parece?" o "¿Querés que te pase más fotos?"\n\n' +
+  '- Usá ###BURBUJAS### con array JSON: ubicación → detalle → precio.\n' +
+  '- Cerrá con pregunta suave: "¿Qué te parece?" o "¿Querés que te pase más fotos?"\n' +
+  '###BURBUJAS###\n["📍 Zona y dirección","Detalle amb/m²","USD X · ¿Querés más fotos?"]\n###FIN_BURBUJAS###\n\n' +
+  'PREGUNTA ESPECÍFICA (cocina, garage, etc.):\n' +
+  '- Respondé directo. NO vuelvas a preguntar zona/presupuesto/operación.\n\n' +
   'VISITAS:\n' +
   '- Link turnos: ' +
   citaLink +
@@ -413,6 +472,9 @@ return [
       presupuesto_detectado: presupuestoUsd ? String(presupuestoUsd) : '',
       pide_opciones: pideOpciones,
       es_solo_saludo: esSoloSaludo,
+      propiedad_consultada: propiedadConsultada,
+      es_pregunta_especifica: preguntaEspecifica,
+      es_detalle_una: detalleUnaPropiedad,
     },
   },
 ];

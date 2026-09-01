@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   emitRealtime,
@@ -26,6 +26,31 @@ interface LeadDetailPageProps {
   onLeadPatch?: (leadId: string, patch: Partial<Lead>) => void;
 }
 
+const PROP_ID_RE = /\b(MZA-\d{3})\b/gi;
+
+function extractPropiedadesVistas(lead: Lead): string[] {
+  const ids = new Set<string>();
+  if (lead.propiedadId) ids.add(lead.propiedadId.toUpperCase());
+  const ref = lead.propiedadReferencia || '';
+  const refMatch = ref.match(/\b(MZA-\d{3})\b/i);
+  if (refMatch) ids.add(refMatch[0].toUpperCase());
+  try {
+    const parsed = JSON.parse(ref);
+    if (parsed?.id) ids.add(String(parsed.id).toUpperCase());
+  } catch {
+    /* not JSON */
+  }
+  for (const h of lead.historial) {
+    const blob = `${h.mensajeCliente} ${h.respuestaBot}`;
+    let m: RegExpExecArray | null;
+    const re = new RegExp(PROP_ID_RE.source, PROP_ID_RE.flags);
+    while ((m = re.exec(blob)) !== null) {
+      ids.add(m[0].toUpperCase());
+    }
+  }
+  return [...ids];
+}
+
 export function LeadDetailPage({
   lead,
   loading = false,
@@ -39,6 +64,11 @@ export function LeadDetailPage({
   const [updatingSeg, setUpdatingSeg] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
+
+  const propiedadesVistas = useMemo(
+    () => (lead ? extractPropiedadesVistas(lead) : []),
+    [lead],
+  );
 
   const clearHighlight = useCallback(() => {
     onClearHighlight?.();
@@ -70,8 +100,8 @@ export function LeadDetailPage({
     lead.canalOrigen === 'whatsapp' && Boolean(lead.chatId);
   const canSend = canSendTelegram || canSendWhatsApp;
 
-  async function handleSend() {
-    const body = text.trim();
+  async function handleSend(overrideText?: string) {
+    const body = (overrideText ?? text).trim();
     if (!body) {
       setError('Escribí un mensaje antes de enviar.');
       return;
@@ -118,7 +148,7 @@ export function LeadDetailPage({
         source: canSendTelegram ? 'panel' : 'panel-wa',
       });
       setOkMsg(canSendTelegram ? 'Enviado por Telegram' : 'Enviado por WhatsApp');
-      setText('');
+      if (!overrideText) setText('');
       window.setTimeout(() => setOkMsg(null), 2200);
     } catch {
       setError('Error de conexión al enviar.');
@@ -165,6 +195,21 @@ export function LeadDetailPage({
     }
   }
 
+  const quickActions = [
+    {
+      label: 'Pedir presupuesto',
+      text: '¿Me contás tu presupuesto aproximado en USD para orientarte mejor?',
+    },
+    {
+      label: 'Ofrecer opciones',
+      text: '¡Claro! Acá te muestro un par de opciones que tenemos disponibles.',
+    },
+    {
+      label: 'Coordinar visita',
+      text: '¿Te gustaría coordinar una visita? Te paso el link de turnos.',
+    },
+  ];
+
   return (
     <div className="page-frame page-frame--detail">
       <header className="page-head page-head--compact page-head--detail">
@@ -205,7 +250,11 @@ export function LeadDetailPage({
             </div>
             <div>
               <dt>Canal</dt>
-              <dd>{CANAL_LABEL[lead.canalOrigen]}</dd>
+              <dd>
+                <span className={`chip chip--sm chip--canal-${lead.canalOrigen}`}>
+                  {CANAL_LABEL[lead.canalOrigen]}
+                </span>
+              </dd>
             </div>
             <div>
               <dt>Zona</dt>
@@ -217,7 +266,7 @@ export function LeadDetailPage({
             </div>
             <div>
               <dt>Operación</dt>
-              <dd>{lead.tipoOperacion || '—'}</dd>
+              <dd>{lead.tipoOperacion || 'Venta'}</dd>
             </div>
             <div>
               <dt>Seguimiento</dt>
@@ -233,13 +282,46 @@ export function LeadDetailPage({
             </div>
           </dl>
 
+          {propiedadesVistas.length > 0 ? (
+            <div className="detail-props-vistas">
+              <h2 className="detail-section-title detail-section-title--spaced">
+                Propiedades vistas
+              </h2>
+              <ul className="detail-props-vistas__list">
+                {propiedadesVistas.map((id) => (
+                  <li key={id}>
+                    <Link to={`/catalogo/${encodeURIComponent(id)}`}>{id}</Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          <div className="detail-send detail-send--compact">
+            <h2 className="detail-section-title detail-section-title--spaced">
+              Acciones rápidas
+            </h2>
+            <div className="detail-quick-actions">
+              {quickActions.map((a) => (
+                <button
+                  key={a.label}
+                  type="button"
+                  className="btn btn--ghost btn--sm"
+                  disabled={!canSend || sending}
+                  onClick={() => void handleSend(a.text)}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="detail-send detail-send--compact">
             <h2 className="detail-section-title detail-section-title--spaced">
               Seguimiento automático
             </h2>
-            <p className="detail-send__hint" style={{ marginBottom: '0.6rem' }}>
-              Si el cliente responde, el bot lo detecta solo y corta los
-              recordatorios. Este botón es solo para frenarlos vos a mano.
+            <p className="detail-send__hint detail-send__hint--compact">
+              Corta recordatorios automáticos.
             </p>
             <button
               type="button"

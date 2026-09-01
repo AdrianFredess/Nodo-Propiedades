@@ -8,6 +8,7 @@ import {
 import { AppShell } from './app/layout/AppShell';
 import { CatalogoPage } from './features/catalogo/CatalogoPage';
 import { PropiedadDetailPage } from './features/catalogo/PropiedadDetailPage';
+import { PublicPropiedadPage } from './features/catalogo/PublicPropiedadPage';
 import { LeadDetailPage } from './features/lead-detail/LeadDetailPage';
 import { PipelinePage } from './features/pipeline/PipelinePage';
 import { ResumenPage } from './features/resumen/ResumenPage';
@@ -91,7 +92,6 @@ export default function App() {
     patchLead,
     appendChatMessage,
     realtimeStatus,
-    refresh,
   } = useLeads();
 
   const { toasts, dismiss, markAllRead, unreadCount } =
@@ -113,18 +113,17 @@ export default function App() {
 
   return (
     <Routes>
+      <Route path="/p/:propiedadId/:token" element={<PublicPropiedadPage />} />
       <Route
         element={
           <AppShell
             payload={payload}
             lastUpdated={lastUpdated}
-            leads={leads}
             tempToasts={toasts}
             tempUnread={unreadCount}
             onDismissTemp={dismiss}
             onMarkTempRead={markAllRead}
             realtimeStatus={realtimeStatus}
-            onRefreshLeads={refresh}
           />
         }
       >

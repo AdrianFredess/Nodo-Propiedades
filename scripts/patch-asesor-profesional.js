@@ -174,6 +174,7 @@ function patchTelegram(wf) {
     type: 'n8n-nodes-base.telegram',
     typeVersion: 1.2,
     position: [2680, 480],
+    onError: 'continueRegularOutput',
     credentials: wf.nodes.find((n) => n.name === 'Telegram Responder')
       ?.credentials,
     parameters: {
@@ -247,7 +248,8 @@ function patchTelegram(wf) {
         conditions: [
           {
             id: 'ultima',
-            leftValue: '={{ $json.is_last_photo }}',
+            leftValue:
+              "={{ $('Preparar Fotos Propiedad').item.json.is_last_photo }}",
             rightValue: true,
             operator: { type: 'boolean', operation: 'equals' },
           },
@@ -296,9 +298,85 @@ function patchTelegram(wf) {
     },
   };
 
+  const prepBurbujas = {
+    id: 'tg-prep-burbujas',
+    name: 'Preparar Burbujas Extra',
+    type: 'n8n-nodes-base.code',
+    typeVersion: 2,
+    position: [2240, 360],
+    parameters: { jsCode: snippet('tg-preparar-burbujas.js') },
+  };
+
+  const ifBurbujas = {
+    id: 'tg-if-burbujas',
+    name: 'IF Tiene Burbujas',
+    type: 'n8n-nodes-base.if',
+    typeVersion: 2.2,
+    position: [2460, 360],
+    parameters: {
+      conditions: {
+        combinator: 'and',
+        conditions: [
+          {
+            id: 'has-burbuja',
+            leftValue: '={{ $json.skip }}',
+            rightValue: true,
+            operator: { type: 'boolean', operation: 'notEquals' },
+          },
+        ],
+        options: { version: 2, typeValidation: 'loose' },
+      },
+    },
+  };
+
+  const tgBurbuja = {
+    id: 'tg-send-burbuja',
+    name: 'Telegram Enviar Burbuja',
+    type: 'n8n-nodes-base.telegram',
+    typeVersion: 1.2,
+    position: [2680, 320],
+    credentials: wf.nodes.find((n) => n.name === 'Telegram Responder')
+      ?.credentials,
+    parameters: {
+      resource: 'message',
+      operation: 'sendMessage',
+      chatId: '={{ $json.chat_id }}',
+      text: '={{ $json.text }}',
+      additionalFields: { appendAttribution: false },
+    },
+  };
+
+  const ifUltimaBurbuja = {
+    id: 'tg-if-ultima-burbuja',
+    name: 'IF Ultima Burbuja',
+    type: 'n8n-nodes-base.if',
+    typeVersion: 2.2,
+    position: [2900, 320],
+    parameters: {
+      conditions: {
+        combinator: 'and',
+        conditions: [
+          {
+            id: 'ultima-burbuja',
+            leftValue:
+              "={{ $('Preparar Burbujas Extra').item.json.is_last_burbuja }}",
+            rightValue: true,
+            operator: { type: 'boolean', operation: 'equals' },
+          },
+        ],
+        options: { version: 2, typeValidation: 'loose' },
+      },
+    },
+  };
+
   ensureNode(wf, 'tg-if-ultima-foto', ifUltimaFoto);
   ensureNode(wf, 'tg-if-cierre', ifCierre);
   ensureNode(wf, 'tg-send-cierre', tgCierre);
+
+  ensureNode(wf, 'tg-prep-burbujas', prepBurbujas);
+  ensureNode(wf, 'tg-if-burbujas', ifBurbujas);
+  ensureNode(wf, 'tg-send-burbuja', tgBurbuja);
+  ensureNode(wf, 'tg-if-ultima-burbuja', ifUltimaBurbuja);
 
   ensureNode(wf, 'tg-prep-fotos', prepFotos);
   ensureNode(wf, 'tg-if-fotos', ifFotos);
@@ -307,7 +385,22 @@ function patchTelegram(wf) {
   ensureNode(wf, 'tg-email-visita', emailVisita);
 
   wf.connections['Telegram Responder'] = {
-    main: [[{ node: 'Preparar Fotos Propiedad', type: 'main', index: 0 }]],
+    main: [[{ node: 'Preparar Burbujas Extra', type: 'main', index: 0 }]],
+  };
+  wf.connections['Preparar Burbujas Extra'] = {
+    main: [[{ node: 'IF Tiene Burbujas', type: 'main', index: 0 }]],
+  };
+  wf.connections['IF Tiene Burbujas'] = {
+    main: [
+      [{ node: 'Telegram Enviar Burbuja', type: 'main', index: 0 }],
+      [{ node: 'Preparar Fotos Propiedad', type: 'main', index: 0 }],
+    ],
+  };
+  wf.connections['Telegram Enviar Burbuja'] = {
+    main: [[{ node: 'IF Ultima Burbuja', type: 'main', index: 0 }]],
+  };
+  wf.connections['IF Ultima Burbuja'] = {
+    main: [[{ node: 'Preparar Fotos Propiedad', type: 'main', index: 0 }], []],
   };
   wf.connections['Preparar Fotos Propiedad'] = {
     main: [[{ node: 'IF Tiene Fotos', type: 'main', index: 0 }]],
@@ -516,10 +609,165 @@ function patchWhatsApp(wf) {
     },
   };
 
+  const prepBurbujas = {
+    id: 'wa-prep-burbujas',
+    name: 'Preparar Burbujas WA',
+    type: 'n8n-nodes-base.code',
+    typeVersion: 2,
+    position: [2840, 180],
+    parameters: { jsCode: snippet('wa-preparar-burbujas.js') },
+  };
+
+  const ifBurbujas = {
+    id: 'wa-if-burbujas',
+    name: 'IF Tiene Burbujas WA',
+    type: 'n8n-nodes-base.if',
+    typeVersion: 2.2,
+    position: [3060, 180],
+    parameters: {
+      conditions: {
+        combinator: 'and',
+        conditions: [
+          {
+            id: 'has-burbuja-wa',
+            leftValue: '={{ $json.skip }}',
+            rightValue: true,
+            operator: { type: 'boolean', operation: 'notEquals' },
+          },
+        ],
+        options: { version: 2, typeValidation: 'loose' },
+      },
+    },
+  };
+
+  const waBurbuja = {
+    id: 'wa-send-burbuja',
+    name: 'WAHA Enviar Burbuja',
+    type: 'n8n-nodes-base.httpRequest',
+    typeVersion: 4.4,
+    position: [3280, 140],
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: 'http://host.docker.internal:3002/api/sendText',
+      sendBody: true,
+      specifyBody: 'json',
+      sendHeaders: true,
+      headerParameters: {
+        parameters: [
+          { name: 'X-Api-Key', value: wahaKey },
+          { name: 'Content-Type', value: 'application/json' },
+        ],
+      },
+      jsonBody:
+        '={{ JSON.stringify({ session: "nodo", chatId: String($json.chat_id), text: String($json.text || "") }) }}',
+    },
+  };
+
+  const ifUltimaBurbuja = {
+    id: 'wa-if-ultima-burbuja',
+    name: 'IF Ultima Burbuja WA',
+    type: 'n8n-nodes-base.if',
+    typeVersion: 2.2,
+    position: [3500, 140],
+    parameters: {
+      conditions: {
+        combinator: 'and',
+        conditions: [
+          {
+            id: 'ultima-burbuja-wa',
+            leftValue:
+              "={{ $('Preparar Burbujas WA').item.json.is_last_burbuja }}",
+            rightValue: true,
+            operator: { type: 'boolean', operation: 'equals' },
+          },
+        ],
+        options: { version: 2, typeValidation: 'loose' },
+      },
+    },
+  };
+
+  const ifUltimaFoto = {
+    id: 'wa-if-ultima-foto',
+    name: 'IF Ultima Foto WA',
+    type: 'n8n-nodes-base.if',
+    typeVersion: 2.2,
+    position: [3500, 300],
+    parameters: {
+      conditions: {
+        combinator: 'and',
+        conditions: [
+          {
+            id: 'ultima-foto-wa',
+            leftValue:
+              "={{ $('Preparar Fotos WA').item.json.is_last_photo }}",
+            rightValue: true,
+            operator: { type: 'boolean', operation: 'equals' },
+          },
+        ],
+        options: { version: 2, typeValidation: 'loose' },
+      },
+    },
+  };
+
+  const ifCierre = {
+    id: 'wa-if-cierre',
+    name: 'IF Tiene Cierre WA',
+    type: 'n8n-nodes-base.if',
+    typeVersion: 2.2,
+    position: [3720, 260],
+    parameters: {
+      conditions: {
+        combinator: 'and',
+        conditions: [
+          {
+            id: 'has-cierre-wa',
+            leftValue:
+              "={{ String($('Code - Procesar IA').first().json.mensaje_cierre || '').trim() }}",
+            rightValue: '',
+            operator: { type: 'string', operation: 'notEquals' },
+          },
+        ],
+        options: { version: 2 },
+      },
+    },
+  };
+
+  const waCierre = {
+    id: 'wa-send-cierre',
+    name: 'WAHA Mensaje Cierre',
+    type: 'n8n-nodes-base.httpRequest',
+    typeVersion: 4.4,
+    position: [3940, 260],
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: 'http://host.docker.internal:3002/api/sendText',
+      sendBody: true,
+      specifyBody: 'json',
+      sendHeaders: true,
+      headerParameters: {
+        parameters: [
+          { name: 'X-Api-Key', value: wahaKey },
+          { name: 'Content-Type', value: 'application/json' },
+        ],
+      },
+      jsonBody:
+        '={{ JSON.stringify({ session: "nodo", chatId: String($(\'Code - Procesar IA\').first().json.chat_id), text: String($(\'Code - Procesar IA\').first().json.mensaje_cierre || "") }) }}',
+    },
+  };
+
   ensureNode(wf, 'wa-leer-stock', stockNode);
+  ensureNode(wf, 'wa-prep-burbujas', prepBurbujas);
+  ensureNode(wf, 'wa-if-burbujas', ifBurbujas);
+  ensureNode(wf, 'wa-send-burbuja', waBurbuja);
+  ensureNode(wf, 'wa-if-ultima-burbuja', ifUltimaBurbuja);
   ensureNode(wf, 'wa-prep-fotos', prepFotos);
   ensureNode(wf, 'wa-if-fotos', ifFotos);
   ensureNode(wf, 'wa-send-image', wahaImg);
+  ensureNode(wf, 'wa-if-ultima-foto', ifUltimaFoto);
+  ensureNode(wf, 'wa-if-cierre', ifCierre);
+  ensureNode(wf, 'wa-send-cierre', waCierre);
   ensureNode(wf, 'wa-if-visita', ifVisita);
   ensureNode(wf, 'wa-email-visita', emailVisita);
 
@@ -530,13 +778,40 @@ function patchWhatsApp(wf) {
   wf.connections['IF - Tiene Mensaje'] = { main: [ifTiene] };
 
   wf.connections['HTTP Request - Enviar WhatsApp'] = {
-    main: [[{ node: 'Preparar Fotos WA', type: 'main', index: 0 }]],
+    main: [[{ node: 'Preparar Burbujas WA', type: 'main', index: 0 }]],
+  };
+  wf.connections['Preparar Burbujas WA'] = {
+    main: [[{ node: 'IF Tiene Burbujas WA', type: 'main', index: 0 }]],
+  };
+  wf.connections['IF Tiene Burbujas WA'] = {
+    main: [
+      [{ node: 'WAHA Enviar Burbuja', type: 'main', index: 0 }],
+      [{ node: 'Preparar Fotos WA', type: 'main', index: 0 }],
+    ],
+  };
+  wf.connections['WAHA Enviar Burbuja'] = {
+    main: [[{ node: 'IF Ultima Burbuja WA', type: 'main', index: 0 }]],
+  };
+  wf.connections['IF Ultima Burbuja WA'] = {
+    main: [[{ node: 'Preparar Fotos WA', type: 'main', index: 0 }], []],
   };
   wf.connections['Preparar Fotos WA'] = {
     main: [[{ node: 'IF Tiene Fotos WA', type: 'main', index: 0 }]],
   };
   wf.connections['IF Tiene Fotos WA'] = {
-    main: [[{ node: 'WAHA Enviar Imagen', type: 'main', index: 0 }], []],
+    main: [
+      [{ node: 'WAHA Enviar Imagen', type: 'main', index: 0 }],
+      [{ node: 'IF Tiene Cierre WA', type: 'main', index: 0 }],
+    ],
+  };
+  wf.connections['WAHA Enviar Imagen'] = {
+    main: [[{ node: 'IF Ultima Foto WA', type: 'main', index: 0 }]],
+  };
+  wf.connections['IF Ultima Foto WA'] = {
+    main: [[{ node: 'IF Tiene Cierre WA', type: 'main', index: 0 }], []],
+  };
+  wf.connections['IF Tiene Cierre WA'] = {
+    main: [[{ node: 'WAHA Mensaje Cierre', type: 'main', index: 0 }], []],
   };
 
   const procOut = wf.connections['Code - Procesar IA']?.main?.[0] || [];

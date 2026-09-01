@@ -1,22 +1,19 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { VoiceAssistant } from '../../features/assistant/VoiceAssistant';
 import { TempNotifications } from '../../features/notifications/TempNotifications';
 import { config } from '../../shared/api/client';
 import type { RealtimeStatus } from '../../shared/hooks/useRealtime';
 import type { TempToast } from '../../shared/hooks/useTempNotifications';
-import type { Lead, LeadsPayload } from '../../shared/types/lead';
+import type { LeadsPayload } from '../../shared/types/lead';
 import { formatDateTime } from '../../shared/lib/time';
 
 interface AppShellProps {
   payload: LeadsPayload | null;
   lastUpdated: string | null;
-  leads: Lead[];
   tempToasts?: TempToast[];
   tempUnread?: number;
   onDismissTemp?: (id: string) => void;
   onMarkTempRead?: () => void;
   realtimeStatus?: RealtimeStatus;
-  onRefreshLeads?: () => Promise<Lead[]>;
 }
 
 const links = [
@@ -26,22 +23,27 @@ const links = [
 ];
 
 function realtimeText(status: RealtimeStatus | undefined): string {
-  if (status === 'open') return 'WebSocket vivo';
-  if (status === 'connecting') return 'WebSocket…';
-  if (status === 'closed') return 'Polling suave';
-  return 'Sin realtime';
+  if (status === 'open') return 'Conectado';
+  if (status === 'connecting') return 'Reconectando…';
+  if (status === 'closed') return 'Polling';
+  return 'Sin WS';
+}
+
+function realtimeClass(status: RealtimeStatus | undefined): string {
+  if (status === 'open') return ' is-open';
+  if (status === 'connecting') return ' is-connecting';
+  if (status === 'closed') return ' is-closed';
+  return '';
 }
 
 export function AppShell({
   payload,
   lastUpdated,
-  leads,
   tempToasts = [],
   tempUnread = 0,
   onDismissTemp,
   onMarkTempRead,
   realtimeStatus = 'off',
-  onRefreshLeads,
 }: AppShellProps) {
   const location = useLocation();
   const source = payload?.source ?? (config.useMock ? 'mock' : 'live');
@@ -85,13 +87,7 @@ export function AppShell({
           </div>
           <div className="shell__meta-live">
             <span
-              className={`shell__meta-live-dot${
-                realtimeStatus === 'open'
-                  ? ' is-open'
-                  : realtimeStatus === 'connecting'
-                    ? ' is-connecting'
-                    : ''
-              }`}
+              className={`shell__meta-live-dot${realtimeClass(realtimeStatus)}`}
             />
             {realtimeText(realtimeStatus)}
           </div>
@@ -99,6 +95,10 @@ export function AppShell({
       </aside>
       <main className="shell__main">
         <header className="shell__topbar" aria-label="Acciones del panel">
+          <div className={`shell__ws-badge${realtimeClass(realtimeStatus)}`}>
+            <span className={`shell__ws-dot${realtimeClass(realtimeStatus)}`} />
+            {realtimeText(realtimeStatus)}
+          </div>
           <TempNotifications
             toasts={tempToasts}
             unreadCount={tempUnread}
@@ -109,11 +109,6 @@ export function AppShell({
         <div className="shell__content">
           <Outlet />
         </div>
-        <VoiceAssistant
-          leads={leads}
-          realtimeStatus={realtimeStatus}
-          onRefreshLeads={onRefreshLeads}
-        />
       </main>
     </div>
   );

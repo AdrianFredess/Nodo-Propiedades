@@ -78,11 +78,7 @@ export function PipelinePage({ leads, unreadByLead }: PipelinePageProps) {
     <div className="pipeline-page">
       <header className="page-head page-head--compact">
         <div>
-          <h1>Pipeline de leads</h1>
-          <p>
-            #1 = más reciente. En cada columna: Telegram arriba, WhatsApp
-            abajo. Solo scrollea cada columna.
-          </p>
+          <h1>Pipeline</h1>
         </div>
       </header>
 

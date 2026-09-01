@@ -55,23 +55,6 @@ export const config = {
   /** Polling suave mientras el WS está conectado (ahorra cuota Sheets). */
   pollIntervalWsMs:
     Number(import.meta.env.VITE_POLL_INTERVAL_WS_MS) || 120_000,
-  /** off | edge | browser | elevenlabs — voz del asistente (edge = argentino real) */
-  ttsMode: envUrl('VITE_TTS_MODE', 'edge') as
-    | 'off'
-    | 'browser'
-    | 'edge'
-    | 'elevenlabs',
-  /** POST /tts del ws-bridge — voz neural es-AR-TomasNeural */
-  ttsUrl: envUrl('VITE_TTS_URL', 'http://127.0.0.1:3099/tts'),
-  elevenLabsApiKey: envUrl('VITE_ELEVENLABS_API_KEY', ''),
-  elevenLabsVoiceId: envUrl('VITE_ELEVENLABS_VOICE_ID', ''),
-  assistantApiUrl: envUrl(
-    'VITE_ASSISTANT_API_URL',
-    'http://localhost:5678/webhook/panel-assistant',
-  ),
-  assistantHumanize: envFlag('VITE_ASSISTANT_HUMANIZE', true),
-  /** Subcadena para forzar voz del navegador (ej: pablo, es-ar) */
-  ttsVoiceHint: envUrl('VITE_TTS_VOICE_HINT', 'pablo'),
 };
 
 function panelHeaders(extra?: Record<string, string>): HeadersInit {
@@ -199,8 +182,20 @@ function mapPropiedad(raw: unknown): Propiedad | null {
   const zona = String(r.zona ?? r.Zona ?? r.barrio ?? '').trim();
   const tipo = String(r.tipo ?? r.Tipo ?? r.tipologia ?? '').trim();
   const precio = String(r.precio ?? r.Precio ?? r.precio_usd ?? '').trim();
+  const mediaKey = id || '';
+  const media =
+    propiedadMedia[mediaKey as keyof typeof propiedadMedia] ?? undefined;
+  const mediaRec =
+    media && typeof media === 'object'
+      ? (media as Record<string, unknown>)
+      : undefined;
   const ambientes = String(
-    r.ambientes ?? r.Ambientes ?? r.dormitorios ?? r.Dormitorios ?? '',
+    r.ambientes ??
+      r.Ambientes ??
+      r.dormitorios ??
+      r.Dormitorios ??
+      mediaRec?.ambientes ??
+      '',
   ).trim();
   const operacion = String(
     r.operacion ?? r.Operacion ?? r.tipo_operacion ?? '',
@@ -210,26 +205,30 @@ function mapPropiedad(raw: unknown): Propiedad | null {
   const interesados = interesadosRaw
     .map(mapInteresado)
     .filter((i): i is LeadInteresadoResumen => i !== null);
-  const mediaKey = id || '';
-  const media =
-    propiedadMedia[mediaKey as keyof typeof propiedadMedia] ?? undefined;
+  const pick = (csvVal: string, mediaKeyName: string): string =>
+    csvVal || String(mediaRec?.[mediaKeyName] ?? '').trim();
   return {
     id: id || `${zona}-${tipo}-${precio}`.slice(0, 48) || 'sin-id',
-    zona,
-    tipo,
-    precio,
+    zona: pick(zona, 'zona'),
+    tipo: pick(tipo, 'tipo'),
+    precio: pick(precio, 'precio'),
     ambientes,
-    operacion,
+    operacion: pick(operacion, 'operacion'),
     estado: String(r.estado ?? r.Estado ?? '').trim() || undefined,
-    descripcion: String(r.descripcion ?? '').trim() || undefined,
+    descripcion:
+      String(r.descripcion ?? '').trim() ||
+      String(mediaRec?.descripcion ?? '').trim() ||
+      undefined,
     honorarios: String(r.honorarios ?? '').trim() || undefined,
     reserva: String(r.reserva ?? '').trim() || undefined,
     mediosPago:
       String(r.mediosPago ?? r.medios_pago ?? '').trim() || undefined,
     aliasCbu: String(r.aliasCbu ?? r.alias_cbu ?? r.cbu ?? '').trim() || undefined,
     requisitos: String(r.requisitos ?? '').trim() || undefined,
-    fotos: media?.fotos ?? undefined,
-    linkFicha: media?.linkFicha ?? undefined,
+    fotos: Array.isArray(mediaRec?.fotos)
+      ? (mediaRec.fotos as string[])
+      : undefined,
+    linkFicha: mediaRec?.linkFicha ? String(mediaRec.linkFicha) : undefined,
     interesados,
     interesadosCount:
       typeof r.interesadosCount === 'number'
@@ -243,12 +242,24 @@ export function mapLead(raw: unknown): Lead | null {
   const chatId = String(r.chatId ?? r.chat_id ?? '').trim();
   if (!chatId && !r.id) return null;
   const canal = normalizeCanal(r.canalOrigen ?? r.canal_origen ?? r.source);
-  const propiedadId = String(
-    r.propiedadId ?? r.propiedad_id ?? '',
-  ).trim();
-  const propiedadReferencia = String(
+  const propiedadReferenciaRaw = String(
     r.propiedadReferencia ?? r.propiedad_referencia ?? r.propiedad_seguimiento ?? '',
   ).trim();
+  let propiedadId = String(r.propiedadId ?? r.propiedad_id ?? '').trim();
+  let propiedadReferencia = propiedadReferenciaRaw;
+  if (!propiedadId && propiedadReferenciaRaw.startsWith('{')) {
+    try {
+      const seg = JSON.parse(propiedadReferenciaRaw);
+      if (seg?.id) propiedadId = String(seg.id).trim();
+      if (seg?.referencia) propiedadReferencia = String(seg.referencia).trim();
+    } catch {
+      /* keep raw */
+    }
+  }
+  if (!propiedadId) {
+    const m = propiedadReferenciaRaw.match(/\b(MZA-\d{3})\b/i);
+    if (m) propiedadId = m[0].toUpperCase();
+  }
   return {
     id: String(r.id ?? `${canal}:${chatId}`),
     chatId,

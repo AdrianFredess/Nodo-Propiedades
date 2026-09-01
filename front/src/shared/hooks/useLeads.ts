@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { pushAssistantActivity, getActivityDedupeKeys } from '../../features/assistant/assistantActivity';
-import { seedActivityFromLeads } from '../../features/assistant/assistantCatchUp';
-import { getCatchUpSinceIso } from '../../features/assistant/assistantSession';
 import { config, fetchLeads } from '../api/client';
+import { normalizeTemperatura } from '../lib/labels';
 import type { HistorialMensaje, Lead, LeadsPayload, Propiedad } from '../types/lead';
 import {
   useRealtime,
@@ -118,7 +116,7 @@ interface UseLeadsResult {
   loading: boolean;
   error: string | null;
   lastUpdated: string | null;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<Lead[]>;
   findLead: (leadId: string) => Lead | undefined;
   patchPropiedad: (id: string, patch: Partial<Propiedad>) => void;
   patchLead: (id: string, patch: Partial<Lead>) => void;
@@ -152,7 +150,21 @@ export function useLeads(): UseLeadsResult {
   const propsCache = useRef<Propiedad[]>([]);
   const backoffUntil = useRef(0);
   const wsOpen = useRef(false);
-  const refreshRef = useRef<() => Promise<void>>(async () => undefined);
+  const refreshRef = useRef<() => Promise<Lead[]>>(async () => []);
+  const refreshInFlight = useRef(false);
+  const softRefreshTimer = useRef<number | undefined>(undefined);
+  const lastSoftRefreshAt = useRef(0);
+
+  const scheduleSoftRefresh = useCallback((delayMs: number) => {
+    const minGap = wsOpen.current ? 4_000 : 2_000;
+    const wait = Math.max(delayMs, minGap - (Date.now() - lastSoftRefreshAt.current));
+    if (softRefreshTimer.current) window.clearTimeout(softRefreshTimer.current);
+    softRefreshTimer.current = window.setTimeout(() => {
+      if (refreshInFlight.current) return;
+      lastSoftRefreshAt.current = Date.now();
+      void refreshRef.current();
+    }, Math.max(0, wait));
+  }, []);
 
   const patchPropiedad = useCallback((id: string, patch: Partial<Propiedad>) => {
     setPayload((prev) => {
@@ -264,6 +276,10 @@ export function useLeads(): UseLeadsResult {
     if (Date.now() < backoffUntil.current) {
       return payload?.leads ?? [];
     }
+    if (refreshInFlight.current) {
+      return payload?.leads ?? [];
+    }
+    refreshInFlight.current = true;
     let result: Lead[] = payload?.leads ?? [];
     try {
       const next = await fetchLeads();
@@ -306,7 +322,6 @@ export function useLeads(): UseLeadsResult {
         result = merged.leads;
         return merged;
       });
-      seedActivityFromLeads(result, getCatchUpSinceIso(), getActivityDedupeKeys());
       setError(
         rateLimited
           ? 'Google Sheets limitó lecturas. Reintento suave en ~90s; se mantiene la última data buena.'
@@ -326,6 +341,7 @@ export function useLeads(): UseLeadsResult {
         setError(message);
       }
     } finally {
+      refreshInFlight.current = false;
       if (mounted.current) setLoading(false);
     }
     return result;
@@ -360,36 +376,7 @@ export function useLeads(): UseLeadsResult {
         const text = String(p.text ?? p.message ?? p.mensaje ?? '').trim();
         const sideRaw = String(p.side ?? p.from ?? '').toLowerCase();
 
-        const cached =
-          (leadId ? leadCache.current.get(leadId) : undefined) ??
-          (chatId ? leadCache.current.get(`chat:${chatId}`) : undefined);
-        const leadName =
-          String(p.leadName ?? p.nombre ?? cached?.nombre ?? '').trim() ||
-          'Cliente';
-        const canal =
-          String(p.canal ?? p.canalOrigen ?? cached?.canalOrigen ?? '').trim() ||
-          (source.includes('whatsapp')
-            ? 'whatsapp'
-            : source.includes('messenger')
-              ? 'messenger'
-              : 'telegram');
-
-        const pushLive = (preview: string, side: 'client' | 'bot') => {
-          if (!preview.trim()) return;
-          pushAssistantActivity({
-            at: at ?? new Date().toISOString(),
-            type: 'chat.message',
-            canal,
-            leadId: leadId ?? cached?.id,
-            leadName,
-            side,
-            preview: preview.trim(),
-            source,
-          });
-        };
-
         if (cliente) {
-          pushLive(cliente, 'client');
           appendChatMessage({
             chatId,
             leadId,
@@ -400,7 +387,6 @@ export function useLeads(): UseLeadsResult {
           });
         }
         if (botReply) {
-          pushLive(botReply, 'bot');
           appendChatMessage({
             chatId,
             leadId,
@@ -417,7 +403,6 @@ export function useLeads(): UseLeadsResult {
             sideRaw === 'cliente'
               ? 'client'
               : 'bot';
-          pushLive(text, side);
           appendChatMessage({
             chatId,
             leadId,
@@ -431,9 +416,7 @@ export function useLeads(): UseLeadsResult {
         if (!cliente && !botReply && !text) return;
         // Soft refresh: merge conserva pending hasta que Sheets confirme
         const delayMs = source === 'panel' ? 8_000 : 2_500;
-        window.setTimeout(() => {
-          void refreshRef.current();
-        }, delayMs);
+        scheduleSoftRefresh(delayMs);
         return;
       }
       if (event.type === 'leads.refresh' || event.type === 'lead.updated') {
@@ -441,22 +424,26 @@ export function useLeads(): UseLeadsResult {
           event.payload !== null && typeof event.payload === 'object'
             ? (event.payload as Record<string, unknown>)
             : {};
-        const leadId = String(p.leadId ?? p.lead_id ?? p.id ?? '').trim();
-        const leadName = String(p.leadName ?? p.nombre ?? 'Lead').trim();
-        pushAssistantActivity({
-          at: typeof event.at === 'string' ? event.at : new Date().toISOString(),
-          type: event.type === 'lead.updated' ? 'lead.updated' : 'leads.refresh',
-          canal: String(p.canal ?? p.canalOrigen ?? 'panel'),
-          leadId: leadId || undefined,
-          leadName,
-          side: 'system',
-          preview: String(p.preview ?? p.summary ?? 'Actualización en el panel'),
-          source: 'realtime',
-        });
-        void refreshRef.current();
+        const chatId = String(p.chatId ?? p.chat_id ?? '').trim();
+        const tempRaw = String(p.temperatura ?? p.temperature ?? '').trim();
+        if (chatId && tempRaw) {
+          const temp = normalizeTemperatura(tempRaw);
+          setPayload((prev) => {
+            if (!prev?.leads?.length) return prev;
+            const nextLeads = prev.leads.map((lead) => {
+              if (lead.chatId !== chatId) return lead;
+              const merged = { ...lead, temperatura: temp };
+              leadCache.current.set(merged.id, merged);
+              leadCache.current.set(`chat:${merged.chatId}`, merged);
+              return merged;
+            });
+            return { ...prev, leads: nextLeads };
+          });
+        }
+        scheduleSoftRefresh(1_500);
       }
     },
-    [appendChatMessage, applyStockEvent],
+    [appendChatMessage, applyStockEvent, scheduleSoftRefresh],
   );
 
   const { status: realtimeStatus } = useRealtime({
@@ -479,6 +466,10 @@ export function useLeads(): UseLeadsResult {
         ? config.pollIntervalWsMs
         : config.pollIntervalMs;
       timer = window.setTimeout(() => {
+        if (refreshInFlight.current) {
+          if (mounted.current) scheduleNext();
+          return;
+        }
         void refresh().finally(() => {
           if (mounted.current) scheduleNext();
         });
@@ -490,6 +481,7 @@ export function useLeads(): UseLeadsResult {
     return () => {
       mounted.current = false;
       if (timer) window.clearTimeout(timer);
+      if (softRefreshTimer.current) window.clearTimeout(softRefreshTimer.current);
     };
   }, [refresh]);
 

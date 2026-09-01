@@ -30,8 +30,21 @@ try {
   }
 } catch (e) {}
 
+let sugerenciasIds = [];
+try {
+  sugerenciasIds = JSON.parse(prep.sugerencias_ids || '[]');
+} catch (e) {
+  sugerenciasIds = [];
+}
+if (!Array.isArray(sugerenciasIds)) sugerenciasIds = [];
+
+const debeMostrar = Boolean(prep.debe_mostrar_propiedades);
+const presupuestoDetectado = String(prep.presupuesto_detectado || '');
+
 const mostrarRegex =
   /###MOSTRAR_PROPIEDADES###\s*(\[[\s\S]*?\])\s*###FIN_MOSTRAR###/i;
+const burbujasRegex =
+  /###BURBUJAS###\s*(\[[\s\S]*?\])\s*###FIN_BURBUJAS###/i;
 const visitaRegex =
   /###SOLICITUD_VISITA###\s*({[\s\S]*?})\s*###FIN_VISITA###/i;
 
@@ -43,7 +56,10 @@ if (mostrarMatch) {
   try {
     const arr = JSON.parse(mostrarMatch[1].trim());
     if (Array.isArray(arr)) {
-      propiedadesMostrar = arr.map((x) => String(x || '').trim()).filter(Boolean).slice(0, 3);
+      propiedadesMostrar = arr
+        .map((x) => String(x || '').trim())
+        .filter(Boolean)
+        .slice(0, 3);
     }
   } catch (e) {
     propiedadesMostrar = [];
@@ -51,6 +67,46 @@ if (mostrarMatch) {
   working = working.replace(mostrarRegex, '').trim();
 }
 
+if (!propiedadesMostrar.length && debeMostrar && sugerenciasIds.length) {
+  propiedadesMostrar = sugerenciasIds.slice(0, 3);
+}
+
+let mensajesExtra = [];
+const burbujasMatch = working.match(burbujasRegex);
+if (burbujasMatch) {
+  try {
+    const arr = JSON.parse(burbujasMatch[1].trim());
+    if (Array.isArray(arr)) {
+      mensajesExtra = arr
+        .map((x) =>
+          String(x || '')
+            .replace(/\b[Cc]he\b[,.;:!?]*\s*/g, '')
+            .trim(),
+        )
+        .filter(Boolean)
+        .slice(0, 4);
+    }
+  } catch (e) {
+    mensajesExtra = [];
+  }
+  working = working.replace(burbujasRegex, '').trim();
+}
+
+function armarIntroPropiedades(presu) {
+  if (presu) {
+    return (
+      '¡Claro! Acá te muestro un par de opciones en venta que encajan con tu presupuesto de USD ' +
+      Number(presu).toLocaleString('es-AR') +
+      '.'
+    );
+  }
+  return '¡Claro! Acá te muestro un par de opciones que tenemos disponibles.';
+}
+
+const MENSAJE_CIERRE_PROPS =
+  '¿Cuál te llama más la atención o querés que te cuente más detalles de alguna?';
+
+let mensajeCierre = '';
 let solicitudVisita = false;
 let visitaData = {};
 const visitaMatch = working.match(visitaRegex);
@@ -71,9 +127,31 @@ respuesta = working
   .replace(/\s{2,}/g, ' ')
   .trim();
 
+if (mensajesExtra.length > 1) {
+  respuesta = mensajesExtra[0];
+  mensajesExtra = mensajesExtra.slice(1);
+} else if (mensajesExtra.length === 1 && !respuesta) {
+  respuesta = mensajesExtra[0];
+  mensajesExtra = [];
+}
+
+if (propiedadesMostrar.length > 0) {
+  respuesta = armarIntroPropiedades(presupuestoDetectado);
+  mensajeCierre = MENSAJE_CIERRE_PROPS;
+} else if (
+  debeMostrar &&
+  !propiedadesMostrar.length &&
+  sugerenciasIds.length &&
+  (!respuesta || respuesta.length < 25)
+) {
+  propiedadesMostrar = sugerenciasIds.slice(0, 3);
+  respuesta = armarIntroPropiedades(presupuestoDetectado);
+  mensajeCierre = MENSAJE_CIERRE_PROPS;
+}
+
 if (iaVacia && !respuesta) {
   respuesta =
-    'Hola, gracias por escribir a Nodo Propiedades. ¿Buscás alquilar o comprar, y en qué zona?';
+    'Hola, gracias por escribir a Nodo Propiedades. Contame qué buscás y en qué zona.';
 }
 
 const lineCliente = 'Cliente: ' + String(prep.mensaje || '').trim();
@@ -94,7 +172,9 @@ try {
 if (!Array.isArray(historialArr)) historialArr = [];
 const ts = new Date().toISOString();
 historialArr.push({ role: 'user', content: String(prep.mensaje || '').trim(), ts });
-historialArr.push({ role: 'assistant', content: String(respuesta || '').trim(), ts });
+let textoAsistente = respuesta;
+if (mensajeCierre) textoAsistente = textoAsistente + '\n\n' + mensajeCierre;
+historialArr.push({ role: 'assistant', content: String(textoAsistente || '').trim(), ts });
 if (historialArr.length > 60) historialArr = historialArr.slice(historialArr.length - 60);
 const historial_json = JSON.stringify(historialArr);
 
@@ -123,6 +203,10 @@ const consultaId =
   'c_' + String(prep.phone || 'x').slice(-8) + '_' + now.toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
 const prevCount = Number(prep.consultas_count_prev || 0) || 0;
 const consultas_count = esNuevaConsulta === 'si' ? prevCount + 1 : Math.max(prevCount, 1);
+
+if (!presupuesto && presupuestoDetectado) {
+  presupuesto = 'USD ' + presupuestoDetectado;
+}
 
 return [
   {
@@ -157,6 +241,8 @@ return [
       solicitud_visita: solicitudVisita,
       visita_propiedad_id: String(visitaData.propiedad_id || ''),
       visita_nota: String(visitaData.nota || ''),
+      mensaje_cierre: mensajeCierre,
+      mensajes_extra: JSON.stringify(mensajesExtra),
     },
   },
 ];

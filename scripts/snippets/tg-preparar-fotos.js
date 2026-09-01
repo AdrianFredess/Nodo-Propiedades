@@ -23,6 +23,7 @@ function cardCaption(m, id) {
   const titulo = m.titulo || m.caption || id;
   const tipo = m.tipo || 'Propiedad';
   const op = m.operacion || 'Venta';
+  const zona = m.zona ? String(m.zona).trim() : '';
   const precio = formatPrecio(m.precio, m.precioUsd);
   const desc = String(m.descripcion || '').trim();
   const link = m.linkFicha || '';
@@ -31,13 +32,9 @@ function cardCaption(m, id) {
     titulo +
     '</b>\n\n' +
     '🏠 Tipo: ' +
-    tipo +
-    '\n' +
-    '🏷️ ' +
-    op +
-    '\n' +
-    '💰 Precio: ' +
-    precio;
+    tipo;
+  if (zona) cap += '\n📍 ' + zona;
+  cap += '\n🏷️ ' + op + '\n💰 Precio: ' + precio;
   if (desc) cap += '\n\n' + desc;
   if (link) cap += '\n\n🔗 <a href="' + link + '">Ver ficha</a>';
   return cap.slice(0, 1000);

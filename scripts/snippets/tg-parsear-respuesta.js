@@ -30,6 +30,8 @@ if (!Array.isArray(sugerenciasIds)) sugerenciasIds = [];
 const debeMostrar = Boolean(promptData.debe_mostrar_propiedades);
 const presupuestoDetectado = String(promptData.presupuesto_detectado || '');
 const esSoloSaludo = Boolean(promptData.es_solo_saludo);
+const esDetalleUna = Boolean(promptData.es_detalle_una);
+const esPreguntaEspecifica = Boolean(promptData.es_pregunta_especifica);
 
 const SALUDOS_HUMANOS = [
   'Hola, ¿cómo estás? Soy Matías de Nodo Propiedades. Cuando quieras contame qué necesitás.',
@@ -51,8 +53,12 @@ function esInvasivo(texto) {
   if (/\b(hey|qué buscás|que buscas|compra,?\s*alquiler|alquiler o venta)\b/i.test(t)) {
     return true;
   }
+  if (/\b(qué tipo de propiedad|para poder ayudarte|ayudarte mejor|me gustaría saber|contame un poco más|necesito que me|podés indicarme|sería ideal si)\b/i.test(t)) {
+    return true;
+  }
   if ((t.match(/\?/g) || []).length >= 2) return true;
   if (/\b(compra|alquiler|venta)\b/i.test(t) && esSaludoSimple(textoUsuario)) return true;
+  if (esPreguntaEspecifica && suenaARobot(t)) return true;
   return false;
 }
 
@@ -73,9 +79,16 @@ function quitarMuletillaChe(texto) {
 }
 
 function suenaARobot(texto) {
-  return /\b(me podr[ií]as indicar|podr[ií]as indicarme|para poder ayudarte mejor|indicame tu presupuesto|zona de mendoza que te interesa)\b/i.test(
+  return /\b(me podr[ií]as indicar|podr[ií]as indicarme|para poder ayudarte mejor|indicame tu presupuesto|zona de mendoza que te interesa|qué tipo de propiedad|con gusto te ayudo|sería de gran ayuda|necesitaría saber|cuál es tu presupuesto|en qué zona|podés contarme|me ayudarías indicando)\b/i.test(
     texto,
   );
+}
+
+function splitParrafos(texto) {
+  return String(texto || '')
+    .split(/\n{2,}|(?:\r?\n)+/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 8 && p.length < 280);
 }
 
 const estadoRegex = /###ESTADO_ACTUAL:(frio|tibio|caliente)###/i;
@@ -85,6 +98,8 @@ const propRegex =
   /###PROPIEDAD_SEGUIMIENTO###[\s\S]*?({[\s\S]*?})[\s\S]*?###FIN_PROP###/;
 const mostrarRegex =
   /###MOSTRAR_PROPIEDADES###\s*(\[[\s\S]*?\])\s*###FIN_MOSTRAR###/i;
+const burbujasRegex =
+  /###BURBUJAS###\s*(\[[\s\S]*?\])\s*###FIN_BURBUJAS###/i;
 const visitaRegex =
   /###SOLICITUD_VISITA###\s*({[\s\S]*?})\s*###FIN_VISITA###/i;
 
@@ -118,6 +133,23 @@ if (mostrarMatch) {
 
 if (!propiedadesMostrar.length && debeMostrar && sugerenciasIds.length) {
   propiedadesMostrar = sugerenciasIds.slice(0, 3);
+}
+
+let mensajesExtra = [];
+const burbujasMatch = working.match(burbujasRegex);
+if (burbujasMatch) {
+  try {
+    const arr = JSON.parse(burbujasMatch[1].trim());
+    if (Array.isArray(arr)) {
+      mensajesExtra = arr
+        .map((x) => humanizarVoz(quitarMuletillaChe(String(x || '').trim())))
+        .filter(Boolean)
+        .slice(0, 4);
+    }
+  } catch (e) {
+    mensajesExtra = [];
+  }
+  working = working.replace(burbujasRegex, '').trim();
 }
 
 function armarIntroPropiedades(presu) {
@@ -187,6 +219,27 @@ if (match) {
 respuestaBot = quitarMuletillaChe(respuestaBot);
 respuestaBot = humanizarVoz(respuestaBot);
 
+if (mensajesExtra.length > 1) {
+  respuestaBot = mensajesExtra[0];
+  mensajesExtra = mensajesExtra.slice(1);
+} else if (mensajesExtra.length === 1 && !respuestaBot) {
+  respuestaBot = mensajesExtra[0];
+  mensajesExtra = [];
+}
+
+if (
+  !mensajesExtra.length &&
+  (esDetalleUna || esPreguntaEspecifica) &&
+  respuestaBot &&
+  !propiedadesMostrar.length
+) {
+  const partes = splitParrafos(respuestaBot);
+  if (partes.length > 1) {
+    respuestaBot = partes[0];
+    mensajesExtra = partes.slice(1, 4);
+  }
+}
+
 if (propiedadesMostrar.length > 0) {
   respuestaBot = armarIntroPropiedades(presupuestoDetectado);
   mensajeCierre = MENSAJE_CIERRE_PROPS;
@@ -195,6 +248,15 @@ if (propiedadesMostrar.length > 0) {
 } else if (esInvasivo(respuestaBot)) {
   if (esSaludoSimple(textoUsuario)) {
     respuestaBot = SALUDOS_HUMANOS[0];
+    mensajesExtra = [];
+  } else if (esPreguntaEspecifica || esDetalleUna) {
+    respuestaBot = humanizarVoz(
+      respuestaBot
+        .replace(/\?[^.!?]*$/g, '.')
+        .replace(/\b(me podr[ií]as|podr[ií]as indicarme|para poder ayudarte)[^.!?]*/gi, '')
+        .trim(),
+    ) || 'Dale, lo confirmo con el asesor y te aviso.';
+    mensajesExtra = [];
   } else {
     respuestaBot = humanizarVoz(respuestaBot);
   }
@@ -267,6 +329,7 @@ return [
       visita_propiedad_id: String(visitaData.propiedad_id || ''),
       visita_nota: String(visitaData.nota || ''),
       mensaje_cierre: mensajeCierre,
+      mensajes_extra: JSON.stringify(mensajesExtra),
     },
   },
 ];

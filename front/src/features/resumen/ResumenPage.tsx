@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { computeResumenMetrics, filterLeadsByDay } from './computeMetrics';
+import { computeGlobalMetrics, computeResumenMetrics, filterLeadsByDay } from './computeMetrics';
 import { CANAL_LABEL, TEMPERATURA_LABEL } from '../../shared/lib/labels';
 import { leadTimestampMs, sortLeadsByRecency } from '../../shared/lib/leadsOrder';
 import {
@@ -18,13 +18,13 @@ interface ResumenPageProps {
 }
 
 const TEMP_ORDER: Temperatura[] = ['caliente', 'tibio', 'frio'];
+const CANAL_ORDER = ['whatsapp', 'telegram', 'messenger'] as const;
 
 function fromInputDate(value: string): Date {
   const [y, m, d] = value.split('-').map(Number);
   return startOfDay(new Date(y, m - 1, d));
 }
 
-/** Fecha local (input date) del lead más reciente con actividad parseable. */
 function latestActivityInputDate(allLeads: Lead[]): string | null {
   let bestMs = 0;
   for (const lead of allLeads) {
@@ -48,13 +48,14 @@ export function ResumenPage({
     () => sortLeadsByRecency(filterLeadsByDay(leads, selectedDay)),
     [leads, selectedDay],
   );
-  const metrics = useMemo(
-    () => computeResumenMetrics(dayLeads, selectedDay),
-    [dayLeads, selectedDay],
+  const dayMetrics = useMemo(
+    () => computeResumenMetrics(dayLeads),
+    [dayLeads],
   );
+  const global = useMemo(() => computeGlobalMetrics(leads), [leads]);
 
-  const maxTemp = Math.max(1, ...Object.values(metrics.porTemperatura));
-  const maxCanal = Math.max(1, ...Object.values(metrics.porCanal));
+  const maxTemp = Math.max(1, ...Object.values(global.porTemperatura));
+  const maxCanal = Math.max(1, ...Object.values(global.porCanal));
 
   const otherDaysHint = useMemo(() => {
     if (dayLeads.length > 0 || leads.length === 0) return null;
@@ -69,9 +70,9 @@ export function ResumenPage({
     <div className="page-frame page-frame--resumen">
       <header className="page-head page-head--compact">
         <div>
-          <h1>Resumen ejecutivo</h1>
-          <p>
-            KPIs y leads del día. Polling actualiza sin cambiar la fecha.
+          <h1>Resumen</h1>
+          <p className="page-head__subtitle">
+            Vista ejecutiva del CRM — leads, pipeline y canales
           </p>
         </div>
         <div className="resumen-toolbar">
@@ -103,31 +104,60 @@ export function ResumenPage({
         </div>
       </header>
 
-      <section className="stat-grid">
+      <section className="stat-grid stat-grid--hero" aria-label="Indicadores principales">
         <article className="stat panel-card">
-          <div className="stat__label">Leads del día</div>
-          <div className="stat__value">{metrics.total}</div>
+          <div className="stat__label">Total leads</div>
+          <div className="stat__value">{global.totalLeads}</div>
+          <p className="stat__hint">En el CRM</p>
+        </article>
+        <article className="stat panel-card">
+          <div className="stat__label">Activos (7 días)</div>
+          <div className="stat__value">{global.leadsSemana}</div>
+          <p className="stat__hint">Con actividad reciente</p>
         </article>
         <article className="stat panel-card stat--hot">
-          <div className="stat__label">Calientes del día</div>
-          <div className="stat__value">{metrics.calientesDia}</div>
+          <div className="stat__label">Calientes</div>
+          <div className="stat__value">{global.calientes}</div>
+          <p className="stat__hint">Listos para avanzar</p>
         </article>
         <article className="stat panel-card">
-          <div className="stat__label">WhatsApp</div>
-          <div className="stat__value">{metrics.porCanal.whatsapp}</div>
+          <div className="stat__label">Visitas solicitadas</div>
+          <div className="stat__value">{global.visitasSolicitadas}</div>
+          <p className="stat__hint">Leads que pidieron ver</p>
         </article>
-        <article className="stat panel-card">
-          <div className="stat__label">Telegram</div>
-          <div className="stat__value">{metrics.porCanal.telegram}</div>
-        </article>
+      </section>
+
+      <section className="resumen-section" aria-label="Actividad del día">
+        <h2 className="resumen-section__title">
+          Actividad {isToday ? 'de hoy' : `del ${dayValue}`}
+        </h2>
+        <div className="stat-grid stat-grid--day">
+          <article className="stat panel-card">
+            <div className="stat__label">Leads activos</div>
+            <div className="stat__value">{dayMetrics.leadsDia}</div>
+          </article>
+          <article className="stat panel-card stat--hot">
+            <div className="stat__label">Calientes</div>
+            <div className="stat__value">{dayMetrics.calientesDia}</div>
+          </article>
+          <article className="stat panel-card">
+            <div className="stat__label">WhatsApp</div>
+            <div className="stat__value">{dayMetrics.whatsappDia}</div>
+          </article>
+          <article className="stat panel-card">
+            <div className="stat__label">Telegram</div>
+            <div className="stat__value">{dayMetrics.telegramDia}</div>
+          </article>
+        </div>
       </section>
 
       <section className="split-2">
         <article className="panel-card section-block">
-          <h2>Temperatura del día</h2>
+          <h2>Pipeline</h2>
+          <p className="section-block__desc">Distribución por temperatura (total)</p>
           <div className="bar-list">
             {TEMP_ORDER.map((temp) => {
-              const value = metrics.porTemperatura[temp];
+              const value = global.porTemperatura[temp];
               const pct = Math.round((value / maxTemp) * 100);
               return (
                 <div className="bar-row" key={temp}>
@@ -146,12 +176,11 @@ export function ResumenPage({
         </article>
 
         <article className="panel-card section-block">
-          <h2>Canal del día</h2>
+          <h2>Canales</h2>
+          <p className="section-block__desc">Origen de los leads (total)</p>
           <div className="bar-list">
-            {(
-              Object.keys(metrics.porCanal) as Array<keyof typeof metrics.porCanal>
-            ).map((canal) => {
-              const value = metrics.porCanal[canal];
+            {CANAL_ORDER.map((canal) => {
+              const value = global.porCanal[canal];
               const pct = Math.round((value / maxCanal) * 100);
               return (
                 <div className="bar-row" key={canal}>
@@ -170,11 +199,28 @@ export function ResumenPage({
         </article>
       </section>
 
+      {global.topPropiedades.length > 0 ? (
+        <section className="panel-card section-block">
+          <h2>Propiedades más consultadas</h2>
+          <p className="section-block__desc">Por menciones en conversaciones</p>
+          <ol className="resumen-top-props">
+            {global.topPropiedades.map((p, i) => (
+              <li key={p.id}>
+                <Link to={`/catalogo/${encodeURIComponent(p.id)}`}>
+                  <span className="resumen-top-props__rank">#{i + 1}</span>
+                  <span className="resumen-top-props__id">{p.id}</span>
+                  <span className="resumen-top-props__count">
+                    {p.count} consulta{p.count === 1 ? '' : 's'}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
+
       <section className="panel-card section-block resumen-day-list resumen-day-list--fill">
-        <h2>
-          Leads del {dayValue}
-          <span className="resumen-day-list__hint"> · más reciente primero</span>
-        </h2>
+        <h2>Leads del {dayValue}</h2>
         {dayLeads.length === 0 ? (
           <div className="empty-state empty-state--compact">
             <p>Sin actividad ese día</p>

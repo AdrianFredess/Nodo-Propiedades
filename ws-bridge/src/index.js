@@ -13,6 +13,11 @@ import { synthesizeArgentine, ttsInfo } from './tts.js';
 const PORT = Number(process.env.WS_BRIDGE_PORT || 3099);
 const HOST = process.env.WS_BRIDGE_HOST || '0.0.0.0';
 const TOKEN = String(process.env.WS_BRIDGE_TOKEN || '').trim();
+const EMIT_WINDOW_MS = Number(process.env.WS_EMIT_RATE_WINDOW_MS || 60_000);
+const EMIT_MAX_PER_WINDOW = Number(process.env.WS_EMIT_RATE_MAX || 60);
+
+/** @type {Map<string, number[]>} */
+const emitRateLog = new Map();
 
 /** @type {Set<import('ws').WebSocket>} */
 const clients = new Set();
@@ -59,6 +64,21 @@ function tokenOk(req, body) {
   return String(header || fromBody).trim() === TOKEN;
 }
 
+function clientIp(req) {
+  const fwd = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return fwd || req.socket?.remoteAddress || 'local';
+}
+
+function emitRateOk(ip) {
+  const now = Date.now();
+  const prev = emitRateLog.get(ip) || [];
+  const recent = prev.filter((t) => now - t < EMIT_WINDOW_MS);
+  if (recent.length >= EMIT_MAX_PER_WINDOW) return false;
+  recent.push(now);
+  emitRateLog.set(ip, recent);
+  return true;
+}
+
 function broadcast(event) {
   const msg = JSON.stringify(event);
   let sent = 0;
@@ -85,6 +105,7 @@ const server = http.createServer(async (req, res) => {
       clients: clients.size,
       port: PORT,
       auth: Boolean(TOKEN),
+      emitRate: { windowMs: EMIT_WINDOW_MS, max: EMIT_MAX_PER_WINDOW },
       tts: ttsInfo(),
     });
     return;
@@ -136,6 +157,11 @@ const server = http.createServer(async (req, res) => {
     }
     if (!tokenOk(req, body)) {
       json(res, 401, { ok: false, error: 'token_invalido' });
+      return;
+    }
+    const ip = clientIp(req);
+    if (!emitRateOk(ip)) {
+      json(res, 429, { ok: false, error: 'rate_limit', retryAfterMs: EMIT_WINDOW_MS });
       return;
     }
     const type = String(body.type || body.event || '').trim();
