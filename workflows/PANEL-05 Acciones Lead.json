@@ -1,0 +1,543 @@
+{
+  "name": "PANEL-05 Acciones Lead",
+  "nodes": [
+    {
+      "id": "p05-webhook",
+      "name": "Webhook Acciones Lead",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "panel-lead-actions",
+        "responseMode": "responseNode"
+      },
+      "position": [
+        200,
+        300
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "panel-lead-actions"
+    },
+    {
+      "id": "p05-auth",
+      "name": "Check Panel Auth",
+      "parameters": {
+        "jsCode": "const root = $input.first().json;\nconst headers = root.headers || {};\nconst norm = {};\nfor (const [k, v] of Object.entries(headers)) {\n  norm[String(k).toLowerCase()] = v;\n}\nconst authHeader = String(norm.authorization || '');\nconst bearer = authHeader.toLowerCase().startsWith('bearer ')\n  ? authHeader.slice(7).trim()\n  : '';\nconst got = String(norm['x-panel-token'] || bearer || '').trim();\nlet expected = '';\ntry {\n  expected = String(($env && $env.PANEL_API_TOKEN) || '').trim();\n} catch (e) {\n  expected = '';\n}\nconst authOk = !expected || got === expected;\nreturn [{ json: { ...root, _authOk: authOk } }];"
+      },
+      "position": [
+        400,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "p05-auth-if",
+      "name": "IF Panel Auth OK",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "auth-ok",
+              "leftValue": "={{ $json._authOk }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": true
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        600,
+        300
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2
+    },
+    {
+      "id": "p05-auth-fail",
+      "name": "Responder Auth Fail",
+      "parameters": {
+        "options": {
+          "responseCode": 401,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: 'unauthorized' }) }}"
+      },
+      "position": [
+        600,
+        520
+      ],
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1
+    },
+    {
+      "id": "p05-prep",
+      "name": "Preparar Accion",
+      "parameters": {
+        "jsCode": "const root = $input.first().json;\nconst body = root.body && typeof root.body === 'object' ? root.body : root;\nconst action = String(body.action || '').trim().toLowerCase();\nconst chatId = String(body.chat_id || body.chatId || '').trim();\nconst text = String(body.text || '').trim();\nconst estado = String(body.estado_seguimiento || body.estadoSeguimiento || '').trim().toLowerCase();\nconst status = String(body.status || '').trim().toLowerCase();\nconst ALLOWED_ESTADO = new Set(['ninguno','enviado_1','enviado_2','respondido','cerrado','cerrado_sin_respuesta']);\nconst ALLOWED_STATUS = new Set(['abierto','calificado','cerrado','cerrado_sin_respuesta']);\n\nif (!chatId) return [{ json: { ok: false, error: 'chat_id_requerido' } }];\nif (action === 'send_whatsapp') {\n  if (!text) return [{ json: { ok: false, error: 'text_requerido' } }];\n  return [{ json: { ok: true, action, chat_id: chatId, text } }];\n}\nif (action === 'update_seguimiento') {\n  if (estado && !ALLOWED_ESTADO.has(estado)) return [{ json: { ok: false, error: 'estado_invalido', estado } }];\n  if (status && !ALLOWED_STATUS.has(status)) return [{ json: { ok: false, error: 'status_invalido', status } }];\n  if (!estado && !status) return [{ json: { ok: false, error: 'sin_cambios' } }];\n  return [{ json: { ok: true, action, chat_id: chatId, estado_seguimiento: estado || undefined, status: status || undefined, ahora: new Date().toISOString() } }];\n}\nreturn [{ json: { ok: false, error: 'action_invalida', action } }];"
+      },
+      "position": [
+        820,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "p05-if-ok",
+      "name": "IF Accion Valida",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "ok1",
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": true
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        1040,
+        300
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2
+    },
+    {
+      "id": "p05-err",
+      "name": "Responder Error",
+      "parameters": {
+        "options": {
+          "responseCode": 400,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        },
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "position": [
+        1040,
+        520
+      ],
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1
+    },
+    {
+      "id": "p05-if-action",
+      "name": "IF Send WhatsApp",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "wa1",
+              "leftValue": "={{ $json.action }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "send_whatsapp"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "position": [
+        1260,
+        220
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2
+    },
+    {
+      "id": "p05-send-wa",
+      "name": "Meta Enviar WhatsApp",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/__SET_META_GRAPH_VERSION__/__SET_META_PHONE_NUMBER_ID__/messages",
+        "sendBody": true,
+        "specifyBody": "json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer __SET_META_ACCESS_TOKEN__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "jsonBody": "={{ JSON.stringify({ messaging_product: \"whatsapp\", recipient_type: \"individual\", to: (function(p){p=String(p||\"\").replace(/\\D/g,\"\");if(/^549\\d{8,11}$/.test(p))return \"54\"+p.slice(3);return p;})($json.phone || $json.chat_id || \"\"), type: \"text\", text: { preview_url: false, body: String($json.text || \"\") } }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "position": [
+        1500,
+        120
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "p05-wrap-wa",
+      "name": "Envelope WA",
+      "parameters": {
+        "jsCode": "const prep = $('Preparar Accion').first().json;\nconst raw = $input.first().json || {};\nconst err = raw.error;\nconst hasMsg = Array.isArray(raw.messages) && raw.messages.length > 0;\nconst statusBad = Number(raw.statusCode || 0) >= 400;\nconst ok = !err && !statusBad && hasMsg;\nreturn [{\n  json: {\n    ok,\n    action: 'send_whatsapp',\n    chat_id: prep.chat_id,\n    text: prep.text,\n    meta: hasMsg ? { message_id: raw.messages[0].id } : undefined,\n    error: ok ? undefined : String(\n      (err && (err.message || err.error_user_msg)) || raw.message || 'meta_send_error'\n    ),\n  },\n}];"
+      },
+      "position": [
+        1720,
+        120
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "p05-emit-wa",
+      "name": "Emit Chat WA",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "jsonBody": "={{ JSON.stringify({ type: 'chat.message', payload: { chatId: String($json.chat_id), text: String($json.text || ''), side: 'bot', source: 'panel-wa' } }) }}",
+        "method": "POST",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 3000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "http://127.0.0.1:5678/webhook/panel-realtime-emit"
+      },
+      "position": [
+        1940,
+        120
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "WBM00QjQj4q8xjLF",
+          "name": "Cuenta de Google Sheets"
+        }
+      },
+      "id": "p05-upd-sheet",
+      "name": "Actualizar Seguimiento Sheets",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "chat_id"
+          ],
+          "schema": [],
+          "value": {
+            "chat_id": "={{ $('Preparar Accion').first().json.chat_id }}",
+            "estado_seguimiento": "={{ $('Preparar Accion').first().json.estado_seguimiento || undefined }}",
+            "status": "={{ $('Preparar Accion').first().json.status || undefined }}",
+            "ultima_actualizacion": "={{ $('Preparar Accion').first().json.ahora }}",
+            "updated_at": "={{ $('Preparar Accion').first().json.ahora }}"
+          }
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__SET_GOOGLE_SHEET_ID__"
+        },
+        "operation": "appendOrUpdate",
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads_Bot"
+        }
+      },
+      "position": [
+        1500,
+        320
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7
+    },
+    {
+      "id": "p05-wrap-seg",
+      "name": "Envelope Seguimiento",
+      "parameters": {
+        "jsCode": "const prep = $('Preparar Accion').first().json;\nconst raw = $input.first().json || {};\nconst failed = Boolean(raw.error);\nreturn [{\n  json: {\n    ok: !failed,\n    action: 'update_seguimiento',\n    chat_id: prep.chat_id,\n    estado_seguimiento: prep.estado_seguimiento || null,\n    status: prep.status || null,\n    error: failed ? String(raw.error) : undefined,\n  },\n}];"
+      },
+      "position": [
+        1720,
+        320
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "p05-emit-lead",
+      "name": "Emit Lead Updated",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "jsonBody": "={{ JSON.stringify({ type: 'lead.updated', payload: { chatId: String($json.chat_id), estadoSeguimiento: $json.estado_seguimiento, status: $json.status, source: 'panel' } }) }}",
+        "method": "POST",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 3000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "http://127.0.0.1:5678/webhook/panel-realtime-emit"
+      },
+      "position": [
+        1940,
+        320
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2
+    },
+    {
+      "id": "p05-ok",
+      "name": "Responder OK",
+      "parameters": {
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($('Preparar Accion').first().json.action === 'send_whatsapp' ? $('Envelope WA').first().json : $('Envelope Seguimiento').first().json) }}"
+      },
+      "position": [
+        2160,
+        220
+      ],
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1
+    }
+  ],
+  "connections": {
+    "Actualizar Seguimiento Sheets": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Envelope Seguimiento",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Check Panel Auth": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "IF Panel Auth OK",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Emit Chat WA": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Responder OK",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Emit Lead Updated": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Responder OK",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Envelope Seguimiento": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Emit Lead Updated",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Envelope WA": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Emit Chat WA",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "IF Accion Valida": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "IF Send WhatsApp",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Responder Error",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "IF Panel Auth OK": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Preparar Accion",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Responder Auth Fail",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "IF Send WhatsApp": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Meta Enviar WhatsApp",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Actualizar Seguimiento Sheets",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Preparar Accion": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "IF Accion Valida",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Webhook Acciones Lead": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Check Panel Auth",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Meta Enviar WhatsApp": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Envelope WA",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

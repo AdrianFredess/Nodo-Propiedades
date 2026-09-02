@@ -24,18 +24,20 @@ node scripts/generate-propiedad-media.js
 node scripts/patch-asesor-profesional.js
 ```
 
-Parchea **Bot Telegram** (prompt, fotos, email visita) y **SIMPLE-02 WhatsApp** (stock, fotos WAHA, email visita).
+Parchea **Bot Telegram** (prompt, fotos, email visita) y **SIMPLE-02 WhatsApp** (stock, fotos, email visita). Para outbound WhatsApp con Meta Cloud API, corré después:
 
-## WhatsApp (sin chip todavía)
+```bash
+node scripts/patch-meta-whatsapp.js --deploy
+```
 
-El workflow **ya queda listo** aunque no tengas WhatsApp activo:
+## WhatsApp (Meta Cloud API)
 
 1. Chip prepago dedicado (no uses tu número personal si podés evitarlo).
-2. `docker compose -f docker-compose.waha.yml --env-file .env.waha up -d`
-3. Abrí `http://localhost:3002` → sesión `nodo` → escaneá QR **una vez**.
-4. El webhook de SIMPLE-02 apunta a n8n; al escribir al número, Matías responde con texto + fotos.
+2. Completá `META_*` en `.env` — ver `docs/WHATSAPP-CLOUD-META.md`.
+3. `node scripts/patch-meta-whatsapp.js --deploy` (webhook `meta-whatsapp`, envío Graph API).
+4. Al escribir al número de negocio, Matías responde con texto + fotos.
 
-Si WAHA no está corriendo, n8n sigue funcionando; solo fallará el envío al cliente (el resto del CRM no se rompe).
+Si faltan credenciales Meta, n8n sigue funcionando; solo fallará el envío al cliente (el resto del CRM no se rompe).
 
 ## Catálogo público (links desde el celular)
 

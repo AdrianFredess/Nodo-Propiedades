@@ -1,0 +1,903 @@
+--- PAGE 1 ---
+UNIVERSIDAD	TECNOLÓGICA	NACIONAL	—	FACULTAD	REGIONAL	MENDOZA
+CUARTA	AUDITORÍA	ACADÉMICA
+Verificación	de	correcciones	sobre	el	informe	del	25	de	agosto	de	2026
+Trabajo	Final	de	Carrera	—	Tecnicatura	Universitaria	en	Programación
+«Nodo	Propiedades	—	Automatización	Inteligente	de	la	Gestión	Comercial	Inmobiliaria	mediante	n8n,	Inteligencia	Artificial	y	Canales	Digitales	de
+Comunicación»
+Autor	de	la	tesis
+Adrian	Fredes
+Director
+Prof.	Alberto	Cortez
+Archivo	auditado
+Nodo_Propiedades_Tesis_corregir3.docx
+Extensión
+~17.600	palabras	·	51	páginas	renderizadas	(versión	anterior:	~17.500	·	50	páginas)
+Informe	de	referencia
+Tercera	auditoría	del	25	de	agosto	de	2026	(plan	de	10	ítems:	2	obligatorios,	3	muy	recomendados,	2	recomendados,	2	menores,	1
+opcional;	9	hallazgos	T1–T9)
+Alcance	de	este	informe
+Verificación	del	plan	de	10	ítems	+	auditoría	independiente	de	lo	incorporado,	con	recálculo	completo	del	capítulo	5
+Fecha	del	informe
+27	de	agosto	de	2026
+Documento	de	uso	interno	del	tribunal	evaluador.	Verificación	textual,	aritmética,	estadística,	gráfica,	bibliográfica	y	formal	sobre	el	archivo	entregado.
+1.	Resumen	ejecutivo	y	dictamen
+APTO	PARA	LA	DEFENSA
+condicionado	a	dos	correcciones	de	edición	(20	minutos)
+Calificación	global:	8,2	/	10
+	·	anterior:	7,9	·	segunda:	7,1	·	original:	3,8
+9	/	10
+ÍTEMS	DEL	PLAN	EJECUTADOS
+7
+RESUELTOS	POR	COMPLETO
+2
+RESUELTOS	PARCIALMENTE
+14	/	14
+VERIFICACIONES	ARITMÉTICAS
+CORRECTAS
+9
+HALLAZGOS	NUEVOS	(3	DE
+SEVERIDAD	ALTA)
+Las	dos	correcciones	obligatorias	del	informe	anterior	están	resueltas.	§2.1	dejó	de	negar	la	notificación	al	operador:	hoy	declara	que	el	trabajo	implementa	un
+mecanismo	explícito	de	notificación	activa	ante	leads	calientes,	en	el	mismo	sentido	que	§4.2.3,	§6.1	y	la	Tabla	7.	§5.6	dejó	de	declarar	cuatro	comparaciones	y
+calcular	sobre	seis:	unificó	el	tamaño	muestral	en	n=6	y	lo	hizo	explícito.	Se	resolvieron	además	la	fecha	de	la	nota	de	la	Tabla	7,	la	referencia	cruzada	«Figuras
+5	a	8»,	la	cita	de	(Fredes,	2026)	en	el	cuerpo,	el	orden	alfabético	Zhao/Zheng,	el	rango	de	páginas	de	Zheng	et	al.	—por	declaración	justificada	y	verificable—,
+el	nivel	de	título	de	4.7.1–4.7.4,	el	orden	del	índice,	el	matiz	del	Resumen,	la	ubicación	de	la	nota	de	la	Tabla	6	y	el	recorte	de	filas	de	la	Figura	8.
+Corresponde	señalar,	con	el	mismo	énfasis	con	que	se	señalan	los	reparos,	que	esta	versión	excede	el	plan	de	corrección	en	un	punto	de	fondo.
+El	autor	ejecutó	la	comparación	contra	un	clasificador	por	reglas	que	el	capítulo	8	identificaba	como	la	recomendación	metodológica	de	mayor	valor	científico,
+y	que	el	informe	anterior	había	listado	entre	las	tres	respuestas	a	preparar	para	la	defensa	oral.	La	sección	5.4	reporta	hoy	20/30	(66,7%)	para	el	clasificador
+determinístico	frente	a	28/30	(93,3%)	para	la	inferencia	semántica,	con	prueba	de	McNemar	exacta	sobre	los	diez	pares	discordantes	(p=0,021).	El	tribunal
+recalculó	la	prueba	de	forma	independiente:	
+el	valor	es	correcto
+,	y	la	tabla	de	contingencia	implícita	(nueve	aciertos	exclusivos	de	la	inferencia	semántica,
+uno	del	clasificador	por	reglas,	un	caso	fallado	por	ambos)	es	internamente	consistente	con	los	dos	totales	reportados.	Es	la	primera	vez	que	el	trabajo	sustenta
+con	evidencia	propia	su	decisión	de	diseño	central.	La	Figura	1	fue	además	redibujada	e	incorpora	hoy	la	rama	
+IF	Temperatura	Caliente	→	Email	Lead	Caliente	/
+Telegram	Alerta	Owner
+.
+Los	hallazgos	nuevos	de	esta	auditoría	son,	en	su	mayoría,	consecuencia	de	esa	incorporación.
+	El	trabajo	agregó	un	experimento	al	capítulo	de
+resultados	sin	anclarlo	en	el	capítulo	metodológico,	y	eso	reabre	—en	un	lugar	distinto—	exactamente	la	familia	de	defecto	que	motivó	los	tres	dictámenes
+anteriores:	el	documento	afirmando	algo	que	su	propia	evidencia	desmiente.
+Primero:	§3.1	sostiene	que	no	hay	grupo	de	control;	§5.4	reporta	una	condición	de	contraste.
+	El	capítulo	metodológico	declara	que	el	trabajo	«no
+constituye	un	diseño	experimental	en	sentido	estricto:	no	hay	grupo	de	control,	no	hay	manipulación	sistemática	de	variables	independientes».	Doce	páginas
+después,	§5.4	reporta	la	comparación	pareada	de	dos	clasificadores	sobre	la	misma	muestra	de	treinta	conversaciones,	que	es	precisamente	una	condición	de
+contraste,	y	§6.3	la	registra	como	tal.	Además,	el	procedimiento	de	§3.7	—que	enumera	paso	por	paso	todo	lo	que	se	hizo—	no	menciona	esta	campaña,	ni	§3.8
+discute	su	validez,	ni	el	Objetivo	5	de	§1.5	la	incorpora.	Un	experimento	que	decide	el	aporte	científico	del	trabajo	no	puede	aparecer	por	primera	vez	en	el
+capítulo	de	resultados.	
+Corrección:	una	oración	en	§3.1	y	un	ítem	en	la	lista	de	§3.7.	15	minutos.
+Segundo:	el	ejemplo	con	el	que	§5.4	ilustra	la	falla	del	clasificador	por	reglas	contradice	el	conjunto	de	reglas	que	la	misma	sección	declara.
+	El
+párrafo	define	la	regla	como	«tibio	si	contiene	"info",	"precio"	o	"ver"»,	y	tres	líneas	más	abajo	afirma	que	«quiero	ver	uno	esta	semana»	[…]	«no	activa	ninguna
+palabra	clave	y	el	sistema	clasifica	por	defecto	como	frío».	La	frase	contiene	«ver».	Es	un	error	de	un	solo	ejemplo,	pero	está	colocado	en	el	punto	exacto	donde
+el	lector	verifica	si	la	comparación	fue	justa,	y	un	miembro	del	tribunal	que	lea	las	dos	frases	seguidas	concluirá	que	el	clasificador	de	referencia	no	se	ejecutó
+tal	como	se	lo	describe.	
+Corrección:	reemplazar	el	ejemplo	por	uno	que	efectivamente	no	active	ninguna	clave.	5	minutos.
+Diagnóstico	en	una	frase:	el	trabajo	cerró	el	plan	anterior	y	sumó	el	resultado	que	le	faltaba	para	sostener	su	tesis	de	diseño;	lo	que	queda	es	que	ese	resultado
+todavía	no	está	integrado	al	aparato	metodológico	que	el	propio	documento	construyó	con	rigor	en	los	capítulos	1	a	3.
+2.	Métricas	objetivas:	versión	auditada	vs.	versión	anterior
+Obtenidas	por	análisis	programático	del	paquete	OOXML	y	del	PDF	renderizado,	no	por	lectura	estimativa.
+Métrica
+Versión	anterior
+Versión	actual
+Observación	del	tribunal
+Palabras	totales
+~17.500
+~17.600
+Crecimiento	neto	del	0,7%.	La	sección	nueva	de	§5.4	(~370
+palabras)	se	compensó	con	depuración	en	otros	pasajes:	no	hubo
+inflado.
+Páginas	renderizadas
+50
+51
+Una	página	adicional,	atribuible	a	§5.4.
+Imágenes	embebidas
+8
+8
+Las	ocho	fueron	extraídas	e	inspeccionadas	de	nuevo,	una	por	una.
+Figura	1	—	rama	de	notificación
+Ausente
+Presente
+Verificado	sobre	la	imagen:	incluye	IF	Temperatura	Caliente,
+--- PAGE 2 ---
+Email	Lead	Caliente	y	Telegram	Alerta	Owner.	T6	resuelto.	Reparo
+de	topología	en	Q5.
+Referencias	bibliográficas
+22
+23
+Se	incorporó	McNemar	(1947),	citada	en	el	cuerpo.	Ver	reparo	de
+ordenamiento	en	Q7.
+Referencias	huérfanas
+1	(Fredes)
+0
+Cotejo	cita–referencia	en	ambos	sentidos	sobre	las	23	entradas:
+correspondencia	completa.	T5(a)	resuelto.
+Orden	alfabético	APA
+1	error	(Zheng	antes	de
+Zhao)
+1	error	(McNemar	tras
+Meta)
+El	error	anterior	se	corrigió;	la	entrada	nueva	introdujo	otro.	Ver
+Q7.
+Intervalos	de	confianza	declarados
+5
+6
+Los	seis	recalculados	de	forma	independiente:	los	seis	correctos.
+Pruebas	de	significación	declaradas
+0
+1
+McNemar	exacta.	Recalculada:	p=0,0215,	correctamente
+redondeada	a	0,021.
+Errores	aritméticos	detectados
+0
+0
+Tercera	auditoría	consecutiva	sin	un	solo	error	de	cálculo.
+Referencias	cruzadas	rotas
+1	(«Figuras	5	a	8»)
+1	(autorreferencia	§5.4)
+La	anterior	se	corrigió	a	«Figuras	3	a	6»,	verificado.	La	nueva	es
+de	otro	tipo:	ver	Q8.
+Nivel	de	título	4.7.1–4.7.4
+Heading	2
+Heading	3
+Ahora	coincide	con	4.2.1–4.2.4.	Verificado	en	los	estilos	del
+OOXML.	T9	resuelto	en	este	punto.
+Índice:	«Aporte	académico	y	práctico»
+Omitido
+Presente
+Y	el	orden	Resumen	/	Abstract	/	Listas	quedó	corregido.
+Listas	de	palabras	clave	en	español
+1	(8	términos)
+2	(8	y	9	términos)
+Se	agregó	la	lista	posterior	al	Resumen	con	«panel	comercial»,
+pero	la	de	portada	quedó	sin	actualizar.	Ver	Q6.
+Dobles	espacios	/	espacios	antes	de
+puntuación
+0	/	0
+0	/	0
+Verificado	sobre	el	texto	completo,	tablas	incluidas.	Mérito
+conservado.
+Oraciones	de	más	de	55	palabras
+20
+11
+Reducción	del	45%.	Medición	sobre	prosa,	excluidas	tablas	y	el
+prompt	transcripto	del	Anexo	B.
+Oraciones	de	más	de	40	palabras
+22,0%
+16,8%
+Por	primera	vez	por	debajo	del	19,6%	de	la	primera	versión	del
+documento.	Ítem	9	del	plan:	ejecutado.
+Correspondencia	índice	/	paginación	real
+9	de	10	exactos
+11	de	12	exactos
+Los	doce	encabezados	se	verificaron	contra	el	PDF	renderizado.
+Única	discrepancia,	la	ya	conocida:	el	Resumen	declara	página	3	y
+está	en	la	2.
+3.	Trazabilidad	del	plan	de	corrección	de	diez	ítems
+#
+Acción	indicada	en	el	informe	anterior
+Estado
+Verificación	realizada
+1
+Reescribir	la	oración	de	§2.1	sobre	notificación	al
+operador	en	el	sentido	de	§4.2.3	y	§6.1
+(obligatoria)
+Resuelto
+§2.1	declara	hoy	que	el	trabajo	«implementa,	además	del	registro	estructurado	del	lead,	un
+mecanismo	explícito	de	notificación	activa	al	operador	humano	ante	leads	de	temperatura
+caliente»,	y	remite	a	§4.2.3	y	§6.1.	Los	tres	pasajes,	la	Tabla	7	(nodos	14–16)	y	la	Figura	2
+dicen	ahora	lo	mismo.	T1	cerrado.
+2
+Unificar	el	número	de	comparaciones	de	§5.6	(4
+vs.	6)	y,	si	corresponde,	recalcular	
+(obligatoria)
+Resuelto
+parcialmente
+La	contradicción	numérica	desapareció:	§5.6	declara	expresamente	n=6	y	sobre	ese
+denominador	calcula	5/6	y	su	intervalo.	La	segunda	mitad	de	la	indicación	—«describir
+cuáles»—	no	se	ejecutó:	la	composición	de	las	seis	ejecuciones	no	está	enumerada,	y	§3.7
+sigue	describiendo	el	conjunto	como	tres	perfiles	más	un	caso	ambiguo,	que	suman	cuatro.
+Ver	Q4.
+3
+Corregir	la	fecha	de	la	nota	de	la	Tabla	7	y	la
+referencia	cruzada	«Figuras	5	a	8»	→	«Figuras	3
+a	6»
+Resuelto
+Las	dos.	La	nota	de	la	Tabla	7	distingue	hoy	las	dos	verificaciones	—relevamiento	en	vivo
+por	MCP	el	5	de	agosto	sobre	17	nodos,	actualización	contra	el	repositorio	el	21	de	agosto
+sobre	los	20	vigentes—,	exactamente	la	formulación	que	el	informe	anterior	proponía.	§4.7
+dice	hoy	«Figuras	3	a	6»:	verificado	por	búsqueda	programática,	cero	apariciones	de	la
+referencia	anterior.	T3	y	T4	cerrados.
+4
+Citar	«(Fredes,	2026)»	en	el	texto;	invertir
+Zhao/Zheng;	agregar	páginas	a	Zheng	et	al.
+Resuelto
+(a)	El	capítulo	7	y	la	nota	de	la	Tabla	7	citan	hoy	«(Fredes,	2026)»	junto	a	la	URL:	cero
+referencias	huérfanas	sobre	las	23	entradas.	(b)	Zhao	precede	a	Zheng:	verificado.	(c)	El
+rango	de	páginas	se	resolvió	por	la	vía	correcta	—declarando	que	la	publicación	no	asigna
+paginación	a	la	Datasets	and	Benchmarks	Track	y	dejando	constancia	de	la	verificación—,
+que	es	preferible	a	inventar	un	rango.	T5	cerrado.
+5
+Confirmar	que	el	repositorio	está	público,
+accesible	y	contiene	lo	que	el	capítulo	7	declara
+No	verificable
+por	el	tribunal
+La	URL	figura	en	tres	lugares	del	documento	y	el	capítulo	7	y	el	Anexo	A	declaran	su
+contenido	(JSON	de	workflows,	código	de	nodos,	instrumentos	de	validación).	El	tribunal	no
+dispone	de	acceso	externo	para	confirmar	visibilidad	ni	contenido,	de	modo	que	la	reserva
+de	la	auditoría	anterior	se	mantiene	sin	cambios:	
+es	responsabilidad	del	autor
+verificarlo	antes	de	la	defensa
+.	Un	enlace	privado	o	vacío	reinstala	el	problema
+completo,	hoy	agravado,	porque	los	instrumentos	de	la	campaña	de	treinta	conversaciones
+sólo	están	allí.
+6
+Agregar	a	la	Figura	1	la	rama	IF	Temperatura
+Caliente	→	alertas;	declarar	o	corregir	el
+solapamiento	de	la	Figura	2
+Resuelto
+La	Figura	1	fue	redibujada	e	incorpora	las	tres	cajas	de	la	rama	de	notificación,	verificado
+sobre	la	imagen	extraída.	El	epígrafe	de	la	Figura	2	declara	hoy,	con	precisión,	que	dos
+nodos	aparecen	superpuestos	por	una	limitación	del	layout	del	render,	que	eso	impide
+verificar	visualmente	el	recuento	de	17	y	que	la	Tabla	7	es	por	eso	la	referencia
+autoritativa.	T6	y	T7	cerrados;	reparo	de	topología	en	Q5.
+7
+Nivel	de	título	de	4.7.1–4.7.4;	matiz	de	§1.1	al
+Resumen;	palabras	clave;	índice;	nota	de	la	Tabla
+6
+Resuelto	en	4	de
+5
+Nivel	de	título:	Heading	3	en	las	ocho	subsecciones,	verificado	en	los	estilos.	Resumen:
+incorpora	hoy	«a	partir	de	la	experiencia	del	autor	con	agencias	de	Mendoza	(sección	1.1)»
+y	el	condicional	«concentrarían»,	que	es	exactamente	el	matiz	que	§1.1	sostenía	y	el
+Resumen	no.	Índice:	orden	corregido	y	«Aporte	académico	y	práctico»	incorporado.	Nota
+de	la	Tabla	6:	reubicada	inmediatamente	debajo	de	la	tabla,	con	«Vigencia	de	esta
+medición»	después.	Palabras	clave:	no	unificadas.	Ver	Q6.
+8
+Aclarar	el	recorte	de	filas	de	la	Figura	8	o
+regenerarla	con	los	12	registros
+Resuelto
+El	epígrafe	declara	hoy	el	recorte	en	filas	y	—mejor	aún—	que	los	dos	conjuntos	son	datos
+de	prueba	independientes	entre	sí,	no	una	vista	parcial	de	un	mismo	dataset.	Verificado
+contra	la	imagen:	diez	registros,	nueve	columnas,	y	las	tres	ausentes	son	exactamente	las
+tres	que	el	epígrafe	nombra.	T8	cerrado.
+--- PAGE 3 ---
+9
+Dividir	las	20	oraciones	que	superan	las	55
+palabras,	en	los	capítulos	3	y	5
+Resuelto
+De	20	a	11,	y	las	oraciones	de	más	de	40	palabras	bajaron	del	22,0%	al	16,8%.	Es	el	primer
+momento	del	expediente	en	que	este	indicador	queda	por	debajo	del	valor	de	la	primera
+versión	del	trabajo.
+10
+Anexar	la	planilla	de	ejecuciones	individuales	y
+repetir	la	medición	de	tiempos	
+(opcional)
+No	ejecutado
+Ninguna	de	las	dos,	y	ambas	seguían	siendo	opcionales.	La	planilla	es	hoy	el	único	residuo
+abierto	de	C18:	§3.1,	§5.5	y	la	nota	de	la	Tabla	6	la	declaran	ausente	como	limitación,	de
+modo	que	el	documento	no	afirma	más	de	lo	que	tiene.	La	medición	de	tiempos	conserva	el
+párrafo	«Vigencia	de	esta	medición»,	que	ya	responde	la	pregunta	previsible	del	tribunal.
+Ejecutado	por	fuera	del	plan
+La	comparación	contra	el	clasificador	de	referencia	(§5.4,	fechada	el	26	de	agosto	de	2026)	no	formaba	parte	del	plan	de	diez	ítems:	era	la	recomendación
+metodológica	que	el	capítulo	8	identificaba	como	la	de	mayor	valor	científico	y	que	el	informe	anterior	había	señalado	como	una	de	las	tres	respuestas	a
+preparar	para	la	defensa	oral.	El	autor	optó	por	ejecutarla	en	lugar	de	prepararla	como	respuesta.	El	capítulo	8	fue	actualizado	en	consecuencia	y	pide	hoy
+ampliar
+	esa	comparación,	no	realizarla;	§6.3	y	el	apartado	«Aporte	académico	y	práctico»	del	capítulo	7	la	incorporan	como	segundo	aporte	del	trabajo.	La
+ejecución	es	correcta	en	su	aritmética	y	en	su	estadística;	los	reparos	que	siguen	son	de	integración	documental,	no	de	cálculo.
+4.	Verificación	aritmética	y	estadística	independiente
+Se	recalculó	cada	proporción,	cada	intervalo	de	Wilson	al	95%	y	la	prueba	de	significación	del	capítulo	5,	con	los	métodos	que	el	propio	documento	declara	aplicar.
+Afirmación	del	documento
+Sección
+Recálculo	del	tribunal
+Veredicto
+Nota
+Total	de	31	ejecuciones
+§5.3
+4×3	+	3	+	3	+	10	+	3	=	31
+Correcto
+—
+CA1:	29/31	=	93,5%
+§5.3;	§6.2;	cap.
+7
+93,55%
+Correcto
+—
+CA3	ampliado:	28/30	=	93,3%;	IC	[78,7	;	98,2]
+§5.4;	§6.2;	cap.
+7
+93,33%;	Wilson	[78,7	;	98,2]
+Correcto
+El	extremo	inferior	supera	el	umbral	del	80%.
+Por	perfil:	10/10,	10/10,	8/10
+§5.4
+28	de	30.	Suma	verificada.
+Correcto
+—
+Clasificador	por	reglas:	20/30	=	66,7%;	IC
+[48,8	;	80,8]
+§5.4;	Resumen
+66,67%;	Wilson	[48,8	;	80,8]
+Correcto
+Verificación	nueva	de	esta	auditoría.
+Reglas	por	perfil:	6/10,	5/10,	9/10
+§5.4
+Suma	20	de	30.	Consistente	con	el
+total.
+Correcto
+Verificación	nueva.
+McNemar	exacto,	n=10	discordantes	(9
+vs.	1),	p=0,021
+§5.4;	§6.3;	cap.
+7	y	8
+p	=	2·P(X≤1	|	n=10,	p=0,5)	=	22/1024
+=	0,0215
+Correcto
+Verificación	nueva.	Bilateral,	exacta,
+correctamente	redondeada.
+Consistencia	de	la	tabla	de	contingencia
+implícita
+§5.4
+9	+	1	discordantes;	1	caso	fallado	por
+ambos	⇒	reglas	20/30	y	semántica
+28/30
+Correcto
+Verificación	nueva.	Los	dos	totales	cierran
+con	la	partición	declarada.	Ver,	no	obstante,
+Q3.
+Concordancia	5/6	=	83,3%;	IC	[0,44	;	0,97]
+§5.6
+83,33%;	Wilson	[43,6	;	97,0]
+Correcto
+El	n	declarado	es	hoy	el	mismo	que	el	usado.
+T2	cerrado	en	su	aritmética.
+0/5	tras	la	mitigación;	IC	[0	;	0,43]
+§5.3;	§6.1
+Wilson	[0	;	43,4]
+Correcto
+La	lectura	del	intervalo	—no	cerrar	el
+problema—	sigue	siendo	la	correcta.
+Parser	mitigado:	4/20	=	20%;	IC	[8,1	;	41,6]
+§5.3
+20,0%;	Wilson	[8,1	;	41,6]
+Correcto
+Medición	desfavorable	al	propio	trabajo,
+correctamente	reportada.
+3/3	por	perfil;	IC	[0,44	;	1,00]
+§5.4
+Wilson	[43,8	;	100]
+Correcto
+Usado	para	justificar	la	ampliación	muestral.
+F3:	2/5	=	40%;	CA4	3/5	y	5/5
+§5.3;	§6.2
+40%;	60%	y	100%
+Correcto
+Coherente	con	la	redefinición	de	CA4.
+Tabla	6:	mín.	1,8	/	máx.	16,1	/	prom.	3,6	s
+§5.5
+1,8	/	16,1	/	3,6
+Correcto
+Los	componentes	suman	los	totales.
+Resultado.
+	Catorce	de	catorce	afirmaciones	cuantitativas	correctas,	incluidas	las	cinco	introducidas	en	esta	versión.	Es	la	tercera	auditoría	consecutiva	en	que
+el	capítulo	5	no	registra	un	solo	error	de	cálculo,	y	la	primera	en	que	además	supera	una	verificación	de	significación	estadística.	
+El	capítulo	5	no	tiene	hoy
+ningún	defecto	aritmético	ni	estadístico;	sus	reparos	son	de	redacción	y	de	anclaje	metodológico.
+5.	Hallazgos	nuevos	de	esta	versión
+No	existían	en	la	versión	anterior	o	no	habían	sido	detectados.	Se	numeran	Q1	a	Q9	y	se	ordenan	por	severidad.
+5.1	Severidad	alta
+#
+Problema
+Ubicación
+Explicación,	impacto	y	corrección
+Q1
+El	nuevo	experimento	comparativo
+no	está	anclado	en	el	capítulo
+metodológico,	y	§3.1	lo	contradice
+§3.1	vs.	§5.4;	§3.7,
+§3.8,	§1.5
+§3.1	declara	que	el	trabajo	«no	constituye	un	diseño	experimental	en	sentido	estricto:	no	hay	grupo	de
+control,	no	hay	manipulación	sistemática	de	variables	independientes	ni	asignación	aleatoria	de	sujetos».
+§5.4	reporta	una	comparación	pareada	de	dos	clasificadores	sobre	la	misma	muestra	de	treinta
+conversaciones,	con	prueba	de	significación,	y	§6.3	la	registra	como	«condición	de	contraste».	Una
+condición	de	contraste	
+es
+	un	grupo	de	control	en	el	sentido	en	que	§3.1	usa	el	término.	Además,	la	lista
+de	pasos	de	§3.7	—que	documenta	todo	lo	que	se	hizo,	incluida	la	validación	inter-evaluador—	no
+menciona	esta	campaña;	§3.8	no	discute	su	validez	ni	sus	amenazas;	y	el	Objetivo	5	de	§1.5	sigue
+enumerando	sólo	criterios	cuantificables	y	concordancia	inter-evaluador.	
+Impacto:
+	el	resultado	más
+fuerte	del	trabajo	aparece	sin	procedimiento	declarado,	lo	que	invita	a	la	pregunta	de	si	fue	diseñado	o
+encontrado.	Es	además	el	único	indicador	de	coherencia	interna	que	empeora	respecto	de	la	auditoría
+anterior.	
+Corrección:
+	reformular	la	oración	de	§3.1	(«el	trabajo	incorpora	una	única	condición	de
+contraste	—la	comparación	contra	el	clasificador	por	reglas	de	§5.4—	pero	no	grupo	de	control	en	sentido
+estricto,	ni	asignación	aleatoria…»)	y	agregar	a	§3.7	un	ítem	que	describa	el	procedimiento:	sobre	qué
+muestra,	contra	qué	artefacto,	con	qué	reglas	y	en	qué	fecha.	
+15	minutos.
+Q2
+El	ejemplo	con	que	§5.4	ilustra	la
+falla	del	clasificador	por	reglas
+contradice	el	conjunto	de	reglas
+declarado	doce	líneas	antes
+§5.4
+El	párrafo	define	el	clasificador	de	referencia	como	«caliente	si	el	mensaje	contiene	"comprar",	"urgente"
+o	"ya";	tibio	si	contiene	"info",	"precio"	o	"ver";	frío	en	caso	contrario».	El	párrafo	siguiente	afirma	que	los
+mensajes	«"quiero	ver	uno	esta	semana"	o	"decisime	que	hay"	no	activan	ninguna	palabra	clave	y	el
+sistema	clasifica	por	defecto	como	frío».	
+La	primera	frase	contiene	«ver»,	que	es	una	clave
+declarada	de	la	categoría	tibio.
+	El	ejemplo	sigue	mostrando	una	falla	real	—el	mensaje	es	de	perfil
+--- PAGE 4 ---
+caliente	y	las	reglas	lo	clasificarían	tibio—,	pero	la	explicación	que	lo	acompaña	es	incorrecta.	
+Impacto:
+está	situado	exactamente	donde	el	lector	verifica	que	la	comparación	fue	justa,	y	es	lo	primero	que	un
+miembro	del	tribunal	puede	comprobar	sin	herramientas.	
+Corrección:
+	conservar	«decisime	que	hay»	y
+reemplazar	el	primer	ejemplo	por	uno	que	efectivamente	no	active	ninguna	clave,	o	reformular	la
+explicación	(«activan	una	clave	de	la	categoría	equivocada»).	
+5	minutos.
+Q3
+La	descripción	de	los	dos	errores
+de	la	inferencia	semántica	es
+incompatible	con	la	partición
+discordante	que	sostiene	el	p-valor
+§5.4
+El	p=0,021	se	apoya	en	una	partición	de	9	contra	1	sobre	diez	pares	discordantes.	Con	8	contra	2	—un
+solo	caso	de	diferencia—	el	mismo	test	exacto	arroja	p=0,109	y	la	diferencia	deja	de	ser	significativa	al
+5%:	el	resultado	es	correcto	pero	
+frágil
+,	y	el	documento	no	lo	advierte.	El	problema	es	que	la	propia
+sección	describe	los	dos	errores	de	la	inferencia	semántica	(TIB-13	y	TIB-14)	como	«consultas	de
+información	de	precio»,	y	«precio»	e	«info»	son	claves	declaradas	de	la	categoría	tibio,	que	era	la
+correcta	en	ambos	casos.	Leído	literalmente,	eso	implicaría	que	el	clasificador	por	reglas	acertó	en	los
+dos,	es	decir	una	partición	de	8	contra	2.	
+Impacto:
+	no	es	un	error	de	cálculo	—la	partición	declarada	es
+internamente	consistente	con	los	totales	28/30	y	20/30—,	pero	el	texto	habilita	una	lectura	que	invierte	la
+conclusión,	y	es	la	pregunta	natural	de	cualquier	evaluador	con	formación	estadística.	
+Corrección:
+precisar	cómo	clasificó	el	sistema	de	reglas	a	TIB-13	y	TIB-14	(una	oración),	y	agregar	una	segunda
+oración	que	declare	la	fragilidad	del	resultado	con	n=10	discordantes,	en	la	misma	línea	de	honestidad
+con	que	§5.3	lee	el	intervalo	de	0/5.	
+15	minutos.
+5.2	Severidad	media
+#
+Problema
+Ubicación
+Explicación	y	corrección
+Q4
+La	composición	de	las	seis
+comparaciones	de	§5.6	no	está
+enumerada,	y	§3.7	sigue	describiendo
+cuatro
+§5.6;	§3.7
+§5.6	declara	hoy,	correctamente	y	sin	contradicción	interna,	que	el	evaluador	independiente	clasificó
+«un	conjunto	de	seis	ejecuciones	que	incluye	los	escenarios	de	perfil	claro	(sección	5.2)	y	el	caso
+adicional	de	perfil	ambiguo».	Pero	§5.2	tiene	tres	escenarios	de	perfil	claro,	y	§3.7	describe	el	conjunto
+como	«los	tres	perfiles	de	usuario	más	un	caso	adicional	de	perfil	ambiguo»:	tres	más	uno	son	cuatro,
+no	seis.	El	informe	anterior	pedía	dos	cosas	—unificar	el	número	y	describir	cuáles—;	se	ejecutó	la
+primera.	
+Corrección:
+	enumerar	las	seis	en	§5.6	(qué	conversación	fue	cada	una)	y	ajustar	la
+descripción	de	§3.7	para	que	la	suma	cierre.	
+10	minutos.
+Q5
+La	Figura	1	cuelga	la	rama	de
+notificación	de	un	nodo	distinto	del
+que	muestra	el	grafo	real	de	la	Figura
+2
+Figura	1	vs.
+Figura	2,	Tabla
+7
+En	la	Figura	1	recién	actualizada,	la	flecha	hacia	«IF	Temperatura	Caliente»	sale	de	«Actualizar
+historial	(siempre)»,	lo	que	sugiere	que	la	notificación	se	dispara	en	toda	ejecución.	En	la	Figura	2	—
+exportación	real	del	workflow	productivo—	«IF	Temperatura	Caliente»	está	aguas	abajo	de	«Sync
+Leads_Bot»,	que	a	su	vez	cuelga	de	«Guardar	Lead»	y	por	lo	tanto	de	«IF	Lead	Completo»:	la
+notificación	sólo	puede	dispararse	cuando	el	lead	se	completó.	El	epígrafe	de	la	Figura	1	dice	bien	que
+ambas	ramas	son	condicionales,	pero	el	dibujo	dice	otra	cosa.	Dos	reparos	menores	adicionales	sobre	la
+misma	imagen:	la	flecha	que	entra	al	bloque	de	post-procesamiento	desde	«Inferencia	Groq»	aterriza
+sobre	«Actualizar	historial»	en	lugar	de	sobre	«Parsear	respuesta»,	que	es	donde	el	texto	de	§4.1	sitúa
+la	bifurcación;	y	las	cuatro	cajas	del	bloque	están	unidas	por	flechas	verticales	en	cadena,	lo	que
+contradice	visualmente	el	rótulo	«(ejecución	en	paralelo)»	del	propio	bloque.	
+Corrección:
+	reubicar	el
+origen	de	la	flecha	de	notificación	bajo	«IF	lead	completo»,	entrar	el	flujo	por	«Parsear	respuesta»	y
+reemplazar	las	flechas	verticales	por	una	llave	o	un	abanico	desde	ese	nodo.	
+30	minutos.
+Q6
+Dos	listas	de	palabras	clave	en	español
+que	difieren	entre	sí
+Portada	y	post-
+Resumen
+La	lista	posterior	al	Resumen	incorporó	«panel	comercial»	y	quedó	con	nueve	términos,	alineada	con
+las	nueve	
+keywords
+	en	inglés:	eso	era	lo	que	pedía	el	informe	anterior.	Pero	la	lista	de	portada,	anterior
+al	Resumen,	conserva	los	ocho	términos	originales	sin	«panel	comercial».	El	documento	tiene	hoy	dos
+listas	de	palabras	clave	que	no	coinciden,	donde	antes	tenía	una	incompleta.	
+Corrección:
+	eliminar	la
+de	portada	—APA	no	la	ubica	allí—	o	igualarla.	
+5	minutos.
+5.3	Severidad	baja
+#
+Problema
+Detalle	y	corrección
+Q7
+McNemar	(1947)	mal	ubicada	en	el
+ordenamiento	alfabético
+La	entrada	figura	entre	«Meta	Platforms»	y	«n8n	GmbH».	APA	7	alfabetiza	letra	por	letra:	«Mc»	precede	a	«Me»,	de	modo
+que	McNemar	debe	ir	antes	de	Meta	Platforms.	Es	el	mismo	tipo	de	defecto	que	la	auditoría	anterior	corrigió	en
+Zhao/Zheng,	reintroducido	por	la	entrada	nueva.	
+Corrección:
+	intercambiar	las	dos	entradas.	2	minutos.
+Q8
+Autorreferencia	y	referencia	circular
+en	§5.4
+Dos	frases	del	bloque	nuevo	remiten	a	lugares	equivocados.	La	primera	dice	que	TIB-13	y	TIB-14	están	«ya	documentados
+en	la	sección	5.4»,	estando	ella	misma	dentro	de	§5.4:	el	destino	correcto	es	el	párrafo	de	la	ampliación	muestral,	dos
+párrafos	arriba,	o	simplemente	«documentados	más	arriba	en	esta	misma	sección».	La	segunda	afirma	que	«esta
+comparación	resuelve	la	recomendación	formulada	en	el	capítulo	8»,	pero	el	capítulo	8	fue	actualizado	y	hoy	formula	otra
+cosa	—ampliar	la	comparación	a	más	de	treinta	casos—,	de	modo	que	la	oración	remite	a	un	texto	que	ya	no	dice	eso.
+Corrección:
+	«resuelve	la	recomendación	que	este	trabajo	había	dejado	abierta	en	revisiones	anteriores».	5	minutos.
+Q9
+Residuos	formales
+·	El	epígrafe	de	la	Figura	1	está	sobre	la	imagen	y	los	de	las	Figuras	2	a	8	debajo;	APA	7	los	ubica	arriba	en	todos	los
+casos.
+·	La	Figura	1	conserva	un	epígrafe	impreso	
+dentro
+	de	la	imagen,	con	redacción	distinta	del	epígrafe	del	documento:	dos
+textos	que	dicen	lo	mismo	de	dos	maneras,	y	que	habrá	que	mantener	sincronizados	en	cada	reedición.
+·	El	índice	declara	el	Resumen	en	la	página	3	y	está	en	la	2;	el	desplazamiento	lo	produce	el	bloque	de	palabras	clave	de
+portada,	que	Q6	propone	retirar.	Los	otros	once	encabezados	coinciden	exactamente.
+·	La	comparación	de	§5.4	se	reporta	sólo	en	prosa:	es	el	único	resultado	cuantitativo	del	capítulo	5	sin	tabla	propia,	cuando
+es	el	que	más	números	contiene	(dos	proporciones,	dos	intervalos,	tres	desagregaciones	por	perfil	y	una	prueba	de
+significación).	Una	Tabla	9	de	dos	columnas	lo	haría	legible	de	un	vistazo	y	lo	integraría	a	la	Lista	de	Tablas.
+·	«WAHA»	aparece	13	veces;	la	planilla	de	ejecuciones	individuales	sigue	sin	anexarse	(residuo	declarado	de	C18);	11
+oraciones	superan	las	55	palabras	y	112	superan	las	40,	concentradas	en	los	capítulos	3	y	5.
+6.	Verificación	de	las	ocho	figuras
+Las	ocho	imágenes	fueron	extraídas	del	paquete	OOXML	e	inspeccionadas	una	por	una,	y	cotejadas	contra	su	epígrafe	y	contra	el	resto	del	documento.
+Fig.
+Contenido
+Veredicto
+Observación
+1
+Arquitectura	general
+Actualizada
+Incorpora	la	rama	IF	Temperatura	Caliente	→	Email	Lead	Caliente	→	Telegram	Alerta	Owner:	T6
+resuelto.	Reparo	de	topología	y	de	flechas	en	Q5;	epígrafe	duplicado	dentro	de	la	imagen	(Q9).
+2
+Grafo	real	del	workflow	exportado
+del	SQLite	productivo
+Válida,	reparo
+declarado
+Sin	cambios	respecto	de	la	versión	anterior,	y	ya	no	hacen	falta:	el	epígrafe	declara	el	solapamiento,
+su	causa	y	su	consecuencia,	y	remite	a	la	Tabla	7	como	inventario	autoritativo.	T7	cerrado	por
+declaración.	Sigue	siendo	la	mejor	evidencia	técnica	del	trabajo,	y	es	la	que	permitió	detectar	Q5.
+3
+Panel	—	resumen	ejecutivo
+Correcta
+Reverificada:	5	+	4	+	3	=	12	leads	y	10	+	2	+	0	=	12	por	canal.	Declara	«Datos	de	demostración»
+en	la	propia	pantalla.
+--- PAGE 5 ---
+4
+Panel	—	pipeline	por	temperatura
+Correcta
+Conteos	coincidentes	con	la	Figura	3;	casilla	deshabilitada	en	las	tarjetas	de	origen	WhatsApp,
+conforme	a	la	restricción	declarada	en	§4.7.
+5
+Panel	—	detalle	de	lead	con
+historial
+Correcta
+Coherencia	cruzada	con	la	Figura	4	conservada.	Es	la	evidencia	directa	de	CA2.
+6
+Panel	—	envío	a	leads
+seleccionados
+Correcta
+Dos	leads	calientes	de	Telegram	seleccionados	y	contador	consistente.
+7
+Reconstrucción	del	escenario
+caliente
+Correcta
+El	epígrafe	declara	con	precisión	qué	es	la	figura	y	qué	comparte	con	el	transcripto.	El	bloque	JSON
+vuelve	a	coincidir	en	los	seis	campos.
+8
+Muestra	de	la	hoja	Leads_Bot
+Honesta,	recorte
+declarado
+Verificado:	diez	filas,	nueve	columnas,	y	las	tres	ausentes	son	exactamente	chat_id,	last_message	y
+ultima_actualizacion.	El	epígrafe	declara	además	que	los	dos	conjuntos	de	datos	son
+independientes,	que	era	la	aclaración	correcta.	T8	cerrado.
+Balance	gráfico.
+	Siete	de	las	ocho	figuras	están	sin	objeciones.	El	único	reparo	de	fondo	es	de	la	Figura	1	(Q5)	y	es	consecuencia	de	haberla	actualizado:	la
+rama	nueva	se	dibujó	en	el	lugar	equivocado	del	diagrama.	Ninguna	figura	requiere	volver	a	producirse	desde	cero.
+7.	Calificación	por	capítulo
+#
+Capítulo
+Rigor	científico
+Calidad	metodológica
+Redacción
+Bibliografía	APA
+Coherencia	interna
+Anterior
+Actual
+1
+Introducción
+7,5
+7,5
+8,5
+7,5
+7,0
+7,5
+7,5
+2
+Marco	Teórico
+8,0
+7,5
+8,5
+8,0
+8,0
+7,5
+8,0
+3
+Marco	Metodológico
+8,5
+8,0
+8,5
+8,0
+7,0
+8,5
+8,0
+4
+Desarrollo	Técnico
+8,0
+8,0
+8,5
+7,5
+7,5
+7,5
+8,0
+5
+Resultados	y	Análisis
+9,0
+8,5
+8,0
+8,5
+8,0
+7,5
+8,5
+6
+Discusión
+8,5
+8,5
+8,5
+8,5
+8,5
+8,0
+8,5
+7
+Conclusiones
+8,5
+8,5
+8,5
+8,0
+8,5
+8,0
+8,5
+8
+Recomendaciones
+8,5
+8,5
+8,5
+8,5
+8,5
+8,5
+8,5
+9
+Referencias
+8,0
+—
+—
+8,0
+8,0
+8,0
+8,0
+10
+Anexos
+8,0
+8,0
+8,0
+—
+8,0
+7,5
+8,0
+PROMEDIO	GENERAL
+7,9
+8,2
+Comentario	sobre	la	trayectoria.
+	Cuatro	auditorías:	3,8	→	7,1	→	7,9	→	8,2.	El	capítulo	5	sube	a	8,5	—lo	que	el	informe	anterior	anticipaba	al	resolver	T2—	y
+suma	medio	punto	adicional	de	rigor	científico	por	la	comparación	contra	el	clasificador	de	referencia,	que	es	el	hallazgo	más	citable	del	trabajo.	El	capítulo	3
+es	el	único	que	baja,	de	8,5	a	8,0,	y	baja	por	una	razón	concreta	y	reversible:	el	experimento	nuevo	no	fue	incorporado	a	la	metodología	que	lo	debía	prever,	y
+§3.1	lo	niega	expresamente	(Q1).	
+Resuelto	Q1,	el	capítulo	3	recupera	8,5	y	el	promedio	pasa	a	8,3.
+	Corregidos	además	Q2,	Q3	y	Q4	—cincuenta	minutos
+en	total—,	el	capítulo	5	llega	a	9,0	y	el	promedio	general	a	8,4.
+8.	Plan	de	corrección	previo	a	la	defensa
+Orden
+Acción
+Esfuerzo
+Resuelve
+Carácter
+1
+Reformular	la	oración	de	§3.1	sobre	el	grupo	de	control	y
+agregar	a	§3.7	el	ítem	que	describe	la	campaña	comparativa
+del	§5.4
+15	min
+Q1
+Obligatoria
+2
+Corregir	el	ejemplo	de	§5.4	que	contradice	el	conjunto	de
+reglas	declarado	(«quiero	ver	uno	esta	semana»	contiene
+«ver»)
+5	min
+Q2
+Obligatoria
+3
+Precisar	cómo	clasificó	el	sistema	de	reglas	a	TIB-13	y	TIB-14,
+y	declarar	en	una	oración	la	fragilidad	del	p-valor	con	diez
+pares	discordantes
+15	min
+Q3
+Muy	recomendada
+4
+Enumerar	las	seis	comparaciones	de	§5.6	y	ajustar	la
+descripción	de	§3.7	para	que	la	suma	cierre
+10	min
+Q4
+Muy	recomendada
+5
+Confirmar	que	el	repositorio	está	público,	accesible	y	contiene
+los	instrumentos	de	la	campaña	de	treinta	conversaciones	que
+§5.4	declara
+15	min
+C18,	ítem	5
+Muy	recomendada
+6
+Unificar	o	retirar	la	lista	de	palabras	clave	de	portada;
+intercambiar	McNemar	y	Meta	Platforms;	corregir	las	dos
+referencias	de	§5.4
+12	min
+Q6,	Q7,	Q8
+Recomendada
+7
+Corregir	la	topología	de	la	rama	de	notificación	en	la	Figura	1	y
+el	punto	de	entrada	del	post-procesamiento
+30	min
+Q5
+Recomendada
+8
+Llevar	la	comparación	de	§5.4	a	una	tabla	propia	(Tabla	9)	e
+incorporarla	a	la	Lista	de	Tablas
+25	min
+Q9
+Menor
+9
+Unificar	la	ubicación	de	los	epígrafes	de	figura	sobre	la	imagen
+y	retirar	el	epígrafe	impreso	dentro	de	la	Figura	1
+20	min
+Q9
+Menor
+10
+Anexar	la	planilla	de	ejecuciones	individuales	y	repetir	la
+medición	de	tiempos	sobre	la	configuración	vigente
+4–6	h
+C18
+Opcional	/	trabajo	futuro
+Esfuerzo	total	estimado:	2	horas	sin	contar	el	ítem	opcional
+	(anterior:	3	a	4	horas;	segunda:	13	a	16;	original:	58	a	75).	Las	dos	correcciones	obligatorias
+suman	veinte	minutos	y	no	modifican	ningún	resultado,	ninguna	medición	ni	ninguna	conclusión.	Los	ítems	1	a	5	—que	llevan	el	trabajo	a	la	franja	del	8,4—
+suman	una	hora.
+--- PAGE 6 ---
+9.	Preguntas	previsibles	del	tribunal	y	estado	de	preparación
+Riesgo
+Nivel	actual
+Anterior
+Pregunta	previsible	y	estado	de	la	respuesta
+Sustento	de	la	decisión	de
+diseño	central
+Bajo
+Alto
+«¿Por	qué	inferencia	semántica	y	no	reglas?»	—	dejó	de	ser	la	pregunta	peligrosa	del	expediente.	§5.4
+responde	con	datos	propios:	93,3%	contra	66,7%	sobre	la	misma	muestra,	con	diferencia	significativa.
+Es	el	mayor	avance	de	esta	versión.
+Diseño	del	experimento
+comparativo
+Medio-alto
+—
+Riesgo	nuevo.	«¿Dónde	declaró	este	experimento?»,	«¿el	clasificador	por	reglas	era	el	prototipo	real	o
+lo	definió	para	esta	comparación?»	y	«¿por	qué	§3.1	dice	que	no	hay	grupo	de	control?».	Las	tres	se
+neutralizan	con	el	ítem	1	del	plan.	La	segunda	conviene	responderla	en	la	defensa	aunque	el
+documento	no	la	formule:	el	sistema	de	reglas	es	SIMPLE-01,	el	prototipo	inicial	del	propio	proyecto,
+y	decirlo	así	—con	la	fecha	en	que	existió—	es	lo	que	separa	una	condición	de	contraste	legítima	de
+un	adversario	construido	a	medida.
+Robustez	del	resultado
+significativo
+Medio
+—
+Riesgo	nuevo.	«Con	diez	pares	discordantes,	¿cuán	estable	es	ese	p?»	—	la	respuesta	honesta	es	que
+con	un	caso	menos	deja	de	ser	significativo,	y	conviene	que	la	escriba	el	documento	antes	de	que	la
+formule	el	tribunal	(ítem	3).	El	capítulo	8	ya	recomienda	ampliar	la	muestra,	lo	que	juega	a	favor.
+Coherencia	interna	del
+documento
+Medio
+Medio
+Las	dos	contradicciones	del	informe	anterior	están	cerradas;	aparecieron	dos	nuevas,	ambas	en	el
+material	incorporado	(Q1,	Q2)	y	ambas	de	una	sola	oración.	El	indicador	no	empeora	ni	mejora:	se
+desplazó.
+Riesgo	de	evidencia
+(repositorio)
+Bajo
+Bajo
+«¿Dónde	está	el	repositorio?»	—	la	URL	figura	en	tres	lugares	y	hoy	se	cita	en	formato	autor-fecha.	La
+reserva	se	mantiene	y	sube	de	importancia:	los	instrumentos	de	la	campaña	de	treinta	conversaciones
+sólo	existen	allí.
+Fidelidad	de	las	figuras
+Bajo
+Bajo
+Los	tres	epígrafes	que	declaraban	de	más	quedaron	corregidos	en	auditorías	anteriores.	El	único
+reparo	vigente	(Q5)	es	de	topología	del	diagrama,	no	de	veracidad	del	epígrafe.
+Vigencia	de	las	mediciones
+Bajo
+Bajo
+«Sus	tiempos	se	midieron	con	otro	modelo»	—	§5.5	lo	declara,	explica	por	qué	no	se	repitió	y	deja	la
+repetición	como	acción	previa	al	despliegue.	La	respuesta	está	escrita.
+Riesgo	metodológico	general
+Bajo
+Bajo
+Unidad	de	análisis,	umbral	de	H1	y	redefinición	de	CA4:	respondidos	de	forma	explícita	y	sin
+anidamiento	de	porcentajes.
+Riesgo	bibliográfico
+Bajo
+Bajo
+Correspondencia	cita–referencia	completa	sobre	23	entradas,	cero	huérfanas.	Un	único	reparo	de
+ordenamiento	(Q7).
+Riesgo	ético-legal
+Bajo
+Bajo
+§1.7	responde	con	encuadre	normativo,	requisitos	de	despliegue,	autocrítica	sobre	las	pruebas	en	un
+número	personal	y	declaración	de	conflicto	de	intereses.
+Riesgo	de	redacción
+Bajo
+Medio-bajo
+Mejoró	por	tercera	vez	consecutiva	y	por	primera	vez	queda	por	debajo	del	valor	de	la	primera
+versión	del	trabajo:	16,8%	de	oraciones	sobre	40	palabras	y	11	sobre	55.
+Recomendación	final	del	tribunal.
+	El	trabajo	está	en	condiciones	de	defenderse	y	hoy	lo	está	en	mejores	condiciones	que	en	cualquier	instancia	previa.	Las
+dos	correcciones	obligatorias	son	de	edición,	suman	veinte	minutos	y	no	tocan	ningún	dato.	Corresponde	dejar	constancia	expresa	de	dos	cosas.	La	primera	es
+que	el	autor	no	se	limitó	a	ejecutar	el	plan	de	corrección:	eligió	resolver	la	pregunta	de	fondo	que	el	capítulo	8	identificaba	como	la	de	mayor	valor	científico,	en
+lugar	de	prepararla	como	respuesta	oral,	y	la	ejecutó	con	la	aritmética	y	la	estadística	correctas.	Es	la	diferencia	entre	un	trabajo	que	sobrevive	a	una	auditoría
+y	uno	que	la	usa	para	mejorar.	La	segunda	es	que	el	documento	conserva	la	práctica	que	este	tribunal	viene	destacando	desde	la	segunda	auditoría	—corregir
+dejando	constancia	del	error	en	lugar	de	borrarlo—,	hoy	visible	en	las	notas	de	las	Tablas	2,	4,	5,	7	y	8,	en	la	nota	final	del	capítulo	9	y	en	los	pasajes	de	§5.3,
+§5.6	y	§6.2.	La	calificación	de	coherencia	interna	lo	refleja	pese	a	los	dos	hallazgos	nuevos.
+Para	la	defensa	oral	se	sugiere	preparar	tres	respuestas	breves:	qué	es	SIMPLE-01	y	en	qué	momento	del	proyecto	existió,	para	sostener	la	legitimidad	de	la
+condición	de	contraste;	qué	habría	hecho	falta	para	dar	CA4	por	confirmado,	que	sigue	siendo	el	único	criterio	sin	cierre	estadístico;	y	qué	muestra
+exactamente	la	Figura	2	y	por	qué	no	es	una	captura	en	vivo.
+Tribunal	evaluador	—	Cuarta	auditoría	de	verificación
+,	realizada	sobre	el	archivo	
+Nodo_Propiedades_Tesis_corregir3.docx
+	y	contrastada	ítem	por	ítem	contra	el	plan	de	corrección	de	diez
+puntos	del	informe	del	25	de	agosto	de	2026.
+Planos	de	verificación	aplicados:
+	trazabilidad	de	correcciones	(10	ítems	del	plan	y	9	hallazgos	T1–T9,	verificados	individualmente);	textual	(coherencia	interna	entre	secciones,	figuras,
+tablas	y	anexos,	y	validación	de	las	referencias	cruzadas);	cuantitativo	(recálculo	independiente	de	nueve	proporciones,	seis	intervalos	de	Wilson	y	una	prueba	de	McNemar	exacta,	más	la
+verificación	de	consistencia	de	la	tabla	de	contingencia	implícita);	gráfico	(extracción	e	inspección	de	las	ocho	imágenes	embebidas	y	cotejo	cruzado	entre	ellas,	contra	sus	epígrafes	y	contra	la
+Tabla	7);	bibliográfico	(correspondencia	cita–referencia	en	ambos	sentidos	sobre	las	23	entradas	y	control	de	ordenamiento	APA);	y	formal	(análisis	programático	del	paquete	OOXML	y	del
+PDF	renderizado:	recuento	de	palabras	y	oraciones,	longitud	de	oración,	medios	embebidos,	estilos	y	niveles	de	título,	posición	de	epígrafes,	espaciado,	y	paginación	real	contra	el	índice	sobre
+los	doce	encabezados	declarados).
+Mendoza,	27	de	agosto	de	2026.

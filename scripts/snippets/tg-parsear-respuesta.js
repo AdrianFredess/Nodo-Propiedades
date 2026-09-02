@@ -28,14 +28,32 @@ try {
 if (!Array.isArray(sugerenciasIds)) sugerenciasIds = [];
 
 const debeMostrar = Boolean(promptData.debe_mostrar_propiedades);
+const esCurioso = Boolean(promptData.es_curioso);
 const presupuestoDetectado = String(promptData.presupuesto_detectado || '');
+const intencionClasificador = String(promptData.intencion_clasificador || '');
+const forzarStockClasificador =
+  debeMostrar ||
+  intencionClasificador === 'pedir_opciones' ||
+  intencionClasificador === 'explorar';
 const esSoloSaludo = Boolean(promptData.es_solo_saludo);
 const esDetalleUna = Boolean(promptData.es_detalle_una);
 const esPreguntaEspecifica = Boolean(promptData.es_pregunta_especifica);
+const esOffTopic = Boolean(promptData.es_off_topic);
+const offTopicCount = Number(promptData.off_topic_count || 0) || 0;
+const skipReply = Boolean(promptData.skip_reply) || offTopicCount >= 3;
+const esAlquilerPresupuestoAlto = Boolean(
+  promptData.es_alquiler_presupuesto_alto,
+);
+const zonaDetectada = String(promptData.zona_detectada || '');
+
+const OFF_TOPIC_MSG_1 =
+  'Solo trabajo con propiedades. Si buscás depto o casa en Mendoza, avisame.';
+const OFF_TOPIC_MSG_2 =
+  'Acá solo propiedades. Si te interesa un depto o casa, decime.';
 
 const SALUDOS_HUMANOS = [
-  'Hola, ¿cómo estás? Soy Matías de Nodo Propiedades. Cuando quieras contame qué necesitás.',
-  'Buen día. Soy Matías, de Nodo Propiedades. Quedo atento por si necesitás algo.',
+  'Hola, cómo estás? Soy Matías de Nodo Propiedades. Cuando quieras contame qué necesitás',
+  'Buen día. Soy Matías, de Nodo Propiedades. Contame cuando quieras qué buscás',
 ];
 
 function esSaludoSimple(t) {
@@ -62,24 +80,8 @@ function esInvasivo(texto) {
   return false;
 }
 
-function humanizarVoz(texto) {
-  let t = String(texto || '').trim();
-  t = t.replace(/^¡?\s*hey[!,.]?\s*/i, '');
-  t = t.replace(/^¡+/g, '');
-  t = t.replace(/\s{2,}/g, ' ').trim();
-  return t;
-}
-
-function quitarMuletillaChe(texto) {
-  if (!texto || typeof texto !== 'string') return texto;
-  return texto
-    .replace(/\b[Cc]he\b[,.;:!?]*\s*/g, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-}
-
 function suenaARobot(texto) {
-  return /\b(me podr[ií]as indicar|podr[ií]as indicarme|para poder ayudarte mejor|indicame tu presupuesto|zona de mendoza que te interesa|qué tipo de propiedad|con gusto te ayudo|sería de gran ayuda|necesitaría saber|cuál es tu presupuesto|en qué zona|podés contarme|me ayudarías indicando)\b/i.test(
+  return /\b(me podr[ií]as indicar|podr[ií]as indicarme|para poder ayudarte mejor|indicame tu presupuesto|zona de mendoza que te interesa|qué tipo de propiedad|con gusto te ayudo|sería de gran ayuda|necesitaría saber|cuál es tu presupuesto|en qué zona|podés contarme|me ayudarías indicando|te gustar[ií]a que un asesor|encaj(?:en|an) con tu b[uú]squeda)\b/i.test(
     texto,
   );
 }
@@ -131,7 +133,18 @@ if (mostrarMatch) {
   working = working.replace(mostrarRegex, '').trim();
 }
 
-if (!propiedadesMostrar.length && debeMostrar && sugerenciasIds.length) {
+if (!propiedadesMostrar.length && forzarStockClasificador && sugerenciasIds.length) {
+  propiedadesMostrar = sugerenciasIds.slice(0, 3);
+}
+
+if (
+  !propiedadesMostrar.length &&
+  esCurioso &&
+  sugerenciasIds.length &&
+  !skipReply &&
+  !esOffTopic &&
+  !esAlquilerPresupuestoAlto
+) {
   propiedadesMostrar = sugerenciasIds.slice(0, 3);
 }
 
@@ -152,19 +165,33 @@ if (burbujasMatch) {
   working = working.replace(burbujasRegex, '').trim();
 }
 
-function armarIntroPropiedades(presu) {
+function armarIntroPropiedades(presu, variantIdx, curioso) {
+  const v = Number(variantIdx) || 0;
   if (presu) {
-    return (
-      '¡Claro! Acá te muestro un par de opciones en venta que encajan con tu presupuesto de USD ' +
-      Number(presu).toLocaleString('es-AR') +
-      '.'
-    );
+    const presuFmt = Number(presu).toLocaleString('es-AR');
+    const opts = [
+      'Dale, te paso un par de opciones en venta cerca de USD ' + presuFmt,
+      'Perfecto, mirá estas opciones que se acercan a USD ' + presuFmt,
+    ];
+    return sanitizarPuntuacion(opts[v % opts.length]);
   }
-  return '¡Claro! Acá te muestro un par de opciones que tenemos disponibles.';
+  if (curioso) {
+    const curiosos = [
+      'Dale, te paso un par de opciones para que veas',
+      'Te paso un par de opciones variadas para que veas lo que hay',
+    ];
+    return sanitizarPuntuacion(curiosos[v % curiosos.length]);
+  }
+  const genericos = [
+    'Dale, te paso un par de opciones que tengo',
+    'Te comparto un par de alternativas que encajan con lo que venís buscando',
+  ];
+  return genericos[v % genericos.length];
 }
 
-const MENSAJE_CIERRE_PROPS =
-  '¿Cuál te llama más la atención o querés que te cuente más detalles de alguna?';
+const MENSAJE_CIERRE_PROPS = esCurioso
+  ? 'Alguna zona te cierra más o querés ver otras?'
+  : 'Cuál te llama más la atención o querés que te cuente más detalles de alguna?';
 
 let mensajeCierre = '';
 let solicitudVisita = false;
@@ -217,9 +244,41 @@ if (match) {
 }
 
 respuestaBot = quitarMuletillaChe(respuestaBot);
-respuestaBot = humanizarVoz(respuestaBot);
+respuestaBot = reescribirSiRobot(
+  respuestaBot,
+  zonaDetectada,
+  presupuestoDetectado,
+);
 
-if (mensajesExtra.length > 1) {
+if (skipReply) {
+  respuestaBot = '';
+  mensajesExtra = [];
+  propiedadesMostrar = [];
+  mensajeCierre = '';
+  solicitudVisita = false;
+} else if (esOffTopic) {
+  respuestaBot = offTopicCount <= 1 ? OFF_TOPIC_MSG_1 : OFF_TOPIC_MSG_2;
+  mensajesExtra = [];
+  propiedadesMostrar = [];
+  mensajeCierre = '';
+  solicitudVisita = false;
+} else if (esAlquilerPresupuestoAlto) {
+  if (
+    suenaPlantillaRobot(respuestaBot) ||
+    !respuestaBot ||
+    respuestaBot.length < 20 ||
+    /\bno tengo inmuebles|asesor de Nodo|encaj|no me cierra|\bUf\b/i.test(respuestaBot)
+  ) {
+    respuestaBot = armarMensajeAlquilerVsCompra(
+      presupuestoDetectado,
+      zonaDetectada,
+    );
+  }
+  mensajesExtra = [];
+  propiedadesMostrar = [];
+  mensajeCierre = '';
+  solicitudVisita = false;
+} else if (mensajesExtra.length > 1) {
   respuestaBot = mensajesExtra[0];
   mensajesExtra = mensajesExtra.slice(1);
 } else if (mensajesExtra.length === 1 && !respuestaBot) {
@@ -228,6 +287,8 @@ if (mensajesExtra.length > 1) {
 }
 
 if (
+  !skipReply &&
+  !esOffTopic &&
   !mensajesExtra.length &&
   (esDetalleUna || esPreguntaEspecifica) &&
   respuestaBot &&
@@ -240,8 +301,19 @@ if (
   }
 }
 
-if (propiedadesMostrar.length > 0) {
-  respuestaBot = armarIntroPropiedades(presupuestoDetectado);
+if (skipReply || esOffTopic) {
+  // already set
+} else if (propiedadesMostrar.length > 0) {
+  respuestaBot = armarIntroPropiedades(presupuestoDetectado, variantIdx, esCurioso);
+  mensajeCierre = MENSAJE_CIERRE_PROPS;
+} else if (
+  forzarStockClasificador &&
+  !propiedadesMostrar.length &&
+  sugerenciasIds.length &&
+  (esSoloPreguntas(respuestaBot) || !respuestaBot || respuestaBot.length < 20 || esCurioso)
+) {
+  propiedadesMostrar = sugerenciasIds.slice(0, 3);
+  respuestaBot = armarIntroPropiedades(presupuestoDetectado, variantIdx, esCurioso);
   mensajeCierre = MENSAJE_CIERRE_PROPS;
 } else if ((esSoloSaludo || esSaludoSimple(textoUsuario)) && turno <= 2) {
   respuestaBot = SALUDOS_HUMANOS[(turno - 1) % SALUDOS_HUMANOS.length];
@@ -255,26 +327,67 @@ if (propiedadesMostrar.length > 0) {
         .replace(/\?[^.!?]*$/g, '.')
         .replace(/\b(me podr[ií]as|podr[ií]as indicarme|para poder ayudarte)[^.!?]*/gi, '')
         .trim(),
-    ) || 'Dale, lo confirmo con el asesor y te aviso.';
+    ) || 'Dale, lo confirmo y te aviso.';
     mensajesExtra = [];
   } else {
-    respuestaBot = humanizarVoz(respuestaBot);
+    respuestaBot = reescribirSiRobot(
+      respuestaBot,
+      zonaDetectada,
+      presupuestoDetectado,
+    );
   }
 } else if (
-  debeMostrar &&
+  (debeMostrar || esCurioso) &&
   !propiedadesMostrar.length &&
   sugerenciasIds.length &&
-  (suenaARobot(respuestaBot) || !respuestaBot || respuestaBot.length < 20)
+  (suenaARobot(respuestaBot) || !respuestaBot || respuestaBot.length < 20 || esCurioso)
 ) {
   propiedadesMostrar = sugerenciasIds.slice(0, 3);
-  respuestaBot = armarIntroPropiedades(presupuestoDetectado);
+  respuestaBot = armarIntroPropiedades(presupuestoDetectado, variantIdx, esCurioso);
   mensajeCierre = MENSAJE_CIERRE_PROPS;
+} else if (suenaPlantillaRobot(respuestaBot)) {
+  respuestaBot = reescribirSiRobot(
+    respuestaBot,
+    zonaDetectada,
+    presupuestoDetectado,
+  );
+  mensajesExtra = [];
 }
 
-if (!respuestaBot) {
+if (!skipReply && !esOffTopic && !respuestaBot) {
   respuestaBot = esSaludoSimple(textoUsuario)
     ? SALUDOS_HUMANOS[0]
     : 'Hola, soy Matías de Nodo Propiedades. Contame qué buscás y te ayudo.';
+}
+
+// Bloquear respuestas off-topic que se escaparon del modelo
+if (
+  !skipReply &&
+  !esOffTopic &&
+  /\b(lugar para comer|restaurante|te recomiendo.*(comer|comida)|herramienta de construcci)\b/i.test(
+    respuestaBot,
+  )
+) {
+  respuestaBot = OFF_TOPIC_MSG_1;
+  mensajesExtra = [];
+  propiedadesMostrar = [];
+  mensajeCierre = '';
+}
+
+const consultaRepetida = esConsultaRepetida(textoUsuario, historialJson);
+const variantIdx = contarBotsSimilares(respuestaBot, historialJson);
+
+if (!skipReply && !esOffTopic) {
+  respuestaBot = evitarRepeticion(respuestaBot, {
+    historialArr: historialJson,
+    mensajeUsuario: textoUsuario,
+    esAlquilerPresupuestoAlto,
+    presupuestoDetectado,
+    zonaDetectada,
+  });
+  if (propiedadesMostrar.length > 0 && consultaRepetida) {
+    respuestaBot = armarIntroPropiedades(presupuestoDetectado, variantIdx + 1, esCurioso);
+  }
 }
 
 let temperatura = '';
@@ -287,10 +400,33 @@ if (!['frio', 'tibio', 'caliente'].includes(temperatura)) {
   temperatura = estadoActual || (presupuestoDetectado ? 'tibio' : 'frio');
 }
 
-historialJson.push({ role: 'user', content: textoUsuario });
-let textoAsistente = respuestaBot;
-if (mensajeCierre) textoAsistente = textoAsistente + '\n\n' + mensajeCierre;
-historialJson.push({ role: 'assistant', content: textoAsistente });
+const presupuestoOut =
+  leadData.presupuesto ||
+  visitaData.presupuesto ||
+  (presupuestoDetectado ? 'USD ' + presupuestoDetectado : '');
+
+historialJson.push(
+  enriquecerEntradaHistorial({ role: 'user', content: textoUsuario }, { intent_detected: leadData.operacion || '' }),
+);
+if (!skipReply && respuestaBot) {
+  const analisisPost = analizarHistorial(historialJson.slice(0, -1), {
+    operacion: leadData.operacion || '',
+    zona: leadData.zona || visitaData.zona || zonaDetectada,
+    presupuesto: presupuestoOut,
+  });
+  const metaTurno = metaTurnoAprendizaje({
+    intencion: leadData.operacion || '',
+    operacion: leadData.operacion || '',
+    zona: leadData.zona || '',
+    presupuesto: presupuestoOut,
+    objeciones: analisisPost.objeciones,
+    lead_completo: leadCompleto,
+    temperatura,
+  });
+  let textoAsistente = respuestaBot;
+  if (mensajeCierre) textoAsistente = textoAsistente + '\n\n' + mensajeCierre;
+  historialJson.push(enriquecerEntradaHistorial({ role: 'assistant', content: textoAsistente }, metaTurno));
+}
 if (historialJson.length > 40) {
   historialJson = historialJson.slice(historialJson.length - 40);
 }
@@ -300,10 +436,29 @@ if (!sd.historialByChat) sd.historialByChat = {};
 sd.historialByChat[chatId] = historialJson;
 
 const ahora = new Date().toISOString();
-const presupuestoOut =
-  leadData.presupuesto ||
-  visitaData.presupuesto ||
-  (presupuestoDetectado ? 'USD ' + presupuestoDetectado : '');
+
+respuestaBot = sanitizarPuntuacion(respuestaBot);
+mensajeCierre = sanitizarPuntuacion(mensajeCierre);
+if (mensajesExtra.length) {
+  mensajesExtra = mensajesExtra.map(sanitizarPuntuacion).filter(Boolean);
+}
+
+const aprendizajeOpts = {
+  contexto_cliente: textoUsuario,
+  respuesta_matias: respuestaBot,
+  canal: 'telegram',
+  zona: leadData.zona || visitaData.zona || zonaDetectada,
+  operacion: leadData.operacion || '',
+  presupuesto: presupuestoOut,
+  temperatura,
+  intencion: leadData.operacion || intencionClasificador || '',
+  intencion_clasificador: intencionClasificador,
+  lead_completo: leadCompleto,
+  skip_reply: skipReply,
+  es_off_topic: esOffTopic,
+  fecha: ahora,
+};
+const regAprendizaje = prepararRegistroAprendizaje(aprendizajeOpts);
 
 return [
   {
@@ -330,6 +485,10 @@ return [
       visita_nota: String(visitaData.nota || ''),
       mensaje_cierre: mensajeCierre,
       mensajes_extra: JSON.stringify(mensajesExtra),
+      skip_reply: skipReply,
+      es_off_topic: esOffTopic,
+      off_topic_count: offTopicCount,
+      ...regAprendizaje,
     },
   },
 ];

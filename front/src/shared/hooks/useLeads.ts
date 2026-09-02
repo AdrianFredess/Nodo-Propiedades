@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { config, fetchLeads } from '../api/client';
-import { normalizeTemperatura } from '../lib/labels';
+import { config, fetchLeads, mapHistorial } from '../api/client';
+import {
+  normalizeCanal,
+  normalizeEstadoSeguimiento,
+  normalizeTemperatura,
+} from '../lib/labels';
 import type { HistorialMensaje, Lead, LeadsPayload, Propiedad } from '../types/lead';
 import {
   useRealtime,
@@ -12,6 +16,75 @@ function localNowIso(): string {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+/** Sheets OAuth inválido / vencido → PANEL-01 solo sirve caché vieja. */
+function isSheetsAuthBroken(warning?: string | null): boolean {
+  if (!warning) return false;
+  return /authorization grant|refresh token is invalid|invalid_grant|expired, revoked|oauth/i.test(
+    warning,
+  );
+}
+
+function parseHistorialJson(raw: unknown): HistorialMensaje[] {
+  if (Array.isArray(raw)) return mapHistorial(raw);
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      return mapHistorial(JSON.parse(raw));
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function stubLeadFromChat(input: {
+  chatId: string;
+  leadId?: string;
+  nombre?: string;
+  source?: string;
+  at: string;
+  text: string;
+  side: 'client' | 'bot';
+  temperatura?: string;
+  presupuesto?: string;
+  status?: string;
+  historial?: HistorialMensaje[];
+}): Lead {
+  const canal = normalizeCanal(input.source || 'telegram');
+  const historial =
+    input.historial?.length && input.historial.length > 0
+      ? input.historial
+      : [
+          {
+            id: `live-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            fecha: input.at,
+            mensajeCliente: input.side === 'client' ? input.text : '',
+            respuestaBot: input.side === 'bot' ? input.text : '',
+            pending: true,
+          },
+        ];
+  const last = historial[historial.length - 1];
+  const lastMessage =
+    last?.respuestaBot.trim() ||
+    last?.mensajeCliente.trim() ||
+    input.text;
+  return {
+    id: input.leadId || `${canal}:${input.chatId}`,
+    chatId: input.chatId,
+    nombre: (input.nombre || 'Cliente').trim() || 'Cliente',
+    zona: '',
+    presupuesto: input.presupuesto?.trim() || '',
+    canalOrigen: canal,
+    temperatura: normalizeTemperatura(input.temperatura),
+    leadCompleto: false,
+    estadoSeguimiento: 'ninguno',
+    status: (input.status || 'abierto').trim() || 'abierto',
+    tipoOperacion: '',
+    ultimaActualizacion: input.at,
+    lastMessage,
+    historial,
+  };
 }
 
 function recentDuplicate(
@@ -63,6 +136,7 @@ function mergeHistorial(
 function mergeLeadsFromRefresh(
   prev: LeadsPayload | null,
   next: LeadsPayload,
+  sheetsBroken: boolean,
 ): LeadsPayload {
   if (!prev?.leads?.length) return next;
   const byId = new Map(prev.leads.map((l) => [l.id, l]));
@@ -71,11 +145,43 @@ function mergeLeadsFromRefresh(
     if (l.chatId) byChat.set(l.chatId, l);
   }
 
+  const seen = new Set<string>();
   const leads = next.leads.map((serverLead) => {
     const local =
       byId.get(serverLead.id) ??
       (serverLead.chatId ? byChat.get(serverLead.chatId) : undefined);
+    if (local) {
+      seen.add(local.id);
+      if (local.chatId) seen.add(`chat:${local.chatId}`);
+    }
     if (!local?.historial?.length) return serverLead;
+
+    // OAuth caído: no pisar historial local (WS / staticData) con caché vieja.
+    if (sheetsBroken && local) {
+      const localPending = local.historial.some(isPendingMsg);
+      const localLonger = local.historial.length > serverLead.historial.length;
+      const localFresher =
+        Boolean(local.ultimaActualizacion) &&
+        local.ultimaActualizacion !== serverLead.ultimaActualizacion;
+      const localChatMoved =
+        Boolean(local.lastMessage) &&
+        local.lastMessage !== serverLead.lastMessage;
+      if (localPending || localLonger || localFresher || localChatMoved) {
+        return {
+          ...serverLead,
+          nombre: local.nombre || serverLead.nombre,
+          temperatura: local.temperatura || serverLead.temperatura,
+          presupuesto: local.presupuesto || serverLead.presupuesto,
+          status: local.status || serverLead.status,
+          leadCompleto: local.leadCompleto,
+          historial: local.historial,
+          lastMessage: local.lastMessage || serverLead.lastMessage,
+          ultimaActualizacion:
+            local.ultimaActualizacion || serverLead.ultimaActualizacion,
+        };
+      }
+    }
+
     const historial = mergeHistorial(serverLead.historial, local.historial);
     if (historial === serverLead.historial) return serverLead;
 
@@ -96,6 +202,18 @@ function mergeLeadsFromRefresh(
           : serverLead.ultimaActualizacion,
     };
   });
+
+  // Leads creados solo por WS (aún no en caché Sheets)
+  if (sheetsBroken) {
+    for (const local of prev.leads) {
+      if (seen.has(local.id)) continue;
+      if (local.chatId && seen.has(`chat:${local.chatId}`)) continue;
+      if (!local.historial.some(isPendingMsg) && local.historial.length === 0) {
+        continue;
+      }
+      leads.unshift(local);
+    }
+  }
 
   return { ...next, leads };
 }
@@ -154,13 +272,24 @@ export function useLeads(): UseLeadsResult {
   const refreshInFlight = useRef(false);
   const softRefreshTimer = useRef<number | undefined>(undefined);
   const lastSoftRefreshAt = useRef(0);
+  const sheetsBrokenRef = useRef(false);
 
   const scheduleSoftRefresh = useCallback((delayMs: number) => {
-    const minGap = wsOpen.current ? 4_000 : 2_000;
-    const wait = Math.max(delayMs, minGap - (Date.now() - lastSoftRefreshAt.current));
+    // Con Sheets OAuth roto el GET solo trae caché vieja → no pisar WS.
+    if (sheetsBrokenRef.current) return;
+    // Con WS vivo: refresh corto; sin martillar Sheets.
+    const minGap = wsOpen.current ? 800 : 500;
+    const wait = Math.max(
+      delayMs,
+      minGap - (Date.now() - lastSoftRefreshAt.current),
+    );
     if (softRefreshTimer.current) window.clearTimeout(softRefreshTimer.current);
     softRefreshTimer.current = window.setTimeout(() => {
-      if (refreshInFlight.current) return;
+      if (refreshInFlight.current) {
+        // Reintentar apenas termine el fetch en curso
+        scheduleSoftRefresh(400);
+        return;
+      }
       lastSoftRefreshAt.current = Date.now();
       void refreshRef.current();
     }, Math.max(0, wait));
@@ -233,8 +362,16 @@ export function useLeads(): UseLeadsResult {
     let applied = false;
 
     setPayload((prev) => {
-      if (!prev?.leads?.length) return prev;
-      const idx = prev.leads.findIndex(
+      const base: LeadsPayload =
+        prev ??
+        ({
+          generatedAt: new Date().toISOString(),
+          leads: [],
+          propiedades: propsCache.current,
+          source: 'live',
+        } as LeadsPayload);
+
+      const idx = base.leads.findIndex(
         (l) =>
           (leadId &&
             (l.id === leadId ||
@@ -242,8 +379,26 @@ export function useLeads(): UseLeadsResult {
               l.id.endsWith(`:${leadId}`))) ||
           (chatId && l.chatId === chatId),
       );
-      if (idx < 0) return prev;
-      const lead = prev.leads[idx];
+
+      if (idx < 0) {
+        if (!chatId && !leadId) return prev;
+        const created = stubLeadFromChat({
+          chatId: chatId || leadId,
+          leadId: leadId || undefined,
+          source: input.source,
+          at,
+          text,
+          side: input.side,
+        });
+        leadCache.current.set(created.id, created);
+        if (created.chatId) {
+          leadCache.current.set(`chat:${created.chatId}`, created);
+        }
+        applied = true;
+        return { ...base, leads: [created, ...base.leads] };
+      }
+
+      const lead = base.leads[idx];
       if (recentDuplicate(lead.historial, text, input.side)) return prev;
 
       const entry: HistorialMensaje = {
@@ -255,6 +410,10 @@ export function useLeads(): UseLeadsResult {
       };
       const nextLead: Lead = {
         ...lead,
+        status:
+          lead.status === 'cerrado_sin_respuesta' || lead.status === 'cerrado'
+            ? 'abierto'
+            : lead.status,
         lastMessage: text,
         ultimaActualizacion: at,
         historial: [...lead.historial, entry],
@@ -263,24 +422,27 @@ export function useLeads(): UseLeadsResult {
       if (nextLead.chatId) {
         leadCache.current.set(`chat:${nextLead.chatId}`, nextLead);
       }
-      const nextLeads = prev.leads.slice();
+      const nextLeads = base.leads.slice();
       nextLeads[idx] = nextLead;
       applied = true;
-      return { ...prev, leads: nextLeads };
+      return { ...base, leads: nextLeads };
     });
 
     return applied;
   }, []);
 
+  const payloadRef = useRef<LeadsPayload | null>(null);
+  payloadRef.current = payload;
+
   const refresh = useCallback(async (): Promise<Lead[]> => {
     if (Date.now() < backoffUntil.current) {
-      return payload?.leads ?? [];
+      return payloadRef.current?.leads ?? [];
     }
     if (refreshInFlight.current) {
-      return payload?.leads ?? [];
+      return payloadRef.current?.leads ?? [];
     }
     refreshInFlight.current = true;
-    let result: Lead[] = payload?.leads ?? [];
+    let result: Lead[] = payloadRef.current?.leads ?? [];
     try {
       const next = await fetchLeads();
       if (!mounted.current) return result;
@@ -289,6 +451,8 @@ export function useLeads(): UseLeadsResult {
         next.warning &&
           /too many requests|quota|429|rate.?limit/i.test(next.warning),
       );
+      const sheetsBroken = isSheetsAuthBroken(next.warning);
+      sheetsBrokenRef.current = sheetsBroken;
 
       if (rateLimited) {
         backoffUntil.current = Date.now() + 90_000;
@@ -312,7 +476,7 @@ export function useLeads(): UseLeadsResult {
       }
 
       setPayload((prev) => {
-        const merged = mergeLeadsFromRefresh(prev, next);
+        const merged = mergeLeadsFromRefresh(prev, next, sheetsBroken);
         for (const lead of merged.leads) {
           leadCache.current.set(lead.id, lead);
           if (lead.chatId) {
@@ -323,9 +487,11 @@ export function useLeads(): UseLeadsResult {
         return merged;
       });
       setError(
-        rateLimited
-          ? 'Google Sheets limitó lecturas. Reintento suave en ~90s; se mantiene la última data buena.'
-          : null,
+        sheetsBroken
+          ? 'Google Sheets OAuth vencido: el panel muestra caché + mensajes en vivo por WebSocket. Reconectá la credencial Google en n8n (Settings → Credentials).'
+          : rateLimited
+            ? 'Google Sheets limitó lecturas. Reintento suave en ~90s; se mantiene la última data buena.'
+            : null,
       );
     } catch (err) {
       if (!mounted.current) return result;
@@ -345,7 +511,7 @@ export function useLeads(): UseLeadsResult {
       if (mounted.current) setLoading(false);
     }
     return result;
-  }, [payload?.leads]);
+  }, []);
 
   refreshRef.current = refresh;
 
@@ -366,6 +532,81 @@ export function useLeads(): UseLeadsResult {
           String(p.leadId ?? p.lead_id ?? p.id ?? '').trim() || undefined;
         const at = typeof event.at === 'string' ? event.at : undefined;
         const source = String(p.source ?? '');
+        const nombre = String(p.nombre ?? p.name ?? '').trim();
+        const tempRaw = String(p.temperatura ?? p.temperature ?? '').trim();
+        const presupuesto = String(p.presupuesto ?? '').trim();
+        const status = String(p.status ?? '').trim();
+        const fromJson = parseHistorialJson(
+          p.historial_json ?? p.historialJson ?? p.historial,
+        );
+
+        // Snapshot completo desde el bot (staticData) cuando Sheets está caído
+        if (fromJson.length && chatId) {
+          const atIso = at || localNowIso();
+          setPayload((prev) => {
+            const base: LeadsPayload =
+              prev ??
+              ({
+                generatedAt: new Date().toISOString(),
+                leads: [],
+                propiedades: propsCache.current,
+                source: 'live',
+              } as LeadsPayload);
+            const idx = base.leads.findIndex(
+              (l) =>
+                l.chatId === chatId ||
+                (leadId &&
+                  (l.id === leadId ||
+                    l.chatId === leadId ||
+                    l.id.endsWith(`:${leadId}`))),
+            );
+            const last = fromJson[fromJson.length - 1];
+            const lastMessage =
+              last?.respuestaBot.trim() ||
+              last?.mensajeCliente.trim() ||
+              '';
+            const patched: Lead =
+              idx >= 0
+                ? {
+                    ...base.leads[idx],
+                    ...(nombre ? { nombre } : {}),
+                    ...(tempRaw
+                      ? { temperatura: normalizeTemperatura(tempRaw) }
+                      : {}),
+                    ...(presupuesto ? { presupuesto } : {}),
+                    status: status || 'abierto',
+                    historial: fromJson,
+                    lastMessage: lastMessage || base.leads[idx].lastMessage,
+                    ultimaActualizacion: atIso,
+                    leadCompleto: false,
+                  }
+                : stubLeadFromChat({
+                    chatId,
+                    leadId,
+                    nombre,
+                    source,
+                    at: atIso,
+                    text: lastMessage || '…',
+                    side: 'bot',
+                    temperatura: tempRaw,
+                    presupuesto,
+                    status: status || 'abierto',
+                    historial: fromJson,
+                  });
+            leadCache.current.set(patched.id, patched);
+            if (patched.chatId) {
+              leadCache.current.set(`chat:${patched.chatId}`, patched);
+            }
+            if (idx < 0) {
+              return { ...base, leads: [patched, ...base.leads] };
+            }
+            const nextLeads = base.leads.slice();
+            nextLeads[idx] = patched;
+            return { ...base, leads: nextLeads };
+          });
+          scheduleSoftRefresh(source === 'panel' ? 3_000 : 700);
+          return;
+        }
 
         const cliente = String(
           p.mensajeCliente ?? p.mensaje_cliente ?? p.userText ?? '',
@@ -415,7 +656,7 @@ export function useLeads(): UseLeadsResult {
         // Sin texto útil: no refetch (pisaría optimistic con Sheets viejo)
         if (!cliente && !botReply && !text) return;
         // Soft refresh: merge conserva pending hasta que Sheets confirme
-        const delayMs = source === 'panel' ? 8_000 : 2_500;
+        const delayMs = source === 'panel' ? 3_000 : 700;
         scheduleSoftRefresh(delayMs);
         return;
       }
@@ -425,22 +666,83 @@ export function useLeads(): UseLeadsResult {
             ? (event.payload as Record<string, unknown>)
             : {};
         const chatId = String(p.chatId ?? p.chat_id ?? '').trim();
+        const leadId = String(p.leadId ?? p.lead_id ?? p.id ?? '').trim();
         const tempRaw = String(p.temperatura ?? p.temperature ?? '').trim();
-        if (chatId && tempRaw) {
-          const temp = normalizeTemperatura(tempRaw);
+        const nombre = String(p.nombre ?? p.name ?? '').trim();
+        const status = String(p.status ?? '').trim();
+        const presupuesto = String(p.presupuesto ?? '').trim();
+        const lastMessage = String(
+          p.lastMessage ?? p.last_message ?? p.mensaje ?? '',
+        ).trim();
+        const estadoSeg = String(
+          p.estadoSeguimiento ?? p.estado_seguimiento ?? '',
+        ).trim();
+
+        if (chatId || leadId) {
           setPayload((prev) => {
-            if (!prev?.leads?.length) return prev;
-            const nextLeads = prev.leads.map((lead) => {
-              if (lead.chatId !== chatId) return lead;
-              const merged = { ...lead, temperatura: temp };
+            const base: LeadsPayload =
+              prev ??
+              ({
+                generatedAt: new Date().toISOString(),
+                leads: [],
+                propiedades: propsCache.current,
+                source: 'live',
+              } as LeadsPayload);
+            let touched = false;
+            const nextLeads = base.leads.map((lead) => {
+              const match =
+                (chatId && lead.chatId === chatId) ||
+                (leadId &&
+                  (lead.id === leadId ||
+                    lead.chatId === leadId ||
+                    lead.id.endsWith(`:${leadId}`)));
+              if (!match) return lead;
+              touched = true;
+              const merged: Lead = {
+                ...lead,
+                ...(tempRaw
+                  ? { temperatura: normalizeTemperatura(tempRaw) }
+                  : {}),
+                ...(nombre ? { nombre } : {}),
+                ...(status ? { status } : {}),
+                ...(presupuesto ? { presupuesto } : {}),
+                ...(lastMessage ? { lastMessage } : {}),
+                ...(estadoSeg
+                  ? { estadoSeguimiento: normalizeEstadoSeguimiento(estadoSeg) }
+                  : {}),
+                ultimaActualizacion:
+                  typeof event.at === 'string'
+                    ? event.at
+                    : lead.ultimaActualizacion,
+              };
               leadCache.current.set(merged.id, merged);
-              leadCache.current.set(`chat:${merged.chatId}`, merged);
+              if (merged.chatId) {
+                leadCache.current.set(`chat:${merged.chatId}`, merged);
+              }
               return merged;
             });
-            return { ...prev, leads: nextLeads };
+            if (!touched && chatId) {
+              const created = stubLeadFromChat({
+                chatId,
+                leadId: leadId || undefined,
+                nombre,
+                source: String(p.source ?? 'telegram'),
+                at:
+                  typeof event.at === 'string' ? event.at : localNowIso(),
+                text: lastMessage || '…',
+                side: 'bot',
+                temperatura: tempRaw,
+                presupuesto,
+                status: status || 'abierto',
+              });
+              leadCache.current.set(created.id, created);
+              leadCache.current.set(`chat:${created.chatId}`, created);
+              return { ...base, leads: [created, ...base.leads] };
+            }
+            return touched ? { ...base, leads: nextLeads } : prev;
           });
         }
-        scheduleSoftRefresh(1_500);
+        scheduleSoftRefresh(event.type === 'leads.refresh' ? 350 : 500);
       }
     },
     [appendChatMessage, applyStockEvent, scheduleSoftRefresh],

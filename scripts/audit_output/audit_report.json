@@ -1,0 +1,471 @@
+{
+  "checklist": [
+    {
+      "label": "Q1 Objetivo general presente y alineado",
+      "ok": true,
+      "hits": [
+        [
+          "objetivo general",
+          true
+        ],
+        [
+          "automatiz",
+          true
+        ],
+        [
+          "inmobiliar",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Q2 Objetivos específicos declarados",
+      "ok": false,
+      "hits": [
+        [
+          "objetivos? específicos?",
+          true
+        ],
+        [
+          "OE\\d|objetivo específico",
+          false
+        ]
+      ]
+    },
+    {
+      "label": "Q3 Metodología / diseño experimental",
+      "ok": true,
+      "hits": [
+        [
+          "metodolog",
+          true
+        ],
+        [
+          "diseño",
+          true
+        ],
+        [
+          "evaluación|evaluacion",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Q4 Métricas cuantitativas reportadas",
+      "ok": true,
+      "hits": [
+        [
+          "precisión|precision|accuracy|f1|métrica|metrica|porcentaje|%",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Q5 Limitaciones / amenazas a la validez",
+      "ok": true,
+      "hits": [
+        [
+          "limitacion|limitación|amenaza|validez",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Q6 Trabajo futuro",
+      "ok": true,
+      "hits": [
+        [
+          "trabajo futuro|líneas futuras|lineas futuras|futuras líneas",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Q7 Marco teórico / referencias",
+      "ok": true,
+      "hits": [
+        [
+          "estado del arte|marco teórico|marco teorico|referencias",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Q8 Descripción técnica / arquitectura",
+      "ok": true,
+      "hits": [
+        [
+          "n8n|workflow|arquitectura|telegram|whatsapp|meta",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Q9 Resultados y conclusiones",
+      "ok": true,
+      "hits": [
+        [
+          "resultados|discusión|discusion|conclus",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Plan 1: Alinear objetivos con resultados",
+      "ok": true,
+      "hits": [
+        [
+          "objetivo",
+          true
+        ],
+        [
+          "resultado",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Plan 2: Métricas y tabla de resultados",
+      "ok": true,
+      "hits": [
+        [
+          "tabla",
+          true
+        ],
+        [
+          "resultado",
+          true
+        ],
+        [
+          "%",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Plan 3: Eliminar marketing / claims no sustentados",
+      "ok": true,
+      "hits": [
+        [
+          "revolucion",
+          true
+        ],
+        [
+          "único",
+          false
+        ],
+        [
+          "líder",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Plan 4: Metodología evaluación usuarios",
+      "ok": true,
+      "hits": [
+        [
+          "usuario|encuesta|evaluación|evaluacion|n\\s*=\\s*6|seis participantes",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Plan 5: Limitaciones explícitas",
+      "ok": true,
+      "hits": [
+        [
+          "limitacion|limitación",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Plan 6: Trabajo futuro concreto",
+      "ok": true,
+      "hits": [
+        [
+          "trabajo futuro|futuro",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Plan 7: Figuras actualizadas",
+      "ok": true,
+      "hits": [
+        [
+          "figura\\s*\\d",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Plan 8: Consistencia numérica",
+      "ok": true,
+      "hits": [
+        [
+          "n\\s*=\\s*6|seis",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Plan 9: Notificaciones / flujo lead",
+      "ok": true,
+      "hits": [
+        [
+          "notificaci[oó]n|lead",
+          true
+        ]
+      ]
+    },
+    {
+      "label": "Plan 10: Formato / redacción académica",
+      "ok": true,
+      "hits": [
+        [
+          "introducción|introduccion|conclusi[oó]n",
+          true
+        ]
+      ]
+    }
+  ],
+  "ok_count": 18,
+  "total": 19,
+  "pct": 94.7,
+  "pendientes": {
+    "5.6_alineado": {
+      "v126_section": "\n5.6 Validación de concordancia inter-evaluador\t34\n6. Discusión\t36\n6.1 Contraste con los antecedentes\t36\n6.2 Alcance de las generalizaciones y contrastación de H1\t36\n6.3 Limitaciones generales del estudio\t37\n7. Conclusiones\t38\nAporte académico y práctico\t38\n8. Recomendaciones\t40\n9. Referencias Bibliográficas\t42\n10. Anexos\t44\nLISTA DE TABLAS\nTabla 1. Comparativa de plataformas de orquestación de flujos de trabajo (Sección 2.3)\nTabla 2. Herramientas utilizadas en el sistema (Sección 3.6)\nTabla 3. Estructura funcional de la hoja de historial de conversación (Sección 4.3)\nTabla 4. Estructura de la hoja Leads_Bot (Sección 4.3)\nTabla 5. Resultados de los escenarios de prueba exitosos (Sección 5.2)\nTabla 6. Análisis de tiempos de respuesta (Sección 5.5)\nTabla 7. Descripción de nodos del workflow de Telegram (Anexo A)\nTabla 8. Estado de los canales de comunicación (Anexo E)\nTabla 9. Comparación de acierto por perfil entre el clasificador por reglas y la inferencia semántica (Sección 5.4)\nLISTA DE FIGURAS\nFigura 1. Diagrama de arquitectura general del sistema (Sección 4.1)\nFigura 2. Vista estructural real del workflow, exportada de la base de datos productiva (Sección 4.2)\nFigura 3. Panel comercial — resumen ejecutivo (Sección 4.7)\nFigura 4. Panel comercial — pipeline de leads por temperatura (Sección 4.7)\nFigura 5. Panel comercial — detalle de un lead (Sección 4.7)\nFigura 6. Panel comercial — envío de mensaje a leads seleccionados (Sección 4.7)\nFigura 7. Reconstrucción visual del escenario caliente (Anexo C)\nFigura 8. Muestra de la hoja Leads_Bot con el esquema real de columnas (Anexo C)\nCAPÍTULO 1: INTRODUCCIÓN\n1.1 Contexto del problema\nLa transformación digital del sector inmobiliario ha modificado los patrones de contacto entre clientes y agencias. A partir de la experiencia del autor con agencias inmobiliarias de Mendoza, se observa una migración creciente de las consultas comerciales iniciales hacia plataformas de mensajería instantánea —Telegram, WhatsApp y Facebook M",
+      "v125_section": "\n5.6 Validación de concordancia inter-evaluador\t34\n6. Discusión\t36\n6.1 Contraste con los antecedentes\t36\n6.2 Alcance de las generalizaciones y contrastación de H1\t36\n6.3 Limitaciones generales del estudio\t37\n7. Conclusiones\t38\nAporte académico y práctico\t38\n8. Recomendaciones\t40\n9. Referencias Bibliográficas\t42\n10. Anexos\t44\nLISTA DE TABLAS\nTabla 1. Comparativa de plataformas de orquestación de flujos de trabajo (Sección 2.3)\nTabla 2. Herramientas utilizadas en el sistema (Sección 3.6)\nTabla 3. Estructura funcional de la hoja de historial de conversación (Sección 4.3)\nTabla 4. Estructura de la hoja Leads_Bot (Sección 4.3)\nTabla 5. Resultados de los escenarios de prueba exitosos (Sección 5.2)\nTabla 6. Análisis de tiempos de respuesta (Sección 5.5)\nTabla 7. Descripción de nodos del workflow de Telegram (Anexo A)\nTabla 8. Estado de los canales de comunicación (Anexo E)\nTabla 9. Comparación de acierto por perfil entre el clasificador por reglas y la inferencia semántica (Sección 5.4)\nLISTA DE FIGURAS\nFigura 1. Diagrama de arquitectura general del sistema (Sección 4.1)\nFigura 2. Vista estructural real del workflow, exportada de la base de datos productiva (Sección 4.2)\nFigura 3. Panel comercial — resumen ejecutivo (Sección 4.7)\nFigura 4. Panel comercial — pipeline de leads por temperatura (Sección 4.7)\nFigura 5. Panel comercial — detalle de un lead (Sección 4.7)\nFigura 6. Panel comercial — envío de mensaje a leads seleccionados (Sección 4.7)\nFigura 7. Reconstrucción visual del escenario caliente (Anexo C)\nFigura 8. Muestra de la hoja Leads_Bot con el esquema real de columnas (Anexo C)\nCAPÍTULO 1: INTRODUCCIÓN\n1.1 Contexto del problema\nLa transformación digital del sector inmobiliario ha modificado los patrones de contacto entre clientes y agencias. A partir de la experiencia del autor con agencias inmobiliarias de Mendoza, se observa una migración creciente de las consultas comerciales iniciales hacia plataformas de mensajería instantánea —Telegram, WhatsApp y Facebook M",
+      "has_833": false,
+      "has_5_6": false,
+      "has_quiero_ver": false,
+      "mentions_n6": false
+    },
+    "v126_833": [
+      "nstrucción y estado real. Versiones previas de este documento reportaban una concordancia de \"5 sobre 6 comparaciones\" (83,3%) entre un evaluador independiente y el sistema, con su intervalo de Wilson correspondiente. Al revisar el respaldo",
+      " de la sección 5.2 y el caso ambiguo de la sección 5.4), no seis. Ante esa falta de trazabilidad, se retira la cifra de 83,3% y su intervalo de confianza, y se declara la validación de concordancia inter-evaluador como no instrumentada con "
+    ],
+    "v126_5_6": [],
+    "v126_quiero_ver": [],
+    "v125_833": [
+      "nstrucción y estado real. Versiones previas de este documento reportaban una concordancia de \"5 sobre 6 comparaciones\" (83,3%) entre un evaluador independiente y el sistema, con su intervalo de Wilson correspondiente. Al revisar el respaldo",
+      " de la sección 5.2 y el caso ambiguo de la sección 5.4), no seis. Ante esa falta de trazabilidad, se retira la cifra de 83,3% y su intervalo de confianza, y se declara la validación de concordancia inter-evaluador como no instrumentada con "
+    ],
+    "v125_5_6": [],
+    "v125_quiero_ver": [],
+    "n6_count": {
+      "v126": 0,
+      "v125": 1
+    },
+    "figuras": {
+      "v126": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ],
+      "v125": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    },
+    "fig5_v126": true,
+    "fig5_v125": true,
+    "fig6_v126": true,
+    "fig6_v125": true,
+    "fig7_v126": true,
+    "fig7_v125": true,
+    "fig8_v126": true,
+    "fig8_v125": true,
+    "figura1_contexts": [
+      "álisis de tiempos de respuesta (Sección 5.5) Tabla 7. Descripción de nodos del workflow de Telegram (Anexo A) Tabla 8. Estado de los canales de comunicación (Anexo E) Tabla 9. Comparación de acierto por perfil entre el clasificador por reglas y la inferencia semántica (Sección 5.4) LISTA DE FIGURAS Figura 1. Diagrama de arquitectura general del sistema (Sección 4.1) Figura 2. Vista estructural real del workflow, exportada de la base de datos productiva (Sección 4.2) Figura 3. Panel comercial — resumen ejecutivo (Sección 4.7) Figura 4. Panel comercial — pipeline de leads por temperatura (Secció",
+      "todos los criterios y no solo para aquellos que se ampliaron a posteriori. CAPÍTULO 4: DESARROLLO TÉCNICO Y ARQUITECTURA DEL SISTEMA 4.1 Arquitectura general El sistema opera en producción sobre tres workflows de canal —Telegram, WhatsApp y Messenger— que comparten un núcleo de procesamiento común (Figura 1), con distinto grado de validación cada uno. El workflow \"SIMPLE-03 Messenger Bot\" permanece inactivo. Se decidió no continuar su desarrollo: requiere el mismo acceso a Meta (Page, token, webhook) bloqueado por la verificación de negocio que tampoco pudo completarse para WhatsApp, y esa ges",
+      "e inteligencia artificial sobre Groq (openai/gpt-oss-120b), confirmando en ambos casos la arquitectura modular descripta en esta sección y en la sección 4.5. El presente capítulo describe la arquitectura del workflow de Telegram, sobre el que se ejecutó la validación cuantitativa del capítulo 5. La Figura 1 esquematiza la relación entre los tres canales de entrada, el núcleo de procesamiento compartido y la capa de persistencia; la Figura 2 (sección 4.2) muestra la estructura real del workflow de Telegram, nodo por nodo. Figura 1. Diagrama de arquitectura general del sistema: canales de entrad",
+      "m, sobre el que se ejecutó la validación cuantitativa del capítulo 5. La Figura 1 esquematiza la relación entre los tres canales de entrada, el núcleo de procesamiento compartido y la capa de persistencia; la Figura 2 (sección 4.2) muestra la estructura real del workflow de Telegram, nodo por nodo. Figura 1. Diagrama de arquitectura general del sistema: canales de entrada, núcleo de procesamiento compartido, post-procesamiento en ejecución paralela (no encadenada) y capa de persistencia, incluyendo el panel comercial y la rama de notificación activa al operador ante leads calientes (elaboració"
+    ],
+    "notif_lead": {
+      "label": "Figura 1: mención notificación bajo IF lead",
+      "ok": true,
+      "hits": [
+        [
+          "notificaci[oó]n.*lead|lead.*notificaci[oó]n|IF.*lead|lead completo",
+          true
+        ]
+      ]
+    }
+  },
+  "phrase_diff": {
+    "83,3": {
+      "v125": 2,
+      "v126": 2
+    },
+    "83.3": {
+      "v125": 0,
+      "v126": 0
+    },
+    "5/6": {
+      "v125": 0,
+      "v126": 0
+    },
+    "5 de 6": {
+      "v125": 0,
+      "v126": 0
+    },
+    "quiero ver": {
+      "v125": 0,
+      "v126": 0
+    },
+    "n=6": {
+      "v125": 1,
+      "v126": 0
+    },
+    "n = 6": {
+      "v125": 0,
+      "v126": 0
+    },
+    "5.6": {
+      "v125": 8,
+      "v126": 8
+    },
+    "figura 1": {
+      "v125": 4,
+      "v126": 4
+    },
+    "figura 5": {
+      "v125": 2,
+      "v126": 2
+    },
+    "figura 6": {
+      "v125": 2,
+      "v126": 2
+    },
+    "figura 7": {
+      "v125": 2,
+      "v126": 2
+    },
+    "figura 8": {
+      "v125": 2,
+      "v126": 2
+    },
+    "notificación": {
+      "v125": 7,
+      "v126": 7
+    },
+    "lead completo": {
+      "v125": 7,
+      "v126": 7
+    },
+    "limitación": {
+      "v125": 18,
+      "v126": 18
+    },
+    "trabajo futuro": {
+      "v125": 6,
+      "v126": 6
+    }
+  },
+  "blockers": [
+    "Obligatorio fallido: Q2 Objetivos específicos declarados"
+  ],
+  "pdf_questions": [
+    [
+      "5",
+      "Referencias\tbibliográficas"
+    ],
+    [
+      "7",
+      "Referencias\thuérfanas"
+    ],
+    [
+      "7",
+      "Intervalos\tde\tconfianza\tdeclarados"
+    ],
+    [
+      "8",
+      "Nivel\tde\ttítulo\t4.7.1–4.7.4"
+    ],
+    [
+      "6",
+      "Dobles\tespacios\t/\tespacios\tantes\tde"
+    ],
+    [
+      "4",
+      "3"
+    ],
+    [
+      "5",
+      "7"
+    ],
+    [
+      "6",
+      "8"
+    ],
+    [
+      "3",
+      "Concordancia\t5/6\t=\t83,3%;\tIC\t[0,44\t;\t0,97]"
+    ],
+    [
+      "1",
+      "a\tQ9\ty\tse\tordenan\tpor\tseveridad."
+    ],
+    [
+      "1",
+      "El\tnuevo\texperimento\tcomparativo"
+    ],
+    [
+      "2",
+      "El\tejemplo\tcon\tque\t§5.4\tilustra\tla"
+    ],
+    [
+      "3",
+      "La\tdescripción\tde\tlos\tdos\terrores"
+    ],
+    [
+      "4",
+      "La\tcomposición\tde\tlas\tseis"
+    ],
+    [
+      "5",
+      "La\tFigura\t1\tcuelga\tla\trama\tde"
+    ],
+    [
+      "6",
+      "Dos\tlistas\tde\tpalabras\tclave\ten\tespañol"
+    ],
+    [
+      "7",
+      "McNemar\t(1947)\tmal\tubicada\ten\tel"
+    ],
+    [
+      "8",
+      "Autorreferencia\ty\treferencia\tcircular"
+    ],
+    [
+      "9",
+      "Residuos\tformales"
+    ],
+    [
+      "6",
+      "propone\tretirar.\tLos\totros\tonce\tencabezados\tcoinciden\texactamente."
+    ]
+  ],
+  "diff_sample_lines": [
+    "--- ",
+    "+++ ",
+    "@@ -281 +281 @@",
+    "-Con el objetivo de reducir el sesgo inherente a la autoevaluación, un evaluador independiente ajeno al desarrollo del sistema replicó, sin conocimiento previo de la clasificación obtenida por el autor, la clasificación de un conjunto de seis ejecuciones que incluye los escenarios de perfil claro (sección 5.2) y el caso adicional de perfil ambiguo identificado en la sección 5.4. El número exacto de comparaciones (n=6) es el que se utiliza en el cálculo de concordancia y de su intervalo de confianza más abajo en esta misma sección. Como se señala en la sección 3.7, el evaluador recibió los mismos criterios de temperatura del prompt del sistema (Anexo B), lo que constituye un cegamiento parcial.",
+    "+Se había planteado, con el objetivo de reducir el sesgo inherente a la autoevaluación, que un evaluador independiente ajeno al desarrollo del sistema replicara —sin conocimiento previo de la clasificación obtenida por el autor— la clasificación de un conjunto de conversaciones que incluyera los escenarios de perfil claro (sección 5.2) y el caso adicional de perfil ambiguo identificado en la sección 5.4. Como se detalla a continuación, esta validación no quedó instrumentada con evidencia verificable, por lo que el número de comparaciones y el resultado que se reportaban en versiones previas de este documento se retiran en la presente versión."
+  ]
+}

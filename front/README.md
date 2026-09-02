@@ -20,10 +20,12 @@ Copiá `.env.example` → `.env`:
 
 | Variable | Descripción |
 |----------|-------------|
-| `VITE_USE_MOCK` | `true` = seed demo (default). `false` = llama al API de leads |
+| `VITE_USE_MOCK` | `false` (recomendado) = API real. `true` = seed vacío (no hay demos) |
 | `VITE_LEADS_API_URL` | `GET` JSON de leads (p. ej. `http://localhost:5678/webhook/panel-leads`) |
 | `VITE_ENVIO_MASIVO_URL` | `POST` `{ chat_ids, text }` Telegram |
-| `VITE_POLL_INTERVAL_MS` | Polling (default 20000) |
+| `VITE_WS_URL` | WebSocket panel (`ws://127.0.0.1:3099/ws`) |
+| `VITE_POLL_INTERVAL_MS` | Polling si WS cae (default 45000) |
+| `VITE_POLL_INTERVAL_WS_MS` | Polling suave con WS abierto (default 120000) |
 
 ## Datos en vivo
 

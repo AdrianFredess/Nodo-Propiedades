@@ -71,9 +71,7 @@ export function ResumenPage({
       <header className="page-head page-head--compact">
         <div>
           <h1>Resumen</h1>
-          <p className="page-head__subtitle">
-            Vista ejecutiva del CRM — leads, pipeline y canales
-          </p>
+          <p className="page-head__subtitle">Estado del CRM</p>
         </div>
         <div className="resumen-toolbar">
           <label className="date-picker">
@@ -108,22 +106,18 @@ export function ResumenPage({
         <article className="stat panel-card">
           <div className="stat__label">Total leads</div>
           <div className="stat__value">{global.totalLeads}</div>
-          <p className="stat__hint">En el CRM</p>
         </article>
         <article className="stat panel-card">
           <div className="stat__label">Activos (7 días)</div>
           <div className="stat__value">{global.leadsSemana}</div>
-          <p className="stat__hint">Con actividad reciente</p>
         </article>
         <article className="stat panel-card stat--hot">
           <div className="stat__label">Calientes</div>
           <div className="stat__value">{global.calientes}</div>
-          <p className="stat__hint">Listos para avanzar</p>
         </article>
         <article className="stat panel-card">
           <div className="stat__label">Visitas solicitadas</div>
           <div className="stat__value">{global.visitasSolicitadas}</div>
-          <p className="stat__hint">Leads que pidieron ver</p>
         </article>
       </section>
 
@@ -131,30 +125,37 @@ export function ResumenPage({
         <h2 className="resumen-section__title">
           Actividad {isToday ? 'de hoy' : `del ${dayValue}`}
         </h2>
-        <div className="stat-grid stat-grid--day">
-          <article className="stat panel-card">
-            <div className="stat__label">Leads activos</div>
-            <div className="stat__value">{dayMetrics.leadsDia}</div>
-          </article>
-          <article className="stat panel-card stat--hot">
-            <div className="stat__label">Calientes</div>
-            <div className="stat__value">{dayMetrics.calientesDia}</div>
-          </article>
-          <article className="stat panel-card">
-            <div className="stat__label">WhatsApp</div>
-            <div className="stat__value">{dayMetrics.whatsappDia}</div>
-          </article>
-          <article className="stat panel-card">
-            <div className="stat__label">Telegram</div>
-            <div className="stat__value">{dayMetrics.telegramDia}</div>
-          </article>
+        <div className="resumen-day-strip" role="list">
+          <div className="resumen-day-strip__item" role="listitem">
+            <span className="resumen-day-strip__label">Leads</span>
+            <strong className="resumen-day-strip__value">{dayMetrics.leadsDia}</strong>
+          </div>
+          <div className="resumen-day-strip__item" role="listitem">
+            <span className="resumen-day-strip__label">Calientes</span>
+            <strong className="resumen-day-strip__value resumen-day-strip__value--hot">
+              {dayMetrics.calientesDia}
+            </strong>
+          </div>
+          <div className="resumen-day-strip__item" role="listitem">
+            <span className="resumen-day-strip__label">WhatsApp</span>
+            <strong className="resumen-day-strip__value">{dayMetrics.whatsappDia}</strong>
+          </div>
+          <div className="resumen-day-strip__item" role="listitem">
+            <span className="resumen-day-strip__label">Telegram</span>
+            <strong className="resumen-day-strip__value">{dayMetrics.telegramDia}</strong>
+          </div>
+          {dayMetrics.messengerDia > 0 ? (
+            <div className="resumen-day-strip__item" role="listitem">
+              <span className="resumen-day-strip__label">Messenger</span>
+              <strong className="resumen-day-strip__value">{dayMetrics.messengerDia}</strong>
+            </div>
+          ) : null}
         </div>
       </section>
 
       <section className="split-2">
         <article className="panel-card section-block">
           <h2>Pipeline</h2>
-          <p className="section-block__desc">Distribución por temperatura (total)</p>
           <div className="bar-list">
             {TEMP_ORDER.map((temp) => {
               const value = global.porTemperatura[temp];
@@ -177,7 +178,6 @@ export function ResumenPage({
 
         <article className="panel-card section-block">
           <h2>Canales</h2>
-          <p className="section-block__desc">Origen de los leads (total)</p>
           <div className="bar-list">
             {CANAL_ORDER.map((canal) => {
               const value = global.porCanal[canal];
@@ -199,28 +199,8 @@ export function ResumenPage({
         </article>
       </section>
 
-      {global.topPropiedades.length > 0 ? (
-        <section className="panel-card section-block">
-          <h2>Propiedades más consultadas</h2>
-          <p className="section-block__desc">Por menciones en conversaciones</p>
-          <ol className="resumen-top-props">
-            {global.topPropiedades.map((p, i) => (
-              <li key={p.id}>
-                <Link to={`/catalogo/${encodeURIComponent(p.id)}`}>
-                  <span className="resumen-top-props__rank">#{i + 1}</span>
-                  <span className="resumen-top-props__id">{p.id}</span>
-                  <span className="resumen-top-props__count">
-                    {p.count} consulta{p.count === 1 ? '' : 's'}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ol>
-        </section>
-      ) : null}
-
       <section className="panel-card section-block resumen-day-list resumen-day-list--fill">
-        <h2>Leads del {dayValue}</h2>
+        <h2>Leads del día</h2>
         {dayLeads.length === 0 ? (
           <div className="empty-state empty-state--compact">
             <p>Sin actividad ese día</p>
@@ -245,13 +225,12 @@ export function ResumenPage({
           </div>
         ) : (
           <ol className="resumen-lead-list resumen-lead-list--scroll">
-            {dayLeads.map((lead, i) => (
+            {dayLeads.map((lead) => (
               <li key={lead.id}>
                 <Link
                   className="resumen-lead-row"
                   to={`/leads/${encodeURIComponent(lead.id)}`}
                 >
-                  <span className="resumen-lead-row__ord">#{i + 1}</span>
                   <span className="resumen-lead-row__name">{lead.nombre}</span>
                   <span className="resumen-lead-row__meta">
                     {TEMPERATURA_LABEL[lead.temperatura]} ·{' '}

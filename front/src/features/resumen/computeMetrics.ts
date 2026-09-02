@@ -18,7 +18,6 @@ export interface GlobalMetrics {
   leadsSemana: number;
   visitasSolicitadas: number;
   porCanal: Record<CanalOrigen, number>;
-  topPropiedades: Array<{ id: string; count: number }>;
 }
 
 function activityDate(lead: Lead): Date | null {
@@ -28,7 +27,6 @@ function activityDate(lead: Lead): Date | null {
 
 const VISITA_RE =
   /\b(visita|agendar|coordinar visita|ver la propiedad|ver el depto|ver la casa|solicitud_visita)\b/i;
-const PROP_ID_RE = /\b(MZA-\d{3})\b/gi;
 
 function countVisitas(leads: Lead[]): number {
   let n = 0;
@@ -40,42 +38,6 @@ function countVisitas(leads: Lead[]): number {
     if (texts.some((t) => VISITA_RE.test(String(t || '')))) n += 1;
   }
   return n;
-}
-
-function extractPropiedadIds(lead: Lead): string[] {
-  const ids = new Set<string>();
-  if (lead.propiedadId) ids.add(lead.propiedadId.toUpperCase());
-  const ref = lead.propiedadReferencia || '';
-  const refMatch = ref.match(/\b(MZA-\d{3})\b/i);
-  if (refMatch) ids.add(refMatch[0].toUpperCase());
-  try {
-    const parsed = JSON.parse(ref);
-    if (parsed?.id) ids.add(String(parsed.id).toUpperCase());
-  } catch {
-    /* not JSON */
-  }
-  for (const h of lead.historial) {
-    const blob = `${h.mensajeCliente} ${h.respuestaBot}`;
-    let m: RegExpExecArray | null;
-    const re = new RegExp(PROP_ID_RE.source, PROP_ID_RE.flags);
-    while ((m = re.exec(blob)) !== null) {
-      ids.add(m[0].toUpperCase());
-    }
-  }
-  return [...ids];
-}
-
-function computeTopPropiedades(leads: Lead[], limit = 5): Array<{ id: string; count: number }> {
-  const counts = new Map<string, number>();
-  for (const lead of leads) {
-    for (const id of extractPropiedadIds(lead)) {
-      counts.set(id, (counts.get(id) ?? 0) + 1);
-    }
-  }
-  return [...counts.entries()]
-    .map(([id, count]) => ({ id, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit);
 }
 
 /** Leads con actividad en el día calendario local de `day`. */
@@ -117,7 +79,6 @@ export function computeGlobalMetrics(leads: Lead[]): GlobalMetrics {
     leadsSemana,
     visitasSolicitadas: countVisitas(leads),
     porCanal,
-    topPropiedades: computeTopPropiedades(leads),
   };
 }
 

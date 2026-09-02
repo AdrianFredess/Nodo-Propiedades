@@ -17,17 +17,22 @@ Ver también `docs/ARRANQUE-NUBE-LOCAL.md`.
 ```bash
 # n8n
 docker compose up -d
-
-# WhatsApp no-oficial (WAHA / WebJS) — recomendado si Meta Cloud no está disponible
-# 1) copiar .env.waha.example → .env.waha y completar claves
-docker compose -f docker-compose.waha.yml --env-file .env.waha up -d
-
-# (Opcional) Evolution API — alternativa Baileys
-# docker compose -f docker-compose.evolution.yml --env-file .env.evolution up -d
 ```
 
 n8n: http://localhost:5678  
-WAHA dashboard: http://localhost:3002  
+
+WhatsApp usa **Meta Cloud API** (no requiere contenedor local). Ver `docs/WHATSAPP-CLOUD-META.md` y variables `META_*` en `.env`.
+
+### Login n8n (Docker local)
+
+- **Basic auth:** desactivado en `docker-compose.yml` (`N8N_BASIC_AUTH_ACTIVE=false`).
+- **Usuario owner** (cuenta n8n): email `adrianfredes12@gmail.com`, contraseña por defecto del repo `adriann8n10f` (ver `scripts/restore_n8n_owner.js`).
+- Si no entra: `docker stop nodo-propiedades-n8n-1` y luego una de:
+  - `node scripts/restore_n8n_owner.js adrianfredes12@gmail.com adriann8n10f`
+  - `$env:N8N_RESET_EMAIL="adrianfredes12@gmail.com"; $env:N8N_RESET_PASSWORD="tu-clave"; node scripts/_reset_n8n_user_password.js`
+- Datos persistentes: `N8N_HOST_DATA_DIR` en `.env` (ej. `C:/Users/adrian/.n8n`).
+
+**URLs con ngrok activo:** editor y webhooks en `https://deranged-defile-comrade.ngrok-free.dev` (mismo túnel que `:5678`).
 
 ## Panel comercial (frontend)
 
@@ -37,7 +42,7 @@ pnpm install --ignore-workspace
 pnpm --ignore-workspace run dev
 ```
 
-Por defecto usa datos demo (`VITE_USE_MOCK=true`). Para datos reales: importá `workflows/PANEL-01 API Leads.json` + `PANEL-02 Envio Masivo Telegram.json`, activá, y poné `VITE_USE_MOCK=false` en `front/.env`.
+Por defecto usa datos reales (`VITE_USE_MOCK=false`). Para demo offline: `VITE_USE_MOCK=true` (seed vacío). Importá `workflows/PANEL-01 API Leads.json` + `PANEL-02 Envio Masivo Telegram.json`, activá, y mantené `VITE_USE_MOCK=false` en `front/.env`.
 
 ## Google Sheets (runtime)
 
@@ -45,6 +50,7 @@ Por defecto usa datos demo (`VITE_USE_MOCK=true`). Para datos reales: importá `
 |------|-----|
 | **Leads_Bot** | Estado actual del cliente (1 fila por chat; dedupe) |
 | **Consultas** | Historial fechado por interacción |
+| **Aprendizaje_Matias** | Few-shot Matías (consulta/respuesta). Ver `docs/APRENDIZAJE-MATIAS.md` |
 
 Spreadsheet ID: configurarlo en los nodos de n8n (no commitear secrets).
 
@@ -53,25 +59,23 @@ Spreadsheet ID: configurarlo en los nodos de n8n (no commitear secrets).
 | Archivo | Notas |
 |---------|--------|
 | `SIMPLE-01 Telegram Bot.json` | Prototipo polling. Token: placeholder `__SET_TELEGRAM_BOT_TOKEN__` |
-| `SIMPLE-02 WhatsApp Bot.json` | Bot WA (webhook). En prod suele apuntar a WAHA path `evolution-whatsapp` |
+| `SIMPLE-02 WhatsApp Bot.json` | Bot WA (webhook Meta `meta-whatsapp`) |
 | `SIMPLE-03 Messenger Bot.json` | Requiere Meta; a menudo pausado |
 | `SIMPLE-04 Seguimiento Automatico.json` | Cron de recontactos sobre Leads_Bot |
 
 **Producción en la instancia n8n local** puede incluir workflows editados fuera del repo (p. ej. bot Telegram con Groq). Re-exportar a `workflows/` sin tokens ni chat IDs personales.
 
-## WhatsApp con WAHA (primera vinculación)
+## WhatsApp (Meta Cloud API)
 
-1. Crear sesión `nodo` en dashboard WAHA o `POST /api/sessions`
-2. Escanear QR **una sola vez** con un **número dedicado** (no el celular personal de uso diario)
-3. Webhook de WAHA → n8n: `.../webhook/evolution-whatsapp`
-4. Sesión persistente en `./waha-data` (ignorada por git)
-
-> Riesgo de ban: WAHA no es API oficial de Meta. Para producción seria usá WhatsApp Cloud API o un BSP.
+1. Completá `META_*` en `.env` (ver `docs/WHATSAPP-CLOUD-META.md`).
+2. Webhook Meta → n8n: `.../webhook/meta-whatsapp`
+3. Aplicá parches: `pnpm run patch-meta-all` (o `node scripts/patch-meta-whatsapp.js --deploy`)
 
 ## Secretos
 
 Nunca subir:
-- `.env`, `.env.waha`, `.env.evolution`
-- tokens de Telegram, Groq, Meta, API keys de WAHA
-- QR, `waha-data/`, dumps de sesión
+- `.env`, `.env.evolution`
+- tokens de Telegram, Groq, Meta
 - tesis/temporales `_tmp_*`
+
+> Legacy: si tenés datos viejos de WAHA en `./waha-data/` (gitignored), podés borrarlos a mano; ya no se usan.

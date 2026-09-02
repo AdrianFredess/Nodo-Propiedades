@@ -44,6 +44,8 @@ function extractPresupuestoUsd(text) {
   if (m) return parseInt(m[1], 10) * 1000;
   m = t.match(/por\s+(\d{1,3}(?:[.\s]\d{3})+|\d{4,7})/i);
   if (m) return parseInt(m[1].replace(/[.\s]/g, ''), 10);
+  m = t.match(/(\d{2,3})\s*mil\b/i);
+  if (m && !/\b(alquil|mensual|por mes)\b/i.test(t)) return parseInt(m[1], 10) * 1000;
   return null;
 }
 
@@ -100,6 +102,69 @@ function esDetalleUnaPropiedad(text, propId) {
   return /\b(m[aá]s info|m[aá]s detalle|contame|cu[aá]nto sale|precio de|fotos de|caracter[ií]stica|detalle de|ubicaci[oó]n de|d[oó]nde queda)\b/i.test(
     text,
   );
+}
+
+const ON_TOPIC_RE =
+  /\b(depto|departamento|casa|lote|local|oficina|alquiler|alquil[oaá]|comprar|compra|venta|vender|propiedad|propiedades|inmueble|inmobiliaria|presupuesto|usd|u\$s|dolares|dólares|visita|escritur|expensas|cochera|garage|ambientes|dormitorio|habitaci[oó]n|m2|m²|mza-\d+|nodo|inversi[oó]n|dueño|dueno|inquilino|seña|senia|reserva)\b/i;
+const PIDE_STOCK_RE =
+  /\b(que ten[eé]s|qué ten[eé]s|que hay|qué hay|que venden|qué venden|que tienen|qué tienen|algo por|opciones por|ten[eé]s algo|tienen algo|lo que tengas|lo que tengan|mostrame|mostrá|mandame|mandá|pasame|pasá|ver algo|algo para ver|catalogo|catálogo|enviame|enviá|cu[aá]nto sale|a cu[aá]nto|precio de|cu[aá]nto cuesta|alg[uú]n depto|alg[uú]na casa|ten[eé]s algo|solo (estoy )?(viendo|mirando|curioseando)|solo quiero ver|de curioso|para ver nomas|para saber nomas|nomas (quiero|para) ver)\b/i;
+const NO_TENGO_CLARO_RE =
+  /\b(no tengo (nada )?(claro|en mente|definido)|no s[eé] (tanto|mucho|bien|nada)?|nose|no estoy seguro|sin criterio|sin idea|no defin[ií]|a[uú]n no s[eé]|todav[ií]a no s[eé]|me da igual|cualquier cosa)\b/i;
+const PIDE_OPCIONES_DIRECTO_RE =
+  /\b(mandame opciones|mandá opciones|enviame opciones|enviá opciones|pasame opciones|pasá opciones|dame opciones|mandame algo|mandá algo|mostrame algo|mostrá algo|no se,? mostr[aá]|no sé,? mostr[aá]|cualquiera|ver opciones|quiero ver|algo para ver|que me recomend[aá]s|qué me recomend[aá]s|sorprendeme|sorprendeme)\b/i;
+const CURIOSO_RE =
+  /\b(que venden|qué venden|que tienen|qué tienen|solo (estoy )?(viendo|mirando|curioseando)|solo quiero ver|de curioso|por curiosidad|para ver nomas|para saber nomas|nomas (quiero|para) ver|algo para ver|que hay en stock|que tenes\??|qué tenés\??|que hay\??|qué hay\??|mostrame algo|mostrá algo|pasame algo|cualquiera|lo que tengas|lo que tengan)\b/i;
+const OFF_TOPIC_RE =
+  /\b(comer|comida|restaurante|almorzar|cenar|desayun|hambur|pizza|asado|birra|cerveza|hambre|tengo hambre|necesito comer|d[oó]nde (puedo|se puede) comer|herramienta|ferreter|construcci[oó]n|supermercado|farmacia|clima|llueve|partido|f[uú]tbol|netflix|receta|cocinar|ropa|zapatillas|celular|auto usado|mecanico|mecánico)\b/i;
+const ACK_RE =
+  /^(ok|dale|gracias|si|sí|no|bueno|perfecto|listo|jajaja|jaja|de una|genial|bárbaro|barbaro|copado)\s*[!.?]*$/i;
+
+function esOnTopicInmobiliario(text, presupuestoUsd) {
+  const t = String(text || '').trim();
+  if (!t) return false;
+  if (presupuestoUsd && !OFF_TOPIC_RE.test(t)) return true;
+  if (PIDE_STOCK_RE.test(t) && !OFF_TOPIC_RE.test(t)) return true;
+  if (
+    (PIDE_OPCIONES_DIRECTO_RE.test(t) || NO_TENGO_CLARO_RE.test(t)) &&
+    !OFF_TOPIC_RE.test(t)
+  ) {
+    return true;
+  }
+  if (ON_TOPIC_RE.test(t) && !OFF_TOPIC_RE.test(t)) return true;
+  if (
+    ON_TOPIC_RE.test(t) &&
+    /\b(depto|departamento|casa|lote|propiedad|alquiler|compr|venta|inmueble|visita|presupuesto|mza-\d+)\b/i.test(
+      t,
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function esOffTopicMsg(text, esSaludoFlag, presupuestoUsd, pideOpcionesFlag) {
+  const t = String(text || '').trim();
+  if (!t || esSaludoFlag) return false;
+  if (ACK_RE.test(t)) return false;
+  if (presupuestoUsd || pideOpcionesFlag) return false;
+  if (
+    PIDE_OPCIONES_DIRECTO_RE.test(t) ||
+    NO_TENGO_CLARO_RE.test(t) ||
+    PIDE_STOCK_RE.test(t)
+  ) {
+    return false;
+  }
+  if (esOnTopicInmobiliario(t, presupuestoUsd)) return false;
+  if (OFF_TOPIC_RE.test(t)) return true;
+  if (
+    /\b(vendes|venden|ten[eé]s|tienen|ofrecen|trabajan con)\b/i.test(t) &&
+    !ON_TOPIC_RE.test(t) &&
+    !PIDE_STOCK_RE.test(t) &&
+    !presupuestoUsd
+  ) {
+    return true;
+  }
+  return false;
 }
 
 function mediaFor(id) {
@@ -187,19 +252,55 @@ function sugerirIds(stock, budgetUsd, zonaHint) {
   return scored.slice(0, 3).map((x) => x.id);
 }
 
+function sugerirIdsVariados(stock) {
+  const rows = [];
+  for (const row of stock) {
+    const id = pick(row, ['id', 'ID', 'codigo']);
+    const precio = parseUsd(pick(row, ['precio', 'Precio']));
+    const zona = pick(row, ['zona', 'Zona']).toLowerCase();
+    if (!id || !precio) continue;
+    rows.push({ id, precio, zona });
+  }
+  if (!rows.length) return [];
+  rows.sort((a, b) => a.precio - b.precio);
+  const picked = [];
+  const zonasUsadas = new Set();
+  for (const r of rows) {
+    if (picked.length >= 3) break;
+    const zonaKey = (r.zona || 'x').split(' ')[0];
+    if (!zonasUsadas.has(zonaKey)) {
+      picked.push(r.id);
+      zonasUsadas.add(zonaKey);
+    }
+  }
+  if (picked.length < 3) {
+    const tiers = [0, Math.floor(rows.length / 2), rows.length - 1];
+    for (const i of tiers) {
+      const id = rows[i]?.id;
+      if (id && !picked.includes(id)) picked.push(id);
+      if (picked.length >= 3) break;
+    }
+  }
+  for (const r of rows) {
+    if (picked.length >= 3) break;
+    if (!picked.includes(r.id)) picked.push(r.id);
+  }
+  return picked.slice(0, 3);
+}
+
 let stockText = '';
 if (stockItems.length) {
   stockText = stockItems.map(rowToStockLine).map((l) => '- ' + l).join('\n');
 } else {
   stockText =
-    '- (Sin stock cargado. Pedí datos al cliente y ofrecé que un asesor le escribe.)';
+    '- (Sin stock cargado. Pedí zona y presupuesto; no inventes propiedades.)';
 }
 
 const FALLBACK_POLITICAS = [
   'transferencia: coordinar con la inmobiliaria.',
   'efectivo: en oficina con comprobante.',
   'reserva: seña según operación; no inventar montos.',
-  'honorarios: ver stock o confirmar con asesor.',
+  'honorarios: ver stock o confirmar después.',
 ].join('\n');
 
 let politicasText = '';
@@ -252,6 +353,7 @@ if (matchRow?.json?.chat_id) {
 
 const sd = $getWorkflowStaticData('global');
 if (!sd.historialByChat) sd.historialByChat = {};
+if (!sd.offTopicCount) sd.offTopicCount = {};
 const cachedHist = sd.historialByChat[chatId];
 if (Array.isArray(cachedHist) && cachedHist.length > historialJson.length) {
   historialJson = cachedHist;
@@ -269,40 +371,56 @@ let zonaDetectada =
 let operacionDetectada =
   extractOperacion(textoUsuario) || extractOperacion(textoHistorial) || '';
 
+const clasif = clasificarIntencionCliente(textoUsuario, textoHistorial, {
+  stockDisponible: stockItems.length > 0,
+  historialJsonArr: historialJson,
+});
+
+presupuestoUsd = clasif.presupuesto_usd || presupuestoUsd;
+zonaDetectada = clasif.zona || zonaDetectada;
+operacionDetectada = clasif.operacion || operacionDetectada;
+
+const esCurioso = clasif.modo_curioso;
 const pideOpciones =
-  /\b(mandame|mandá|mostrame|mostrá|pasame|pasá|que ten[eé]s|qué ten[eé]s|opciones|ver algo|lo que tengas|lo que tengan|catalogo|catálogo|mostrar|enviame|enviá|algo para|propiedades para|dentro de|hasta)\b/i.test(
-    textoUsuario,
-  ) ||
-  (Boolean(presupuestoUsd) &&
-    /\b(tengo|presupuesto|usd|u\$s|dolar|busco|quiero)\b/i.test(textoUsuario));
+  clasif.intencion === 'pedir_opciones' || clasif.mostrar_stock || esCurioso;
 const esSoloSaludo =
+  clasif.intencion === 'saludo' &&
   textoUsuario.length < 50 &&
   !/\b(depto|casa|alquil|compr|venta|propiedad|precio|usd|\d|zona|mendoza)\b/i.test(
     textoUsuario,
-  ) &&
-  /^(hola|buen[oa]s?\s*(d[ií]as|tardes|noches)?|buenas|qué tal|que tal|como est[aá]s)\s*[!.?]*$/i.test(
-    textoUsuario.trim(),
   );
 const esSaludo =
-  /^(hola|buen[oa]s?\s*(d[ií]as|tardes|noches)?|como est[aá]s|qué tal)/i.test(
+  clasif.es_saludo ||
+  (/^(hola|buen[oa]s?\s*(d[ií]as|tardes|noches)?|como est[aá]s|qué tal)/i.test(
     textoUsuario.trim(),
-  ) && textoUsuario.length < 55;
+  ) &&
+    textoUsuario.length < 55);
 const frustrado =
   /\b(ya te dije|te dije|otra vez|no entend)/i.test(textoUsuario);
 
+const onTopicAhora =
+  !clasif.es_off_topic || clasif.mostrar_stock || esSaludo || esSoloSaludo;
+const offTopicAhora = clasif.es_off_topic && !clasif.mostrar_stock && !esSaludo;
+let offTopicCount = Number(sd.offTopicCount[chatId] || 0) || 0;
+if (onTopicAhora) {
+  offTopicCount = 0;
+} else if (offTopicAhora) {
+  offTopicCount += 1;
+}
+sd.offTopicCount[chatId] = offTopicCount;
+const skipReply = offTopicCount >= 3;
+const esOffTopic = offTopicAhora && !onTopicAhora;
+
 const sugerenciasIds =
   stockItems.length > 0
-    ? sugerirIds(stockItems, presupuestoUsd, zonaDetectada)
+    ? presupuestoUsd || zonaDetectada
+      ? sugerirIds(stockItems, presupuestoUsd, zonaDetectada)
+      : sugerirIdsVariados(stockItems)
     : [];
 
 const debeMostrarPropiedades =
   stockItems.length > 0 &&
-  (pideOpciones ||
-    frustrado ||
-    Boolean(presupuestoUsd) ||
-    /\b(propiedad|propiedades|depto|departamento|casa|ten[eé]s|tienen)\b/i.test(
-      textoUsuario,
-    ));
+  (clasif.mostrar_stock || frustrado);
 
 let refSeg = '';
 let idSeg = '';
@@ -330,8 +448,73 @@ const datosConocidos = {
   operacion: operacionDetectada || '(no indicó)',
 };
 
+const esAlquilerPresupuestoAlto =
+  operacionDetectada === 'alquiler' &&
+  Boolean(presupuestoUsd) &&
+  presupuestoUsd >= 15000;
+
+function esConsultaRepetidaPrompt(mensaje, historialArr) {
+  const actual = String(mensaje || '').trim().toLowerCase();
+  if (!actual || !Array.isArray(historialArr) || !historialArr.length) return false;
+  const norm = (s) =>
+    String(s || '')
+      .toLowerCase()
+      .replace(/[^a-záéíóúñ0-9\s]/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  const na = norm(actual);
+  const users = historialArr
+    .filter((m) => String((m && m.role) || '').toLowerCase() === 'user')
+    .map((m) => norm((m && m.content) || ''))
+    .filter(Boolean);
+  return users.slice(-4).some((p) => {
+    if (p === na) return true;
+    const wa = na.split(' ').filter((w) => w.length > 2);
+    const wb = new Set(p.split(' ').filter((w) => w.length > 2));
+    if (!wa.length) return false;
+    let inter = 0;
+    for (const w of wa) if (wb.has(w)) inter++;
+    return inter / wa.length >= 0.62;
+  });
+}
+
+const consultaRepetida = esConsultaRepetidaPrompt(textoUsuario, historialJson);
+const aprendizajePack = armarBloqueAprendizajePrompt(
+  historialJson,
+  {
+    operacion: datosConocidos.operacion !== '(no indicó)' ? datosConocidos.operacion : '',
+    zona: datosConocidos.zona !== '(no indicó)' ? datosConocidos.zona : '',
+    presupuesto: datosConocidos.presupuesto_texto || '',
+  },
+  textoUsuario,
+  'telegram',
+  clasif.intencion,
+);
+const bloqueAprendizaje = aprendizajePack.bloque;
+const ultimoBotHistorial = (() => {
+  const bots = historialJson
+    .filter((m) => {
+      const role = String((m && m.role) || '').toLowerCase();
+      return role === 'assistant' || role === 'bot';
+    })
+    .map((m) => String((m && m.content) || '').trim())
+    .filter(Boolean);
+  return bots.length ? bots[bots.length - 1] : '';
+})();
+
 let modoObligatorio = '';
-if (preguntaEspecifica && (propiedadConsultada || idSeg)) {
+if (esOffTopic) {
+  modoObligatorio =
+    '\n\nMODO OFF-TOPIC (OBLIGATORIO):\n' +
+    '- El mensaje NO es de inmuebles. NO ayudes con comida, restaurantes, herramientas ni otros temas.\n' +
+    '- NO empatices ofreciendo recomendaciones off-topic.\n' +
+    '- Respuesta ' +
+    (offTopicCount <= 1
+      ? '1: "Solo trabajo con propiedades. Si buscás depto o casa en Mendoza, avisame."'
+      : '2 (más corta): "Acá solo propiedades. Si te interesa un depto o casa, decime."') +
+    '\n' +
+    '- Una sola frase. Nada más.\n';
+} else if (preguntaEspecifica && (propiedadConsultada || idSeg)) {
   modoObligatorio =
     '\n\nMODO PREGUNTA ESPECÍFICA (OBLIGATORIO):\n' +
     '- El cliente pregunta algo concreto sobre la propiedad ' +
@@ -339,8 +522,26 @@ if (preguntaEspecifica && (propiedadConsultada || idSeg)) {
     '.\n' +
     '- Respondé DIRECTO en 1-3 frases. NO re-califiques (zona, presupuesto, operación).\n' +
     '- PROHIBIDO: "¿Me podrías indicar...?", "Para ayudarte mejor...", cuestionario.\n' +
-    '- Si el dato no está en el STOCK, decilo con honestidad y ofrecé confirmar con asesor.\n' +
+    '- Si el dato no está en el STOCK, decilo con honestidad ("lo confirmo y te aviso").\n' +
     '- Podés usar ###BURBUJAS### con 2-3 mensajes cortos si ayuda a leer.\n';
+} else if (
+  esAlquilerPresupuestoAlto
+) {
+  modoObligatorio =
+    '\n\nMODO ALQUILER VS COMPRA (OBLIGATORIO):\n' +
+    '- El cliente dijo alquiler pero el presupuesto (USD ' +
+    presupuestoUsd +
+    ') suena a COMPRA/VENTA.\n' +
+    '- Aclaralo amable, sin plantilla. NO inventes alquileres. NO digas que un asesor lo contacta. NO uses ###MOSTRAR_PROPIEDADES### todavía.\n' +
+    '- BIEN: "Con ' +
+    (presupuestoUsd >= 1000
+      ? Math.round(presupuestoUsd / 1000) + ' mil'
+      : String(presupuestoUsd)) +
+    ' dólares podemos mirar opciones de compra' +
+    (zonaDetectada ? ' en ' + zonaDetectada : '') +
+    '. Buscás comprar o alquilar? Si es alquiler, el presupuesto mensual suele expresarse en pesos; contame un poco más y te oriento"\n' +
+    '- MAL: "Uf, con X mil para alquiler no me cierra..." o "no tengo inmuebles disponibles... ¿Te gustaría que un asesor te contacte..."\n' +
+    '- Si confirma compra → asumí VENTA USD y mostrá stock. Si insiste alquiler → pedí presupuesto mensual (pesos) y zona.\n';
 } else if (detalleUnaPropiedad && propiedadConsultada) {
   modoObligatorio =
     '\n\nMODO DETALLE UNA PROPIEDAD (OBLIGATORIO):\n' +
@@ -356,8 +557,11 @@ if (preguntaEspecifica && (propiedadConsultada || idSeg)) {
 } else if (debeMostrarPropiedades && sugerenciasIds.length) {
   modoObligatorio =
     '\n\nMODO MOSTRAR PROPIEDADES (OBLIGATORIO):\n' +
+    (esCurioso
+      ? '- MODO CURIOSO: el cliente explora sin datos claros o pidió opciones directo. Intro fija: "Dale, te paso un par de opciones para que veas". Mostrá 2-3 fichas variadas YA. PROHIBIDO cuestionario de zona/presupuesto/operación antes.\n'
+      : '') +
     '- El cliente pidió opciones o dio presupuesto. NO listes propiedades en el texto.\n' +
-    '- Tu mensaje visible = SOLO 1 frase intro (ej: "¡Claro! Acá te muestro opciones dentro de tu presupuesto.").\n' +
+    '- Tu mensaje visible = SOLO 1 frase intro (ej: "Dale, te paso un par de opciones dentro de tu presupuesto.").\n' +
     '- Las fichas van en fotos con caption (el sistema las arma). Vos solo intro + bloque técnico.\n' +
     '- IDs sugeridos del stock real: ' +
     JSON.stringify(sugerenciasIds) +
@@ -371,7 +575,7 @@ if (preguntaEspecifica && (propiedadConsultada || idSeg)) {
     '- Solo saludá y presentate. CERO preguntas de compra/alquiler/venta/zona/presupuesto.\n' +
     '- CERO urgencia. El cliente recién llegó.\n' +
     '- PROHIBIDO: "Hey", "¡Hey!", "¿Qué buscás?", listar compra/alquiler/venta.\n' +
-    '- BIEN: "Hola, ¿cómo estás? Soy Matías de Nodo Propiedades. Cuando quieras contame qué necesitás."\n' +
+    '- BIEN: "Hola, cómo estás? Soy Matías de Nodo Propiedades. Cuando quieras contame qué necesitás"\n' +
     '- MAL: "¡Hey! ¿Qué buscás, compra, alquiler o venta?"\n' +
     '- Una o dos frases tranquilas. Sin signos de exclamación exagerados.\n';
 } else if (esSaludo && turno <= 2) {
@@ -382,21 +586,60 @@ if (preguntaEspecifica && (propiedadConsultada || idSeg)) {
 }
 
 const systemPrompt =
-  'Sos Matías, asesor de Nodo Propiedades en Mendoza. Atendés como una persona real, con paciencia.\n\n' +
-  'VOZ DE ASESOR HUMANO (no vendedor apurado):\n' +
-  '- Tranquilo, cercano, profesional. Como un asesor que tiene tiempo.\n' +
-  '- NUNCA apures al cliente ni hagas cuestionario al inicio.\n' +
-  '- PROHIBIDO: "Hey", "¡Hey!", "¿Qué buscás, compra, alquiler o venta?", múltiples preguntas seguidas.\n' +
-  '- PROHIBIDO: "¿Me podrías indicar...?", sonar a formulario o bot.\n' +
-  '- Si solo te saludan → saludá, presentate, quedá disponible. Nada más.\n' +
-  '- Cuando el cliente cuente qué busca, recién ahí orientá con una pregunta suave si hace falta.\n' +
-  '- Preferí: "Dale", "Perfecto", "Te paso", "Con ese presupuesto tengo...".\n' +
-  '- Sin "che". Sin decir bot/IA.\n' +
-  '- Máximo UNA pregunta por mensaje, y solo cuando ya hubo intercambio real.\n\n' +
-  'EJEMPLOS DE SALUDO:\n' +
+  'Sos Matías, asesor virtual de Nodo Propiedades en Mendoza. Vos SOS el asesor: hablás como persona real, corto, natural, argentino. Nunca derivás a "un asesor".\n\n' +
+  'SOLO RUBRO:\n' +
+  '- Únicamente compra/venta/alquiler de inmuebles en Mendoza.\n' +
+  '- Off-topic (comida, herramientas, etc.): NO ayudes. Una frase redirigiendo a propiedades.\n\n' +
+  'NEGOCIO (importante):\n' +
+  '- Default: VENTA en USD. Alquiler solo si el cliente lo pidió claro.\n' +
+  '- Si dice "alquiler" con presupuesto alto en USD (ej. 45 mil): NO inventes alquileres. Aclará amable que ese monto suena a compra, o que alquileres son mensuales en pesos / otro rango. Preguntá si busca alquilar o comprar.\n' +
+  '- Sin stock para el pedido: decilo natural y ofrecé alternativas (otra zona, otro tope, venta vs alquiler). Nunca prometas que "un asesor te contacta".\n\n' +
+  'VOZ HUMANA:\n' +
+  '- Tranquilo, cercano, profesional. Frases cortas. Como asesor inmobiliario real de Mendoza, no un script ni un soldado.\n' +
+  '- El cliente puede escribir informal ("che tenes algo", "cuanto sale", "50 lucas"): entendé su intención, pero respondé vos con tono profesional-cercano. NO copies su slang ni muletillas.\n' +
+  '- Entendé lenguaje informal argentino: "que tenes", "cuanto sale", "algo en godoy cruz", "50 mil" = consulta válida de propiedades.\n' +
+  '- No actúes como bot, robot ni soldado: nada de copy-paste, tono militar ni listas rígidas sin contexto.\n' +
+  '- Preferí: "Dale", "Perfecto", "Te paso", "Con ese presupuesto podemos mirar...", "Ahora mismo no tengo..."\n' +
+  '- PROHIBIDO: "che", bot/IA, tono dismissivo ("Uf", "no me cierra", "te contacta un asesor"), sarcasmo.\n' +
+  '- PUNTUACIÓN: no uses ¿ ni ... ; preguntas con ? ; comas y punto seguido; evitá punto final innecesario.\n' +
+  '- Máximo UNA pregunta por mensaje. Variá saludos y cierres. Si solo saludan → saludá y presentate. Sin cuestionario.\n\n' +
+  'NO REPETIR (CRÍTICO):\n' +
+  '- Leé el historial completo. Si ya respondiste algo parecido, NO copies la misma frase.\n' +
+  '- Usá el bloque APRENDIZAJE (esta conversación + ejemplos) para adaptar tono; no copies plantillas si ya cubriste el tema.\n' +
+  '- Si el cliente repite la pregunta: reconocelo, variá redacción, sumá un dato o hacé otra pregunta concreta.\n' +
+  '- Nunca mandes dos veces el mismo texto.\n\n' +
+  'PROHIBIDO (frases robot / plantilla):\n' +
+  '- "¿Te gustaría que un asesor de Nodo Propiedades te contacte..."\n' +
+  '- "estoy a tu disposición" / "quedo a tu disposición"\n' +
+  '- "mi especialidad es..."\n' +
+  '- "encajen con tu búsqueda" / "encajan con tu búsqueda"\n' +
+  '- "no tengo inmuebles disponibles en este momento"\n' +
+  '- "Hey", tono corporativo, "con gusto estoy para ayudarte"\n\n' +
+  'EJEMPLOS:\n' +
   'Cliente: "hola"\n' +
-  'BIEN: "Hola, ¿cómo estás? Soy Matías de Nodo Propiedades. Cuando quieras contame qué necesitás."\n' +
+  'BIEN: "Hola, cómo estás? Soy Matías de Nodo Propiedades. Cuando quieras contame qué necesitás"\n' +
   'MAL: "¡Hey! ¿Qué buscás, compra, alquiler o venta?"\n\n' +
+  'Cliente: "que tenes por 50 mil dolares"\n' +
+  'BIEN: "Dale, con USD 50.000 te paso un par de opciones en venta. Buscás depto o casa? Alguna zona en Mendoza?"\n' +
+  'MAL: "Solo trabajo con propiedades..." (es consulta inmobiliaria válida, no off-topic)\n\n' +
+  'Cliente: "que tenes?" / "que hay?" / "solo estoy viendo"\n' +
+  'BIEN: intro corta + ###MOSTRAR_PROPIEDADES### con 2-3 opciones variadas. Una pregunta suave: "Alguna zona te cierra más?"\n' +
+  'MAL: Cuestionario de zona/presupuesto/operación sin mostrar fichas\n\n' +
+  'Cliente: "no tengo nada en mente" / "mandame opciones" / "cualquiera" / "lo que tengas"\n' +
+  'BIEN: "Dale, te paso un par de opciones para que veas" + ###MOSTRAR_PROPIEDADES### en la MISMA respuesta. PROHIBIDO preguntar zona/presupuesto/operación antes.\n' +
+  'MAL: "Contame qué buscás" / "En qué zona?" / cuestionario sin fichas\n\n' +
+  'Cliente: "cuanto sale mas o menos un depto?"\n' +
+  'BIEN: rango de precios + 1-2 ejemplos con ###MOSTRAR_PROPIEDADES###\n' +
+  'MAL: Solo preguntas sin mostrar nada\n\n' +
+  'Cliente: "alquiler 45000 usd godoy cruz"\n' +
+  'BIEN: "Con 45 mil dólares podemos mirar opciones de compra en Godoy Cruz. Buscás comprar o alquilar? Si es alquiler, el presupuesto mensual suele expresarse en pesos; contame un poco más y te oriento"\n' +
+  'MAL: "Uf, con 45 mil para alquiler no me cierra..." o plantilla con "asesor te contacte"\n\n' +
+  'Cliente: sin stock en zona/tope\n' +
+  'BIEN: "Ahora mismo no tengo nada en esa zona con ese tope, aflojamos un poco el presupuesto o miramos Capital?"\n' +
+  'MAL: "no tengo inmuebles disponibles en este momento" + derivar a otro asesor\n\n' +
+  'OFF-TOPIC:\n' +
+  'BIEN: "Solo trabajo con propiedades. Si buscás depto o casa en Mendoza, avisame."\n' +
+  'MAL: "¿Te gustaría que te recomiende algún lugar para comer?"\n\n' +
   'DATOS_CONOCIDOS (extraídos del chat — respetalos):\n' +
   JSON.stringify(datosConocidos, null, 2) +
   '\n\n' +
@@ -404,21 +647,37 @@ const systemPrompt =
   '- Turno: ' +
   turno +
   '\n' +
+  '- Off-topic seguidos: ' +
+  offTopicCount +
+  '\n' +
   '- Días sin contacto: ' +
   (ultimaActualizacionStr ? diasSinContacto : 'sin_dato') +
   '\n' +
   '- Propiedad en seguimiento: ' +
   (refSeg || 'ninguna') +
+  (consultaRepetida
+    ? '\n- REPETICIÓN DETECTADA: el cliente repitió consulta similar. Variá respuesta respecto al último mensaje del Bot.'
+    : '') +
+  (ultimoBotHistorial
+    ? '\n- ÚLTIMA RESPUESTA TUYA (NO repetir igual): "' +
+      ultimoBotHistorial.slice(0, 220) +
+      '"'
+    : '') +
   modoObligatorio +
+  '\n\n' +
+  formatearBloqueIntencionPrompt(clasif) +
+  (bloqueAprendizaje ? '\n\n' + bloqueAprendizaje : '') +
   '\n\nSTOCK (solo IDs de esta lista):\n' +
   stockText +
-  '\n\nMOSTRAR PROPIEDADES (estilo asesor humano — como Casa Clic):\n' +
+  '\n\nMOSTRAR PROPIEDADES (estilo Casa Clic):\n' +
+  '- Si el cliente pregunta qué hay / qué tenés / está curioseando / dice que no tiene nada claro / pide opciones o "mandame algo": mostrá opciones YA con ###MOSTRAR_PROPIEDADES### en la misma respuesta. PROHIBIDO preguntar zona, presupuesto u operación antes.\n' +
+  '- Modo curioso: 2-3 opciones variadas (distintas zonas/precios). Temperatura "frio" pero igual mostrá algo. UNA pregunta suave al final.\n' +
   '- Cuando muestres opciones: texto intro de 1 frase + bloque ###MOSTRAR_PROPIEDADES###.\n' +
   '- NO escribas listas con guiones ni párrafos largos con cada propiedad.\n' +
   '- Las fichas (foto + tipo + precio + link) las envía el sistema automáticamente.\n' +
   '- Después de las fotos el sistema manda cierre suave ("¿Cuál te interesa?").\n' +
   '- Solo IDs del STOCK. Nunca inventes direcciones, precios ni m².\n' +
-  '- Default: VENTA en USD. Alquiler solo si el cliente lo pidió.\n' +
+  '- Default: VENTA en USD.\n' +
   '###MOSTRAR_PROPIEDADES###\n["MZA-003","MZA-011"]\n###FIN_MOSTRAR###\n\n' +
   'DETALLE DE UNA PROPIEDAD (si preguntan por una específica):\n' +
   '- Usá ###BURBUJAS### con array JSON: ubicación → detalle → precio.\n' +
@@ -430,8 +689,8 @@ const systemPrompt =
   '- Link turnos: ' +
   citaLink +
   '\n' +
-  '- Si confirma visita con asesor:\n' +
-  '"Perfecto, ya le avisé a un asesor de Nodo Propiedades para que se ponga en contacto con vos en breve y coordinen una visita.\\n\\nCualquier cosa que necesites, estoy acá."\n' +
+  '- Vos coordinás: NO digas "un asesor te contacta". Ejemplo:\n' +
+  '"Dale, coordinamos. Te dejo el link para agendar y te confirmo por acá."\n' +
   '###SOLICITUD_VISITA###\n{"propiedad_id":"ID","zona":"...","presupuesto":"...","nota":"..."}\n###FIN_VISITA###\n\n' +
   'POLITICAS_PAGO:\n' +
   politicasText +
@@ -446,7 +705,7 @@ if (esSoloSaludo) {
   messages.push({
     role: 'assistant',
     content:
-      'Hola, ¿cómo estás? Soy Matías de Nodo Propiedades. Cuando quieras contame qué necesitás.',
+      'Hola, cómo estás? Soy Matías de Nodo Propiedades. Cuando quieras contame qué necesitás',
   });
 }
 for (const msg of historialJson) {
@@ -468,13 +727,25 @@ return [
       dias_sin_contacto: diasSinContacto,
       politicas_source: politicasRows.length ? 'sheets' : 'fallback',
       sugerencias_ids: JSON.stringify(sugerenciasIds),
-      debe_mostrar_propiedades: debeMostrarPropiedades,
+      debe_mostrar_propiedades:
+        debeMostrarPropiedades && !esOffTopic && !esAlquilerPresupuestoAlto,
       presupuesto_detectado: presupuestoUsd ? String(presupuestoUsd) : '',
       pide_opciones: pideOpciones,
+      es_curioso: esCurioso,
       es_solo_saludo: esSoloSaludo,
       propiedad_consultada: propiedadConsultada,
       es_pregunta_especifica: preguntaEspecifica,
       es_detalle_una: detalleUnaPropiedad,
+      es_off_topic: esOffTopic,
+      off_topic_count: offTopicCount,
+      skip_reply: skipReply,
+      es_alquiler_presupuesto_alto: esAlquilerPresupuestoAlto,
+      zona_detectada: zonaDetectada || '',
+      operacion_detectada: operacionDetectada || '',
+      clasificacion_intencion: JSON.stringify(clasif),
+      intencion_clasificador: clasif.intencion,
+      confianza_clasificador: clasif.confianza,
+      requiere_calificar: clasif.requiere_calificar,
     },
   },
 ];

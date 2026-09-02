@@ -1,0 +1,328 @@
+{
+  "version": "v127",
+  "checks": {
+    "plan1_2.1_notificacion": {
+      "desc": "Plan 1: §2.1 notificación activa al operador",
+      "ok": true,
+      "evidence": [
+        "l registro estructurado del lead, un mecanismo explícito de notificación activa al operador humano ante leads de temperatura caliente, desc",
+        "de persistencia, incluyendo el panel comercial y la rama de notificación activa al operador ante leads calientes (elaboración propia, actua"
+      ]
+    },
+    "plan2_5.6_n6": {
+      "desc": "Plan 2: §5.6 n=6 unificado o declaración no instrumentada",
+      "ok": true,
+      "evidence": [
+        "5.6 Validación de concordancia inter-evaluador\t34",
+        "Validación de concordancia inter-evaluador (planteada, no instrumentada con evidencia verificable): se previó que un evaluador inde"
+      ]
+    },
+    "plan2_5.6_enumerar": {
+      "desc": "Plan 2 (parte): enumerar 6 comparaciones o retirar cifra",
+      "ok": true,
+      "evidence": [
+        "Los siguientes seis objetivos específicos se corresponden uno a uno con las con",
+        "s, planilla o instrumento— que documente cuáles fueron esas seis comparaciones ni quién las evaluó. La sección 3.7 de este m"
+      ]
+    },
+    "plan3_tabla7_fechas": {
+      "desc": "Plan 3: nota Tabla 7 fechas MCP/repo",
+      "ok": true,
+      "evidence": [
+        "l grafo, exportada de la base de datos productiva de n8n el 5 de agosto de 2026, cuando el workflow tenía 17 nodos; desde entonces "
+      ]
+    },
+    "plan3_figuras_3_6": {
+      "desc": "Plan 3: Figuras 3 a 6 (no 5 a 8)",
+      "ok": true,
+      "evidence": [
+        "tinuó su desarrollo con posterioridad a las capturas de las Figuras 3 a 6, verificado por auditoría de repositorio el 21 de agost"
+      ]
+    },
+    "plan4_fredes": {
+      "desc": "Plan 4: cita (Fredes, 2026)",
+      "ok": true,
+      "evidence": [
+        "lows de producción fue publicada en el repositorio público (Fredes, 2026), https://github.com/AdrianFredess/Nodo-Propiedades, junto ",
+        "ode, se encuentra publicada en el repositorio del proyecto (Fredes, 2026): https://github.com/AdrianFredess/Nodo-Propiedades."
+      ]
+    },
+    "plan5_repo": {
+      "desc": "Plan 5: repositorio público declarado",
+      "ok": true,
+      "evidence": [
+        " 20 nodos, verificados contra el código y los workflows del repositorio el 21 de agosto de 2026 (Tabla 7). La Figura 2 es la vista ",
+        " capturas de las Figuras 3 a 6, verificado por auditoría de repositorio el 21 de agosto de 2026. Se agregó una cuarta columna al pi"
+      ]
+    },
+    "plan6_figura1": {
+      "desc": "Plan 6: Figura 1 rama notificación caliente",
+      "ok": true,
+      "evidence": [
+        "ito de notificación activa al operador humano ante leads de temperatura caliente, descripto en la sección 4.2.3 y retomado en la discusión (",
+        "t y Registrar Consulta Telegram. Un segundo condicional, IF Temperatura Caliente, dispara dos nodos de notificación activa —Email Lead Calie"
+      ]
+    },
+    "plan7_resumen_matiz": {
+      "desc": "Plan 7: matiz Resumen (experiencia Mendoza, condicional)",
+      "ok": true,
+      "evidence": [
+        "doza (sección 1.1), Telegram, WhatsApp y Facebook Messenger concentrarían hoy una proporción creciente de las consultas iniciales. El"
+      ]
+    },
+    "plan7_keywords": {
+      "desc": "Plan 7 / Q6: palabras clave unificadas",
+      "ok": true,
+      "evidence": [
+        "'panel comercial' aparece 17 veces"
+      ]
+    },
+    "plan8_figura8": {
+      "desc": "Plan 8: epígrafe Figura 8 recorte declarado",
+      "ok": true,
+      "evidence": [
+        "Figura 8. Muestra de la hoja Leads_Bot con el esquema real de column",
+        "Figura 8. Muestra de la hoja Leads_Bot con el esquema de columnas re"
+      ]
+    },
+    "plan9_oraciones": {
+      "desc": "Plan 9: reducción oraciones largas (cualitativo)",
+      "ok": null,
+      "evidence": [
+        "Verificación cualitativa"
+      ]
+    },
+    "plan10_planilla": {
+      "desc": "Plan 10 (opcional): planilla ejecuciones individuales",
+      "ok": true,
+      "evidence": [
+        ", tiempo de respuesta, éxito o fallo del registro), sin una planilla de ejecuciones anexada de forma sistemática; se señala esta",
+        "nto, no fue posible localizar un registro —transcripciones, planilla o instrumento— que documente qué conversaciones se evaluaro"
+      ]
+    },
+    "Q1_anclaje_metodologico": {
+      "desc": "Q1 OBLIG: §3.1 reformulado + condición de contraste",
+      "ok": true,
+      "evidence": [
+        "l controlado en los escenarios de fallo (F1–F4) y una única condición de contraste —la comparación contra un clasificador de referencia por re",
+        "nada por el autor, sin usuarios reales ni catálogo real. La condición de contraste entre la clasificación por inferencia semántica y la clasif"
+      ]
+    },
+    "Q1_3.7_item": {
+      "desc": "Q1: §3.7 menciona campaña comparativa/clasificador reglas",
+      "ok": false,
+      "evidence": [
+        "3.7 Procedimiento de desarrollo y de pruebas\t18\n3.8 Validez y confiabilidad\t20"
+      ]
+    },
+    "Q2_ejemplo_ver": {
+      "desc": "Q2 OBLIG: ejemplo §5.4 sin contradicción 'ver'",
+      "ok": true,
+      "evidence": []
+    },
+    "Q3_TIB13_14": {
+      "desc": "Q3 MUY REC: TIB-13/TIB-14 + fragilidad p-valor",
+      "ok": true,
+      "evidence": [
+        "einta casos, documentados más arriba en esta misma sección (TIB-13 y TIB-14). El sistema de reglas clasificó correctamente a T"
+      ]
+    },
+    "Q4_seis_comparaciones": {
+      "desc": "Q4 MUY REC: 6 comparaciones §5.6 coherente o retiradas",
+      "ok": true,
+      "evidence": [
+        "Validación de concordancia inter-evaluador (planteada, no instrumentada con evidencia verificable): se previó que un evaluador inde",
+        " declara la validación de concordancia inter-evaluador como no instrumentada con el nivel de detalle exigible: se planteó como mecanismo"
+      ]
+    },
+    "Q5_figura1_topologia": {
+      "desc": "Q5 REC: topología Figura 1 (notificación bajo IF lead)",
+      "ok": null,
+      "evidence": [
+        "Figura 1. Diagrama de arquitectura general del sistema (Sección 4.1)",
+        " Messenger— que comparten un núcleo de procesamiento común (Figura 1), con distinto grado de validación cada uno. El workflow \"S"
+      ]
+    },
+    "Q6_keywords_unificadas": {
+      "desc": "Q6 REC: palabras clave portada y post-Resumen unificadas",
+      "ok": false,
+      "evidence": [
+        "Palabras clave:",
+        "Comparación contra un clasificador de referencia: sobre la misma muestra de treinta conversaciones utilizada en la campaña anterior, se ejecutó también el prototipo inicial del proyecto (SIMPLE-01 Telegram Bot, clasificación determinística por coincidencia de palabras clave, activo hasta el reemplazo por el sistema de inferencia semántica descripto en la sección 4.1) y se comparó su resultado contra la clasificación por inferencia semántica ya reportada, el 26 de agosto de 2026. El procedimiento y sus resultados se detallan en la sección 5.4.",
+        "Comparación contra un clasificador de referencia (26 de agosto de 2026). Con el objetivo de sustentar con evidencia propia la decisión de diseño de emplear inferencia semántica en lugar de clasificación por reglas, se ejecutó el mismo guion de treinta conversaciones contra el prototipo inicial del proyecto (SIMPLE-01 Telegram Bot, clasificación determinística por coincidencia de palabras clave: caliente si el mensaje contiene \"comprar\", \"urgente\" o \"ya\"; tibio si contiene \"info\", \"precio\" o \"ver\"; frío en caso contrario), y se comparó contra la clasificación por inferencia semántica ya reportada. El clasificador por palabras clave coincidió con el perfil esperado en 20 de 30 casos (66,7%; IC de Wilson al 95%: [48,8% ; 80,8%]), frente al 93,3% (28/30) de la inferencia semántica reportado más arriba. La diferencia es sistemática y no aleatoria: de las diez ejecuciones donde ambos clasificadores discreparon, la inferencia semántica acertó en nueve y el clasificador por reglas en una (prueba de McNemar exacta —McNemar, 1947—, n=10, p=0,021). Esto permite rechazar la hipótesis de que ambos clasificadores tienen el mismo desempeño sobre esta muestra."
+      ]
+    },
+    "Q7_mcnemar_orden": {
+      "desc": "Q7 REC: McNemar antes de Meta Platforms",
+      "ok": false,
+      "evidence": [
+        "McNemar no encontrado",
+        "Meta no encontrado"
+      ]
+    },
+    "Q8_autorreferencia": {
+      "desc": "Q8 REC: corregir autorreferencia §5.4",
+      "ok": true,
+      "evidence": [
+        "entre el clasificador por reglas y la inferencia semántica (Sección 5.4)",
+        "e agosto durante la campaña de validación documentada en la sección 5.4. La migración a openai/gpt-oss-120b, verificada en los tres"
+      ]
+    },
+    "Q9_tabla9": {
+      "desc": "Q9 MENOR: Tabla 9 comparación §5.4",
+      "ok": true,
+      "evidence": [
+        "Tabla 9. Comparación de acierto por perfil entre el clasificador po",
+        "Tabla 9. Comparación de acierto por perfil entre el clasificador po"
+      ]
+    },
+    "extra_5.4_mcnemar": {
+      "desc": "Extra: §5.4 McNemar 66,7% vs 93,3%",
+      "ok": true,
+      "evidence": [
+        "a misma muestra (diferencia estadísticamente significativa, McNemar exacto p=0,021). Se identificaron limitaciones metodológica",
+        "he same sample (statistically significant difference, exact McNemar p=0.021). Methodological limitations of the validation itse"
+      ]
+    },
+    "plan4_zhao_zheng": {
+      "desc": "Plan 4: Zhao antes de Zheng",
+      "ok": false,
+      "evidence": []
+    },
+    "v126_mitiga_parcialmente": {
+      "desc": "Pendiente v126: 'mitiga parcialmente' corregido",
+      "ok": true,
+      "evidence": [
+        "as evaluó. Se declara, en consecuencia, que esta validación no quedó instrumentada con el detalle exigible; el estado real y las implicancias ",
+        "dación de concordancia inter-evaluador, pero esa validación no quedó instrumentada con evidencia verificable (sección 5.6), por lo que la amen"
+      ]
+    },
+    "v126_38_62_coherencia": {
+      "desc": "Pendiente v126: §3.8/§6.2 alineados con §5.6 (no instrumentada)",
+      "ok": false,
+      "evidence": [
+        "as evaluó. Se declara, en consecuencia, que esta validación no quedó instrumentada con el detalle exigible; el estado real y las implicancias ",
+        "dación de concordancia inter-evaluador, pero esa validación no quedó instrumentada con evidencia verificable (sección 5.6), por lo que la amen",
+        "s guiones y no para el lenguaje natural de usuarios reales. Se había previsto mitigar este riesgo mediante una validación de concordancia",
+        "reproducen el mismo estímulo, no estímulos independientes). Se había previsto una validación inter-evaluador como aproximación a una medi"
+      ]
+    }
+  },
+  "ok_count": 20,
+  "total_scored": 25,
+  "pct": 80.0,
+  "pendientes": {
+    "5.6_text": "5.6 Validación de concordancia inter-evaluador\t34",
+    "has_833_claim": false,
+    "has_5_6_active": false,
+    "has_quiero_ver": false,
+    "mentions_n6_active": false,
+    "declares_not_instrumented": false,
+    "mitiga_parcialmente_count": 0,
+    "no_quedo_instrumentada_count": 9,
+    "fig5_ref": true,
+    "fig6_ref": true,
+    "fig7_ref": true,
+    "fig8_ref": true
+  },
+  "searches": {
+    "mitiga parcialmente": {
+      "v127": 0,
+      "v126": 2
+    },
+    "Se había previsto mitigar": {
+      "v127": 2,
+      "v126": 0
+    },
+    "no quedó instrumentada": {
+      "v127": 6,
+      "v126": 4
+    },
+    "quiero ver uno": {
+      "v127": 0,
+      "v126": 0
+    },
+    "decisime que hay": {
+      "v127": 0,
+      "v126": 0
+    },
+    "n=6": {
+      "v127": 0,
+      "v126": 0
+    },
+    "n = 6": {
+      "v127": 0,
+      "v126": 0
+    },
+    "83,3": {
+      "v127": 2,
+      "v126": 2
+    },
+    "5 de 6": {
+      "v127": 0,
+      "v126": 0
+    },
+    "Figuras 5 a 8": {
+      "v127": 0,
+      "v126": 0
+    },
+    "Figuras 3 a 6": {
+      "v127": 2,
+      "v126": 2
+    },
+    "condición de contraste": {
+      "v127": 2,
+      "v126": 2
+    }
+  },
+  "phrase_diff": {
+    "mitiga parcialmente": {
+      "v126": 2,
+      "v127": 0
+    },
+    "Se había previsto mitigar": {
+      "v126": 0,
+      "v127": 2
+    },
+    "no quedó instrumentada": {
+      "v126": 4,
+      "v127": 6
+    },
+    "no instrumentada": {
+      "v126": 3,
+      "v127": 3
+    },
+    "83,3": {
+      "v126": 2,
+      "v127": 2
+    },
+    "n=6": {
+      "v126": 0,
+      "v127": 0
+    },
+    "quiero ver": {
+      "v126": 0,
+      "v127": 0
+    },
+    "decisime que hay": {
+      "v126": 0,
+      "v127": 0
+    },
+    "condición de contraste": {
+      "v126": 2,
+      "v127": 2
+    },
+    "clasificador por reglas": {
+      "v126": 5,
+      "v127": 5
+    }
+  },
+  "blockers": [],
+  "diff_line_count": 12,
+  "diff_changed_sample": [
+    "[-] Validez interna. La principal amenaza a la validez interna es que la totalidad de las conversaciones de prueba fueron diseñadas por el propio autor para representar los perfiles declarados. Esto introduce el riesgo de que el sistema esté implícitamente afinado para esos guiones y no para el lenguaje natural de usuarios reales. Se mitiga parcialmente mediante la validación de concordancia inter-evaluador (sección 5.6), que sigue sin embargo trabajando sobre las mismas transcripciones diseñadas por el autor.",
+    "Validez interna. La principal amenaza a la validez interna es que la totalidad de las conversaciones de prueba fueron diseñadas por el propio autor para representar los perfiles declarados. Esto introduce el riesgo de que el sistema esté implícitamente afinado para esos guiones y no para el lenguaje natural de usuarios reales. Se había previsto mitigar este riesgo mediante una validación de concordancia inter-evaluador, pero esa validación no quedó instrumentada con evidencia verificable (sección 5.6), por lo que la amenaza a la validez interna permanece sin mitigación independiente del autor.",
+    "[-] Se reconoce explícitamente sesgo de evaluación: las pruebas fueron ejecutadas mayoritariamente por el propio desarrollador, quien conocía de antemano los perfiles y clasificaciones esperadas. La validación de concordancia inter-evaluador (sección 5.6) mitiga parcialmente este sesgo, pero no lo elimina: el evaluador independiente trabajó sobre transcripciones diseñadas por el autor y recibió los mismos criterios de clasificación del prompt del sistema.",
+    "Se reconoce explícitamente sesgo de evaluación: las pruebas fueron ejecutadas mayoritariamente por el propio desarrollador, quien conocía de antemano los perfiles y clasificaciones esperadas. Se había previsto mitigar este sesgo mediante una validación de concordancia inter-evaluador, pero no quedó instrumentada con evidencia verificable (sección 5.6): el sesgo de autoevaluación permanece, en consecuencia, sin una mitigación independiente reportable."
+  ]
+}

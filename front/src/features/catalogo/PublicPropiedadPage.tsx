@@ -15,6 +15,16 @@ function toPropiedad(entry: ReturnType<typeof lookupPublicPropiedad>): Propiedad
     operacion: entry.operacion ?? 'Venta',
     descripcion: entry.descripcion,
     fotos: entry.fotos,
+    titulo: entry.titulo,
+    caption: entry.caption,
+    precioUsd: entry.precioUsd,
+    direccion: entry.direccion,
+    metrosCuadrados: entry.metrosCuadrados,
+    dormitorios: entry.dormitorios,
+    banos: entry.banos,
+    expensas: entry.expensas,
+    highlights: entry.highlights,
+    linkFicha: entry.linkFicha,
   };
 }
 

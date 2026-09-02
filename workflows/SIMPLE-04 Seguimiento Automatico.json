@@ -241,7 +241,7 @@
     },
     {
       "id": "s04-n08",
-      "name": "Enviar WhatsApp",
+      "name": "Meta Enviar WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
@@ -249,11 +249,16 @@
         200
       ],
       "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/__SET_META_GRAPH_VERSION__/__SET_META_PHONE_NUMBER_ID__/messages",
+        "sendBody": true,
+        "specifyBody": "json",
+        "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "X-Api-Key",
-              "value": "c0273aea132c4a0bbd25a4af073b09be"
+              "name": "Authorization",
+              "value": "Bearer __SET_META_ACCESS_TOKEN__"
             },
             {
               "name": "Content-Type",
@@ -261,13 +266,15 @@
             }
           ]
         },
-        "jsonBody": "={{ JSON.stringify({ session: 'nodo', chatId: String($json.chat_id).includes('@') ? String($json.chat_id) : (String($json.chat_id) + '@c.us'), text: String($json.mensaje) }) }}",
-        "method": "POST",
-        "options": {},
-        "sendBody": true,
-        "sendHeaders": true,
-        "specifyBody": "json",
-        "url": "http://host.docker.internal:3002/api/sendText"
+        "jsonBody": "={{ JSON.stringify({ messaging_product: \"whatsapp\", recipient_type: \"individual\", to: (function(p){p=String(p||\"\").replace(/\\D/g,\"\");if(/^549\\d{8,11}$/.test(p))return \"54\"+p.slice(3);return p;})($json.telefono || $json.phone || $json.chat_id || \"\"), type: \"text\", text: { preview_url: false, body: String($json.mensaje || \"\") } }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 15000
+        }
       },
       "onError": "continueRegularOutput"
     },
@@ -467,7 +474,7 @@
         ],
         [
           {
-            "node": "Enviar WhatsApp",
+            "node": "Meta Enviar WhatsApp",
             "type": "main",
             "index": 0
           }
@@ -482,17 +489,6 @@
       ]
     },
     "Enviar Telegram": {
-      "main": [
-        [
-          {
-            "node": "Google Sheets - Update",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Enviar WhatsApp": {
       "main": [
         [
           {
@@ -547,6 +543,17 @@
         [
           {
             "node": "Switch Canal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meta Enviar WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Update",
             "type": "main",
             "index": 0
           }

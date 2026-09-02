@@ -74,6 +74,17 @@ export interface Propiedad {
   linkFicha?: string;
   interesadosCount?: number;
   interesados?: LeadInteresadoResumen[];
+  /** Campos enriquecidos desde propiedadMedia / CSV */
+  titulo?: string;
+  caption?: string;
+  precioUsd?: number;
+  direccion?: string;
+  metrosCuadrados?: string;
+  dormitorios?: string;
+  banos?: string;
+  expensas?: string;
+  /** Chips / amenities derivados o desde media */
+  highlights?: string[];
 }
 
 export interface LeadsPayload {

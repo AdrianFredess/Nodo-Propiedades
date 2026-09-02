@@ -12,6 +12,7 @@ const http = require('http');
 
 const ROOT = path.join(__dirname, '..');
 const MEDIA_PATH = path.join(ROOT, 'data', 'propiedad-media.json');
+const LEARNING_PATH = path.join(ROOT, 'data', 'bot-aprendizaje.json');
 const NOTIFY_EMAIL =
   process.env.NOTIFY_EMAIL || 'adrianfredes12@gmail.com';
 
@@ -30,6 +31,7 @@ function loadApiKey() {
 
 const KEY = loadApiKey();
 const PROP_MEDIA = JSON.parse(fs.readFileSync(MEDIA_PATH, 'utf8'));
+const BOT_APRENDIZAJE = JSON.parse(fs.readFileSync(LEARNING_PATH, 'utf8'));
 
 function snippet(name) {
   let code = fs.readFileSync(
@@ -41,6 +43,50 @@ function snippet(name) {
     JSON.stringify(PROP_MEDIA),
   );
   return code;
+}
+
+function intentClassifierSnippet() {
+  return fs.readFileSync(
+    path.join(__dirname, 'snippets', 'intent-classifier.js'),
+    'utf8',
+  );
+}
+
+function learningSnippet() {
+  let code = fs.readFileSync(
+    path.join(__dirname, 'snippets', 'bot-aprendizaje.js'),
+    'utf8',
+  );
+  code = code.replace(/__BOT_APRENDIZAJE_JSON__/g, JSON.stringify(BOT_APRENDIZAJE));
+  return code;
+}
+
+function postProcessSnippet(name) {
+  const shared = fs.readFileSync(
+    path.join(__dirname, 'snippets', 'humanize-voz.js'),
+    'utf8',
+  );
+  return (
+    shared +
+    '\n' +
+    intentClassifierSnippet() +
+    '\n' +
+    learningSnippet() +
+    '\n' +
+    snippet(name)
+  );
+}
+
+function promptSnippet(name) {
+  return (
+    fs.readFileSync(path.join(__dirname, 'snippets', 'humanize-voz.js'), 'utf8') +
+    '\n' +
+    intentClassifierSnippet() +
+    '\n' +
+    learningSnippet() +
+    '\n' +
+    snippet(name)
+  );
 }
 
 function request(method, urlPath, body) {
@@ -125,8 +171,8 @@ function patchTelegram(wf) {
   const parsear = wf.nodes.find((n) => n.name === 'Parsear Respuesta');
   if (!construir || !parsear) throw new Error('Nodos TG faltantes');
 
-  construir.parameters.jsCode = snippet('tg-construir-prompt.js');
-  parsear.parameters.jsCode = snippet('tg-parsear-respuesta.js');
+  construir.parameters.jsCode = promptSnippet('tg-construir-prompt.js');
+  parsear.parameters.jsCode = postProcessSnippet('tg-parsear-respuesta.js');
 
   const groq = wf.nodes.find((n) => n.name === 'HTTP Groq');
   if (groq?.parameters?.jsonBody) {
@@ -369,6 +415,68 @@ function patchTelegram(wf) {
     },
   };
 
+  const ifSkipReply = {
+    id: 'tg-if-debe-responder',
+    name: 'IF Debe Responder TG',
+    type: 'n8n-nodes-base.if',
+    typeVersion: 2.2,
+    position: [1900, 304],
+    parameters: {
+      conditions: {
+        combinator: 'and',
+        conditions: [
+          {
+            id: 'not-skip',
+            leftValue: '={{ Boolean($json.skip_reply) }}',
+            rightValue: true,
+            operator: {
+              type: 'boolean',
+              operation: 'notEquals',
+            },
+          },
+        ],
+        options: { version: 2, typeValidation: 'loose' },
+      },
+    },
+  };
+
+  const ifLlamarIa = {
+    id: 'tg-if-llamar-ia',
+    name: 'IF Llamar IA TG',
+    type: 'n8n-nodes-base.if',
+    typeVersion: 2.2,
+    position: [1020, 304],
+    parameters: {
+      conditions: {
+        combinator: 'and',
+        conditions: [
+          {
+            id: 'call-ia',
+            leftValue: '={{ Boolean($json.skip_reply) }}',
+            rightValue: true,
+            operator: {
+              type: 'boolean',
+              operation: 'notEquals',
+            },
+          },
+        ],
+        options: { version: 2, typeValidation: 'loose' },
+      },
+    },
+  };
+
+  const stubGroq = {
+    id: 'tg-stub-groq-skip',
+    name: 'Stub Groq Skip',
+    type: 'n8n-nodes-base.code',
+    typeVersion: 2,
+    position: [1120, 480],
+    parameters: {
+      jsCode:
+        "return [{ json: { choices: [{ message: { content: '' } }], skip_reply: true } }];",
+    },
+  };
+
   ensureNode(wf, 'tg-if-ultima-foto', ifUltimaFoto);
   ensureNode(wf, 'tg-if-cierre', ifCierre);
   ensureNode(wf, 'tg-send-cierre', tgCierre);
@@ -383,6 +491,39 @@ function patchTelegram(wf) {
   ensureNode(wf, 'tg-send-photo', tgFoto);
   ensureNode(wf, 'tg-if-visita', ifVisita);
   ensureNode(wf, 'tg-email-visita', emailVisita);
+  ensureNode(wf, 'tg-if-debe-responder', ifSkipReply);
+  ensureNode(wf, 'tg-if-llamar-ia', ifLlamarIa);
+  ensureNode(wf, 'tg-stub-groq-skip', stubGroq);
+
+  // Construir → IF Llamar IA → Groq|Stub → Parsear
+  wf.connections['Construir Prompt'] = {
+    main: [[{ node: 'IF Llamar IA TG', type: 'main', index: 0 }]],
+  };
+  wf.connections['IF Llamar IA TG'] = {
+    main: [
+      [{ node: 'HTTP Groq', type: 'main', index: 0 }],
+      [{ node: 'Stub Groq Skip', type: 'main', index: 0 }],
+    ],
+  };
+  wf.connections['HTTP Groq'] = {
+    main: [[{ node: 'Parsear Respuesta', type: 'main', index: 0 }]],
+  };
+  wf.connections['Stub Groq Skip'] = {
+    main: [[{ node: 'Parsear Respuesta', type: 'main', index: 0 }]],
+  };
+
+  // Parsear → IF Debe Responder → Telegram (si no skip_reply)
+  const parseOut = (wf.connections['Parsear Respuesta']?.main?.[0] || []).filter(
+    (c) => c.node !== 'Telegram Responder' && c.node !== 'IF Debe Responder TG',
+  );
+  parseOut.unshift({ node: 'IF Debe Responder TG', type: 'main', index: 0 });
+  if (!parseOut.some((c) => c.node === 'IF Solicitud Visita')) {
+    parseOut.push({ node: 'IF Solicitud Visita', type: 'main', index: 0 });
+  }
+  wf.connections['Parsear Respuesta'] = { main: [parseOut] };
+  wf.connections['IF Debe Responder TG'] = {
+    main: [[{ node: 'Telegram Responder', type: 'main', index: 0 }], []],
+  };
 
   wf.connections['Telegram Responder'] = {
     main: [[{ node: 'Preparar Burbujas Extra', type: 'main', index: 0 }]],
@@ -421,11 +562,6 @@ function patchTelegram(wf) {
     main: [[{ node: 'Telegram Mensaje Cierre', type: 'main', index: 0 }], []],
   };
 
-  const parseOut = wf.connections['Parsear Respuesta']?.main?.[0] || [];
-  if (!parseOut.some((c) => c.node === 'IF Solicitud Visita')) {
-    parseOut.push({ node: 'IF Solicitud Visita', type: 'main', index: 0 });
-  }
-  wf.connections['Parsear Respuesta'] = { main: [parseOut] };
   wf.connections['IF Solicitud Visita'] = {
     main: [[{ node: 'Email Solicitud Visita', type: 'main', index: 0 }], []],
   };
@@ -451,7 +587,7 @@ function citaWebhookBase() {
 }
 
 function waSnippet(name, extra = {}) {
-  let code = snippet(name);
+  let code = promptSnippet(name);
   code = code.replace(/__CITA_WEBHOOK_BASE__/g, citaWebhookBase());
   for (const [k, v] of Object.entries(extra)) {
     code = code.replace(new RegExp(k, 'g'), v);
@@ -469,7 +605,7 @@ function patchWhatsApp(wf) {
   }
 
   armar.parameters.jsCode = waSnippet('wa-armar-prompt.js');
-  procesar.parameters.jsCode = snippet('wa-procesar-ia.js');
+  procesar.parameters.jsCode = postProcessSnippet('wa-procesar-ia.js');
 
   const sheetsCred = buscarLead?.credentials || {
     googleSheetsOAuth2Api: {
@@ -835,7 +971,7 @@ async function main() {
   await request('POST', `/api/v1/workflows/${tg.id}/activate`);
   console.log('  OK TG');
 
-  console.log('→ SIMPLE-02 WhatsApp (stock + fotos WAHA + email visita)');
+  console.log('→ SIMPLE-02 WhatsApp (stock + fotos + email visita)');
   let wa = await request('GET', '/api/v1/workflows/npq6sC6YLaUBpHac');
   patchWhatsApp(wa);
   await request('PUT', `/api/v1/workflows/${wa.id}`, putSettings(wa));
@@ -844,7 +980,7 @@ async function main() {
   console.log('  OK WA');
 
   console.log('Listo. Fotos:', Object.keys(PROP_MEDIA).length, 'propiedades');
-  console.log('WhatsApp: workflow listo; escaneá QR en WAHA cuando tengas el chip.');
+  console.log('WhatsApp: corré node scripts/patch-meta-whatsapp.js --deploy para Meta Cloud API.');
 }
 
 main().catch((e) => {

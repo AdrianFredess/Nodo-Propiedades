@@ -1,17 +1,29 @@
 /**
- * Actualiza la contraseña del usuario en ~/.n8n/database.sqlite (instalación npm).
- * Usa el mismo algoritmo que n8n (bcryptjs, 10 rounds).
+ * Actualiza la contraseña del usuario en database.sqlite de n8n.
+ * Usa N8N_HOST_DATA_DIR del .env (misma ruta que Docker) o ~/.n8n.
  *
  * Uso (PowerShell):
+ *   docker stop nodo-propiedades-n8n-1
  *   $env:N8N_RESET_EMAIL="tu@email.com"
  *   $env:N8N_RESET_PASSWORD="nueva-clave"
  *   node scripts/_reset_n8n_user_password.js
- *
- * Detener n8n antes de ejecutar para evitar SQLITE_BUSY.
+ *   docker start nodo-propiedades-n8n-1
  */
 
+const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
+
+const ROOT = path.join(__dirname, '..');
+
+function loadEnvValue(key, fallback) {
+  const envPath = path.join(ROOT, '.env');
+  if (!fs.existsSync(envPath)) return fallback;
+  const raw = fs.readFileSync(envPath, 'utf8');
+  const m = raw.match(new RegExp(`^${key}=(.+)$`, 'm'));
+  if (!m) return fallback;
+  return String(m[1]).trim().replace(/^["']|["']$/g, '') || fallback;
+}
 
 const email = process.env.N8N_RESET_EMAIL;
 const password = process.env.N8N_RESET_PASSWORD;
@@ -31,7 +43,10 @@ const bcryptPath = path.join(
 );
 const bcrypt = require(bcryptPath);
 
-const dbPath = path.join(process.env.USERPROFILE, '.n8n', 'database.sqlite');
+const dataDir =
+  process.env.N8N_HOST_DATA_DIR ||
+  loadEnvValue('N8N_HOST_DATA_DIR', path.join(process.env.USERPROFILE, '.n8n'));
+const dbPath = path.join(dataDir.replace(/\/$/, ''), 'database.sqlite');
 const hash = bcrypt.hashSync(password, 10);
 const now = new Date().toISOString();
 

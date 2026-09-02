@@ -39,7 +39,12 @@ try {
 if (!Array.isArray(sugerenciasIds)) sugerenciasIds = [];
 
 const debeMostrar = Boolean(prep.debe_mostrar_propiedades);
+const esCurioso = Boolean(prep.es_curioso);
 const presupuestoDetectado = String(prep.presupuesto_detectado || '');
+const esAlquilerPresupuestoAlto = Boolean(prep.es_alquiler_presupuesto_alto);
+const zonaDetectada = String(prep.zona_detectada || '');
+const intencionClasificador = String(prep.intencion_clasificador || '');
+const forzarStockClasificador = debeMostrar || intencionClasificador === 'pedir_opciones' || intencionClasificador === 'explorar';
 
 const mostrarRegex =
   /###MOSTRAR_PROPIEDADES###\s*(\[[\s\S]*?\])\s*###FIN_MOSTRAR###/i;
@@ -67,7 +72,17 @@ if (mostrarMatch) {
   working = working.replace(mostrarRegex, '').trim();
 }
 
-if (!propiedadesMostrar.length && debeMostrar && sugerenciasIds.length) {
+if (!propiedadesMostrar.length && forzarStockClasificador && sugerenciasIds.length) {
+  propiedadesMostrar = sugerenciasIds.slice(0, 3);
+}
+
+if (
+  !propiedadesMostrar.length &&
+  esCurioso &&
+  sugerenciasIds.length &&
+  !String(prep.respuesta_forzada || '').trim() &&
+  !esAlquilerPresupuestoAlto
+) {
   propiedadesMostrar = sugerenciasIds.slice(0, 3);
 }
 
@@ -78,11 +93,7 @@ if (burbujasMatch) {
     const arr = JSON.parse(burbujasMatch[1].trim());
     if (Array.isArray(arr)) {
       mensajesExtra = arr
-        .map((x) =>
-          String(x || '')
-            .replace(/\b[Cc]he\b[,.;:!?]*\s*/g, '')
-            .trim(),
-        )
+        .map((x) => humanizarVoz(String(x || '').trim()))
         .filter(Boolean)
         .slice(0, 4);
     }
@@ -92,19 +103,33 @@ if (burbujasMatch) {
   working = working.replace(burbujasRegex, '').trim();
 }
 
-function armarIntroPropiedades(presu) {
+function armarIntroPropiedades(presu, variantIdx, curioso) {
+  const v = Number(variantIdx) || 0;
   if (presu) {
-    return (
-      '¡Claro! Acá te muestro un par de opciones en venta que encajan con tu presupuesto de USD ' +
-      Number(presu).toLocaleString('es-AR') +
-      '.'
-    );
+    const presuFmt = Number(presu).toLocaleString('es-AR');
+    const opts = [
+      'Dale, te paso un par de opciones en venta cerca de USD ' + presuFmt,
+      'Perfecto, mirá estas opciones que se acercan a USD ' + presuFmt,
+    ];
+    return sanitizarPuntuacion(opts[v % opts.length]);
   }
-  return '¡Claro! Acá te muestro un par de opciones que tenemos disponibles.';
+  if (curioso) {
+    const curiosos = [
+      'Dale, te paso un par de opciones para que veas',
+      'Te paso un par de opciones variadas para que veas lo que hay',
+    ];
+    return sanitizarPuntuacion(curiosos[v % curiosos.length]);
+  }
+  const genericos = [
+    'Dale, te paso un par de opciones que tengo',
+    'Te comparto un par de alternativas que encajan con lo que venís buscando',
+  ];
+  return genericos[v % genericos.length];
 }
 
-const MENSAJE_CIERRE_PROPS =
-  '¿Cuál te llama más la atención o querés que te cuente más detalles de alguna?';
+const MENSAJE_CIERRE_PROPS = esCurioso
+  ? 'Alguna zona te cierra más o querés ver otras?'
+  : 'Cuál te llama más la atención o querés que te cuente más detalles de alguna?';
 
 let mensajeCierre = '';
 let solicitudVisita = false;
@@ -122,12 +147,33 @@ if (visitaMatch) {
   if (visitaData.presupuesto && !presupuesto) presupuesto = String(visitaData.presupuesto);
 }
 
-respuesta = working
-  .replace(/\b[Cc]he\b[,.;:!?]*\s*/g, '')
-  .replace(/\s{2,}/g, ' ')
-  .trim();
+respuesta = humanizarVoz(working);
 
-if (mensajesExtra.length > 1) {
+if (String(prep.respuesta_forzada || '').trim()) {
+  respuesta = String(prep.respuesta_forzada).trim();
+  mensajesExtra = [];
+  propiedadesMostrar = [];
+  mensajeCierre = '';
+  solicitudVisita = false;
+} else if (esAlquilerPresupuestoAlto) {
+  if (
+    suenaPlantillaRobot(respuesta) ||
+    !respuesta ||
+    respuesta.length < 20 ||
+    /\bno tengo inmuebles|asesor de Nodo|encaj|no me cierra|\bUf\b/i.test(respuesta)
+  ) {
+    respuesta = armarMensajeAlquilerVsCompra(
+      presupuestoDetectado,
+      zonaDetectada,
+    );
+  } else {
+    respuesta = reescribirSiRobot(respuesta, zonaDetectada, presupuestoDetectado);
+  }
+  mensajesExtra = [];
+  propiedadesMostrar = [];
+  mensajeCierre = '';
+  solicitudVisita = false;
+} else if (mensajesExtra.length > 1) {
   respuesta = mensajesExtra[0];
   mensajesExtra = mensajesExtra.slice(1);
 } else if (mensajesExtra.length === 1 && !respuesta) {
@@ -135,23 +181,58 @@ if (mensajesExtra.length > 1) {
   mensajesExtra = [];
 }
 
-if (propiedadesMostrar.length > 0) {
-  respuesta = armarIntroPropiedades(presupuestoDetectado);
+if (String(prep.respuesta_forzada || '').trim() || esAlquilerPresupuestoAlto) {
+  // already set
+} else if (propiedadesMostrar.length > 0) {
+  respuesta = armarIntroPropiedades(presupuestoDetectado, variantIdx, esCurioso);
   mensajeCierre = MENSAJE_CIERRE_PROPS;
 } else if (
-  debeMostrar &&
+  forzarStockClasificador &&
   !propiedadesMostrar.length &&
   sugerenciasIds.length &&
-  (!respuesta || respuesta.length < 25)
+  (esSoloPreguntas(respuesta) || !respuesta || respuesta.length < 25 || esCurioso)
 ) {
   propiedadesMostrar = sugerenciasIds.slice(0, 3);
-  respuesta = armarIntroPropiedades(presupuestoDetectado);
+  respuesta = armarIntroPropiedades(presupuestoDetectado, variantIdx, esCurioso);
   mensajeCierre = MENSAJE_CIERRE_PROPS;
+} else if (
+  (debeMostrar || esCurioso) &&
+  !propiedadesMostrar.length &&
+  sugerenciasIds.length &&
+  (!respuesta || respuesta.length < 25 || esCurioso)
+) {
+  propiedadesMostrar = sugerenciasIds.slice(0, 3);
+  respuesta = armarIntroPropiedades(presupuestoDetectado, variantIdx, esCurioso);
+  mensajeCierre = MENSAJE_CIERRE_PROPS;
+} else if (suenaPlantillaRobot(respuesta)) {
+  respuesta = reescribirSiRobot(
+    respuesta,
+    zonaDetectada,
+    presupuestoDetectado,
+  );
+  mensajesExtra = [];
 }
 
 if (iaVacia && !respuesta) {
   respuesta =
-    'Hola, gracias por escribir a Nodo Propiedades. Contame qué buscás y en qué zona.';
+    'Hola, soy Matías de Nodo Propiedades. Contame qué buscás y en qué zona';
+}
+
+let historialArr = parseHistorialArr(prep.historial_json_prev);
+const consultaRepetida = esConsultaRepetida(prep.mensaje, historialArr);
+const variantIdx = contarBotsSimilares(respuesta, historialArr);
+
+if (!String(prep.respuesta_forzada || '').trim()) {
+  respuesta = evitarRepeticion(respuesta, {
+    historialArr,
+    mensajeUsuario: prep.mensaje,
+    esAlquilerPresupuestoAlto,
+    presupuestoDetectado,
+    zonaDetectada,
+  });
+  if (propiedadesMostrar.length > 0 && consultaRepetida) {
+    respuesta = armarIntroPropiedades(presupuestoDetectado, variantIdx + 1, esCurioso);
+  }
 }
 
 const lineCliente = 'Cliente: ' + String(prep.mensaje || '').trim();
@@ -161,22 +242,40 @@ let historial = prev ? prev + '\n' + lineCliente + '\n' + lineBot : lineCliente 
 const lines = historial.split('\n').filter(Boolean);
 if (lines.length > 24) historial = lines.slice(-24).join('\n');
 
-let historialArr = [];
-try {
-  const rawHj = prep.historial_json_prev;
-  if (typeof rawHj === 'string' && rawHj.trim()) historialArr = JSON.parse(rawHj);
-  else if (Array.isArray(rawHj)) historialArr = rawHj;
-} catch (e) {
-  historialArr = [];
-}
 if (!Array.isArray(historialArr)) historialArr = [];
 const ts = new Date().toISOString();
-historialArr.push({ role: 'user', content: String(prep.mensaje || '').trim(), ts });
+const analisisPost = analizarHistorial(historialArr, {
+  operacion,
+  zona,
+  presupuesto,
+  dormitorios,
+});
+const metaTurno = metaTurnoAprendizaje({
+  intencion,
+  operacion,
+  zona: zona || zonaDetectada,
+  presupuesto,
+  objeciones: analisisPost.objeciones,
+  lead_completo,
+  temperatura,
+});
+
+historialArr.push(
+  enriquecerEntradaHistorial(
+    { role: 'user', content: String(prep.mensaje || '').trim(), ts },
+    { intent_detected: intencion },
+  ),
+);
 let textoAsistente = respuesta;
 if (mensajeCierre) textoAsistente = textoAsistente + '\n\n' + mensajeCierre;
-historialArr.push({ role: 'assistant', content: String(textoAsistente || '').trim(), ts });
+historialArr.push(
+  enriquecerEntradaHistorial(
+    { role: 'assistant', content: String(textoAsistente || '').trim(), ts },
+    metaTurno,
+  ),
+);
 if (historialArr.length > 60) historialArr = historialArr.slice(historialArr.length - 60);
-const historial_json = JSON.stringify(historialArr);
+let historial_json = JSON.stringify(historialArr);
 
 const now = new Date();
 const lastRaw = prep.ultima_prev || prep.fecha || '';
@@ -207,6 +306,30 @@ const consultas_count = esNuevaConsulta === 'si' ? prevCount + 1 : Math.max(prev
 if (!presupuesto && presupuestoDetectado) {
   presupuesto = 'USD ' + presupuestoDetectado;
 }
+
+respuesta = sanitizarPuntuacion(respuesta);
+mensajeCierre = sanitizarPuntuacion(mensajeCierre);
+if (mensajesExtra.length) {
+  mensajesExtra = mensajesExtra.map(sanitizarPuntuacion).filter(Boolean);
+}
+
+const aprendizajeOpts = {
+  contexto_cliente: prep.mensaje,
+  respuesta_matias: respuesta,
+  canal: prep.canal || 'whatsapp',
+  zona: zona || zonaDetectada,
+  operacion,
+  presupuesto,
+  temperatura,
+  intencion,
+  lead_completo,
+  skip_reply: prep.skip_reply,
+  respuesta_forzada: prep.respuesta_forzada,
+  es_off_topic: prep.es_off_topic,
+  intencion_clasificador: prep.intencion_clasificador || intencionClasificador,
+  fecha: fechaLocal,
+};
+const regAprendizaje = prepararRegistroAprendizaje(aprendizajeOpts);
 
 return [
   {
@@ -243,6 +366,9 @@ return [
       visita_nota: String(visitaData.nota || ''),
       mensaje_cierre: mensajeCierre,
       mensajes_extra: JSON.stringify(mensajesExtra),
+      intent_detected: intencionClasificador || intencion,
+      objeciones: JSON.stringify(analisisPost.objeciones || []),
+      ...regAprendizaje,
     },
   },
 ];

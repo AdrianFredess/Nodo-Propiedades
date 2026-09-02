@@ -3,6 +3,7 @@ import propiedadMedia from '../../data/propiedadMedia.json';
 type MediaEntry = {
   shareToken?: string;
   titulo?: string;
+  caption?: string;
   tipo?: string;
   zona?: string;
   precio?: string;
@@ -10,6 +11,12 @@ type MediaEntry = {
   operacion?: string;
   ambientes?: string;
   descripcion?: string;
+  direccion?: string;
+  metrosCuadrados?: string;
+  dormitorios?: string;
+  banos?: string;
+  expensas?: string;
+  highlights?: string[];
   fotos?: string[];
   linkFicha?: string;
 };

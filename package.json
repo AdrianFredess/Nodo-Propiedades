@@ -6,7 +6,17 @@
   "scripts": {
     "import-stock": "node scripts/importar_30_propiedades_stock.js",
     "ws-bridge": "pnpm --dir ws-bridge --ignore-workspace start",
-    "patch-emit": "node scripts/patch-emit-realtime.js"
+    "patch-emit": "node scripts/patch-emit-realtime.js",
+    "patch-meta-wa": "node scripts/patch-meta-whatsapp.js",
+    "patch-panel-meta-wa": "node scripts/patch-panel-meta-whatsapp.js",
+    "patch-seguimiento-meta-wa": "node scripts/patch-seguimiento-meta-whatsapp.js",
+    "patch-messenger": "node scripts/patch-messenger-matias.js",
+    "patch-channels-emit": "node scripts/patch-channel-emit.js",
+    "patch-meta-all": "node scripts/patch-meta-whatsapp.js && node scripts/patch-panel-meta-whatsapp.js && node scripts/patch-seguimiento-meta-whatsapp.js && node scripts/patch-messenger-matias.js && node scripts/patch-channel-emit.js",
+    "check-meta-wa": "node scripts/check-meta-whatsapp.js",
+    "patch-advisor-learning": "node scripts/patch-advisor-learning.js",
+    "aggregate-bot-learning": "node scripts/aggregate-bot-learning.js",
+    "setup-aprendizaje-sheet": "node scripts/setup-aprendizaje-sheet.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.6.0",

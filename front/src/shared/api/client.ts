@@ -1,5 +1,6 @@
 import { getMockPayload } from '../../data/seed';
 import propiedadMedia from '../../data/propiedadMedia.json';
+import { extractHighlights } from '../lib/propiedadInfo';
 import {
   normalizeCanal,
   normalizeEstadoSeguimiento,
@@ -74,7 +75,7 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-function mapHistorial(raw: unknown): HistorialMensaje[] {
+export function mapHistorial(raw: unknown): HistorialMensaje[] {
   if (!Array.isArray(raw)) return [];
 
   // Formato rol/content (historial_json canónico) → pares cliente/bot
@@ -176,6 +177,28 @@ function mapInteresado(raw: unknown): LeadInteresadoResumen | null {
   };
 }
 
+function mediaString(
+  mediaRec: Record<string, unknown> | undefined,
+  ...keys: string[]
+): string {
+  if (!mediaRec) return '';
+  for (const k of keys) {
+    const v = String(mediaRec[k] ?? '').trim();
+    if (v) return v;
+  }
+  return '';
+}
+
+function mediaStringList(
+  mediaRec: Record<string, unknown> | undefined,
+  key: string,
+): string[] | undefined {
+  const v = mediaRec?.[key];
+  if (!Array.isArray(v)) return undefined;
+  const list = v.map((x) => String(x).trim()).filter(Boolean);
+  return list.length ? list : undefined;
+}
+
 function mapPropiedad(raw: unknown): Propiedad | null {
   const r = asRecord(raw);
   const id = String(r.id ?? r.ID ?? r.codigo ?? '').trim();
@@ -192,8 +215,6 @@ function mapPropiedad(raw: unknown): Propiedad | null {
   const ambientes = String(
     r.ambientes ??
       r.Ambientes ??
-      r.dormitorios ??
-      r.Dormitorios ??
       mediaRec?.ambientes ??
       '',
   ).trim();
@@ -207,6 +228,20 @@ function mapPropiedad(raw: unknown): Propiedad | null {
     .filter((i): i is LeadInteresadoResumen => i !== null);
   const pick = (csvVal: string, mediaKeyName: string): string =>
     csvVal || String(mediaRec?.[mediaKeyName] ?? '').trim();
+  const descripcion =
+    String(r.descripcion ?? '').trim() ||
+    String(mediaRec?.descripcion ?? '').trim() ||
+    undefined;
+  const precioUsdRaw = r.precioUsd ?? r.precio_usd ?? mediaRec?.precioUsd;
+  const precioUsdNum = Number(precioUsdRaw);
+  const precioUsd =
+    typeof precioUsdRaw === 'number'
+      ? precioUsdRaw
+      : Number.isFinite(precioUsdNum) && String(precioUsdRaw ?? '').trim() !== ''
+        ? precioUsdNum
+        : undefined;
+  const mediaHighlights = mediaStringList(mediaRec, 'highlights');
+  const highlights = extractHighlights(descripcion, mediaHighlights, pick(tipo, 'tipo'));
   return {
     id: id || `${zona}-${tipo}-${precio}`.slice(0, 48) || 'sin-id',
     zona: pick(zona, 'zona'),
@@ -215,10 +250,7 @@ function mapPropiedad(raw: unknown): Propiedad | null {
     ambientes,
     operacion: pick(operacion, 'operacion'),
     estado: String(r.estado ?? r.Estado ?? '').trim() || undefined,
-    descripcion:
-      String(r.descripcion ?? '').trim() ||
-      String(mediaRec?.descripcion ?? '').trim() ||
-      undefined,
+    descripcion,
     honorarios: String(r.honorarios ?? '').trim() || undefined,
     reserva: String(r.reserva ?? '').trim() || undefined,
     mediosPago:
@@ -229,6 +261,33 @@ function mapPropiedad(raw: unknown): Propiedad | null {
       ? (mediaRec.fotos as string[])
       : undefined,
     linkFicha: mediaRec?.linkFicha ? String(mediaRec.linkFicha) : undefined,
+    titulo: mediaString(mediaRec, 'titulo') || undefined,
+    caption: mediaString(mediaRec, 'caption') || undefined,
+    precioUsd:
+      typeof precioUsd === 'number' && Number.isFinite(precioUsd)
+        ? precioUsd
+        : undefined,
+    direccion:
+      String(r.direccion ?? r.address ?? '').trim() ||
+      mediaString(mediaRec, 'direccion', 'address') ||
+      undefined,
+    metrosCuadrados:
+      String(r.metrosCuadrados ?? r.area_m2 ?? r.m2 ?? '').trim() ||
+      mediaString(mediaRec, 'metrosCuadrados', 'area_m2', 'm2') ||
+      undefined,
+    dormitorios:
+      String(r.dormitorios ?? r.bedrooms ?? '').trim() ||
+      mediaString(mediaRec, 'dormitorios', 'bedrooms') ||
+      undefined,
+    banos:
+      String(r.banos ?? r.bathrooms ?? '').trim() ||
+      mediaString(mediaRec, 'banos', 'bathrooms') ||
+      undefined,
+    expensas:
+      String(r.expensas ?? r.expenses ?? '').trim() ||
+      mediaString(mediaRec, 'expensas', 'expenses') ||
+      undefined,
+    highlights: highlights.length ? highlights : undefined,
     interesados,
     interesadosCount:
       typeof r.interesadosCount === 'number'
@@ -289,16 +348,70 @@ export function mapLead(raw: unknown): Lead | null {
   };
 }
 
+/**
+ * Filtra filas de prueba / seeds viejos que quedaron en Sheets o caché PANEL-01.
+ * Borrarlas también en Google Sheets (Leads_Bot) para no recargarlas.
+ */
+export function isJunkLeadKey(
+  chatId: string,
+  id: string,
+  nombre: string,
+): boolean {
+  const chat = chatId.trim().toUpperCase();
+  const leadId = id.trim().toUpperCase();
+  const name = nombre.trim().toLowerCase();
+
+  if (chat.startsWith('TEST_SEG') || leadId.includes('TEST_SEG')) return true;
+  if (/^TEST[_-]/.test(chat) || /[:/]TEST[_-]/.test(leadId)) return true;
+  if (chat.includes('5492619999999') || leadId.includes('5492619999999')) {
+    return true;
+  }
+  if (name === 'cliente test' || name.startsWith('prueba ')) return true;
+  // Nombres del seed histórico (si alguien los re-sembró en Sheets)
+  if (
+    name === 'carla méndez' ||
+    name === 'diego conversando' ||
+    name === 'martín ríos' ||
+    name === 'martin rios' ||
+    name === 'sofía blanco' ||
+    name === 'sofia blanco' ||
+    name === 'solo miraba'
+  ) {
+    return true;
+  }
+  return false;
+}
+
+export function isJunkLead(lead: Lead): boolean {
+  return isJunkLeadKey(lead.chatId, lead.id, lead.nombre);
+}
+
+function scrubInteresados(propiedades: Propiedad[]): Propiedad[] {
+  return propiedades.map((p) => {
+    const interesados = (p.interesados ?? []).filter(
+      (i) => !isJunkLeadKey(i.chatId, i.id, i.nombre),
+    );
+    return {
+      ...p,
+      interesados,
+      interesadosCount: interesados.length,
+    };
+  });
+}
+
 function mapPayload(data: unknown, source: 'live' | 'mock'): LeadsPayload {
   const root = asRecord(data);
   const list = Array.isArray(root.leads) ? root.leads : [];
   const leads = list
     .map(mapLead)
-    .filter((lead): lead is Lead => lead !== null);
+    .filter((lead): lead is Lead => lead !== null)
+    .filter((lead) => !isJunkLead(lead));
   const propRaw = Array.isArray(root.propiedades) ? root.propiedades : [];
-  const propiedades = propRaw
-    .map(mapPropiedad)
-    .filter((p): p is Propiedad => p !== null);
+  const propiedades = scrubInteresados(
+    propRaw
+      .map(mapPropiedad)
+      .filter((p): p is Propiedad => p !== null),
+  );
   return {
     generatedAt: String(root.generatedAt ?? new Date().toISOString()),
     leads,
