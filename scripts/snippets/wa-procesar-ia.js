@@ -1,6 +1,8 @@
 const textoIA = ($json.text || '').trim();
 const prep = $('Code - Armar Prompt').item.json;
 
+const repeticionDetectada = Boolean(prep.repeticion_detectada);
+
 let temperatura = 'frio';
 let intencion = 'consulta general';
 let respuesta =
@@ -235,6 +237,19 @@ if (!String(prep.respuesta_forzada || '').trim()) {
   }
 }
 
+// Si el modelo devuelve 2 bloques separados por doble salto de línea (y no hay ###BURBUJAS###),
+// el sistema los envía como mensajes separados vía mensajes_extra.
+if (!mensajesExtra.length && respuesta && !String(prep.respuesta_forzada || '').trim()) {
+  const parts = String(respuesta)
+    .split(/\r?\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (parts.length > 1) {
+    respuesta = parts[0];
+    mensajesExtra = parts.slice(1, 3); // máximo 2 bloques (principal + 1 extra)
+  }
+}
+
 const lineCliente = 'Cliente: ' + String(prep.mensaje || '').trim();
 const lineBot = 'Bot: ' + String(respuesta || '').trim();
 const prev = String(prep.historial_prev || '').trim();
@@ -366,6 +381,7 @@ return [
       visita_nota: String(visitaData.nota || ''),
       mensaje_cierre: mensajeCierre,
       mensajes_extra: JSON.stringify(mensajesExtra),
+      repeticion_detectada: repeticionDetectada,
       intent_detected: intencionClasificador || intencion,
       objeciones: JSON.stringify(analisisPost.objeciones || []),
       ...regAprendizaje,

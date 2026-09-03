@@ -454,28 +454,43 @@ const esAlquilerPresupuestoAlto =
   presupuestoUsd >= 15000;
 
 function esConsultaRepetidaPrompt(mensaje, historialArr) {
-  const actual = String(mensaje || '').trim().toLowerCase();
-  if (!actual || !Array.isArray(historialArr) || !historialArr.length) return false;
-  const norm = (s) =>
+  const actualRaw = String(mensaje || '').trim();
+  if (!actualRaw || !Array.isArray(historialArr) || historialArr.length === 0)
+    return false;
+
+  // Normalización determinística: lowercase + quitar puntuación/símbolos + colapsar espacios
+  const normalizar = (s) =>
     String(s || '')
+      .trim()
       .toLowerCase()
-      .replace(/[^a-záéíóúñ0-9\s]/gi, ' ')
+      .replace(/[^a-záéíóúñü0-9\s]/gi, ' ')
       .replace(/\s+/g, ' ')
       .trim();
-  const na = norm(actual);
+
+  const na = normalizar(actualRaw);
+  if (!na) return false;
+
   const users = historialArr
     .filter((m) => String((m && m.role) || '').toLowerCase() === 'user')
-    .map((m) => norm((m && m.content) || ''))
+    .map((m) => normalizar((m && m.content) || ''))
     .filter(Boolean);
-  return users.slice(-4).some((p) => {
-    if (p === na) return true;
-    const wa = na.split(' ').filter((w) => w.length > 2);
-    const wb = new Set(p.split(' ').filter((w) => w.length > 2));
-    if (!wa.length) return false;
-    let inter = 0;
-    for (const w of wa) if (wb.has(w)) inter++;
-    return inter / wa.length >= 0.62;
-  });
+
+  // "Último mensaje del cliente" (actualRaw) vs "anteúltimo" (último user en historial)
+  if (users.length < 1) return false;
+  const previo = users[users.length - 1];
+  if (!previo) return false;
+
+  if (na === previo) return true;
+
+  const tokensA = na.split(' ').filter((w) => w.length > 2);
+  const tokensB = previo.split(' ').filter((w) => w.length > 2);
+  if (!tokensA.length || !tokensB.length) return false;
+
+  const setB = new Set(tokensB);
+  let inter = 0;
+  for (const w of tokensA) if (setB.has(w)) inter++;
+  const ratio = inter / tokensA.length;
+  return ratio >= 0.9;
 }
 
 const consultaRepetida = esConsultaRepetidaPrompt(textoUsuario, historialJson);
@@ -558,7 +573,7 @@ if (esOffTopic) {
   modoObligatorio =
     '\n\nMODO MOSTRAR PROPIEDADES (OBLIGATORIO):\n' +
     (esCurioso
-      ? '- MODO CURIOSO: el cliente explora sin datos claros o pidió opciones directo. Intro fija: "Dale, te paso un par de opciones para que veas". Mostrá 2-3 fichas variadas YA. PROHIBIDO cuestionario de zona/presupuesto/operación antes.\n'
+      ? '- MODO CURIOSO: el cliente explora sin datos claros o pidió opciones directo. Intro fija: "Dale, te paso un par de opciones para que veas". Mostrá 2-3 fichas variadas YA. Sin presionar: PROHIBIDO cuestionario de zona/presupuesto/operación antes.\n'
       : '') +
     '- El cliente pidió opciones o dio presupuesto. NO listes propiedades en el texto.\n' +
     '- Tu mensaje visible = SOLO 1 frase intro (ej: "Dale, te paso un par de opciones dentro de tu presupuesto.").\n' +
@@ -599,10 +614,15 @@ const systemPrompt =
   '- El cliente puede escribir informal ("che tenes algo", "cuanto sale", "50 lucas"): entendé su intención, pero respondé vos con tono profesional-cercano. NO copies su slang ni muletillas.\n' +
   '- Entendé lenguaje informal argentino: "que tenes", "cuanto sale", "algo en godoy cruz", "50 mil" = consulta válida de propiedades.\n' +
   '- No actúes como bot, robot ni soldado: nada de copy-paste, tono militar ni listas rígidas sin contexto.\n' +
-  '- Preferí: "Dale", "Perfecto", "Te paso", "Con ese presupuesto podemos mirar...", "Ahora mismo no tengo..."\n' +
+  '- Si el cliente es grosero o agresivo, respondé normal y sin defensividad: intentá entender qué necesita.\n' +
+  '- Si el cliente es curioso sin intención real, respondé con rango o 2-3 opciones si el stock lo permite, sin presionar.\n' +
+  '- Si el mensaje es ambiguo, preguntá SOLO una cosa concreta por turno (nunca lista ni cuestionario).\n' +
+  '- Variá el largo de las oraciones: mezclá frases cortas con alguna media.\n' +
+  '- Preferí: "Dale", "Te paso", "Con ese presupuesto podemos mirar...", "Ahora mismo no tengo..."\n' +
   '- PROHIBIDO: "che", bot/IA, tono dismissivo ("Uf", "no me cierra", "te contacta un asesor"), sarcasmo.\n' +
-  '- PUNTUACIÓN: no uses ¿ ni ... ; preguntas con ? ; comas y punto seguido; evitá punto final innecesario.\n' +
-  '- Máximo UNA pregunta por mensaje. Variá saludos y cierres. Si solo saludan → saludá y presentate. Sin cuestionario.\n\n' +
+  '- PROHIBIDO (modo soporte técnico): "Entiendo tu consulta", "Perfecto", "Quedo atento", "Estoy a tu disposición", "A tu disposición", "Te escribo cuando..." y frases similares.\n' +
+  '- PUNTUACIÓN: no uses ¿ ni ¡ ni ... ; preguntas con ? ; comas y punto seguido; evitá punto final innecesario.\n' +
+  '- Máximo 1-3 oraciones visibles por turno. Máximo UNA pregunta por mensaje. Variá saludos y cierres. Si necesitás más, devolvé 2 bloques separados por doble salto de línea (línea en blanco) dentro del campo "respuesta". Si solo saludan → saludá y presentate. Sin cuestionario.\n\n' +
   'NO REPETIR (CRÍTICO):\n' +
   '- Leé el historial completo. Si ya respondiste algo parecido, NO copies la misma frase.\n' +
   '- Usá el bloque APRENDIZAJE (esta conversación + ejemplos) para adaptar tono; no copies plantillas si ya cubriste el tema.\n' +
@@ -656,7 +676,7 @@ const systemPrompt =
   '- Propiedad en seguimiento: ' +
   (refSeg || 'ninguna') +
   (consultaRepetida
-    ? '\n- REPETICIÓN DETECTADA: el cliente repitió consulta similar. Variá respuesta respecto al último mensaje del Bot.'
+    ? '\n- REPETICIÓN DETECTADA: El cliente parece haber repetido una consulta similar. No repitas la misma respuesta tal cual. Reformulá o preguntale qué no le quedó resuelto.'
     : '') +
   (ultimoBotHistorial
     ? '\n- ÚLTIMA RESPUESTA TUYA (NO repetir igual): "' +
@@ -731,6 +751,7 @@ return [
         debeMostrarPropiedades && !esOffTopic && !esAlquilerPresupuestoAlto,
       presupuesto_detectado: presupuestoUsd ? String(presupuestoUsd) : '',
       pide_opciones: pideOpciones,
+      repeticion_detectada: Boolean(consultaRepetida),
       es_curioso: esCurioso,
       es_solo_saludo: esSoloSaludo,
       propiedad_consultada: propiedadConsultada,

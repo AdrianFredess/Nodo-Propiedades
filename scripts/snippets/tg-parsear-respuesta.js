@@ -1,6 +1,8 @@
 const groqData = $input.first().json;
 const promptData = $('Construir Prompt').first().json;
 
+const repeticionDetectada = Boolean(promptData.repeticion_detectada);
+
 const choices = Array.isArray(groqData.choices) ? groqData.choices : [];
 const msgGroq = (choices[0] && choices[0].message) || {};
 let respuestaCompleta =
@@ -301,6 +303,22 @@ if (
   }
 }
 
+// Si el modelo devuelve 2 bloques separados por doble salto de línea (y no usamos ###BURBUJAS###),
+// mandalos como mensajes separados vía mensajes_extra.
+if (
+  !skipReply &&
+  !esOffTopic &&
+  !mensajesExtra.length &&
+  respuestaBot &&
+  /\r?\n{2,}/.test(String(respuestaBot))
+) {
+  const partes = splitParrafos(respuestaBot);
+  if (partes.length > 1) {
+    respuestaBot = partes[0];
+    mensajesExtra = partes.slice(1, 4);
+  }
+}
+
 if (skipReply || esOffTopic) {
   // already set
 } else if (propiedadesMostrar.length > 0) {
@@ -485,6 +503,7 @@ return [
       visita_nota: String(visitaData.nota || ''),
       mensaje_cierre: mensajeCierre,
       mensajes_extra: JSON.stringify(mensajesExtra),
+      repeticion_detectada: repeticionDetectada,
       skip_reply: skipReply,
       es_off_topic: esOffTopic,
       off_topic_count: offTopicCount,

@@ -311,28 +311,43 @@ const historialBlock = historialPrev
 let historialJsonArr = historialJsonArrEarly;
 
 function esConsultaRepetidaPrompt(mensaje, historialArr) {
-  const actual = String(mensaje || '').trim().toLowerCase();
-  if (!actual || !Array.isArray(historialArr) || !historialArr.length) return false;
-  const norm = (s) =>
+  const actualRaw = String(mensaje || '').trim();
+  if (!actualRaw || !Array.isArray(historialArr) || historialArr.length === 0)
+    return false;
+
+  // Normalización determinística: lowercase + quitar puntuación/símbolos + colapsar espacios
+  const normalizar = (s) =>
     String(s || '')
+      .trim()
       .toLowerCase()
-      .replace(/[^a-záéíóúñ0-9\s]/gi, ' ')
+      .replace(/[^a-záéíóúñü0-9\s]/gi, ' ')
       .replace(/\s+/g, ' ')
       .trim();
-  const na = norm(actual);
+
+  const na = normalizar(actualRaw);
+  if (!na) return false;
+
   const users = historialArr
     .filter((m) => String((m && m.role) || '').toLowerCase() === 'user')
-    .map((m) => norm((m && m.content) || ''))
+    .map((m) => normalizar((m && m.content) || ''))
     .filter(Boolean);
-  return users.slice(-4).some((p) => {
-    if (p === na) return true;
-    const wa = na.split(' ').filter((w) => w.length > 2);
-    const wb = new Set(p.split(' ').filter((w) => w.length > 2));
-    if (!wa.length) return false;
-    let inter = 0;
-    for (const w of wa) if (wb.has(w)) inter++;
-    return inter / wa.length >= 0.62;
-  });
+
+  // "Último mensaje del cliente" (actualRaw) vs "anteúltimo" (último user en historial)
+  if (users.length < 1) return false;
+  const previo = users[users.length - 1];
+  if (!previo) return false;
+
+  if (na === previo) return true;
+
+  const tokensA = na.split(' ').filter((w) => w.length > 2);
+  const tokensB = previo.split(' ').filter((w) => w.length > 2);
+  if (!tokensA.length || !tokensB.length) return false;
+
+  const setB = new Set(tokensB);
+  let inter = 0;
+  for (const w of tokensA) if (setB.has(w)) inter++;
+  const ratio = inter / tokensA.length;
+  return ratio >= 0.9;
 }
 
 const consultaRepetida = esConsultaRepetidaPrompt(msg, historialJsonArr);
@@ -381,10 +396,16 @@ VOZ HUMANA:
 - El cliente puede escribir informal ("che tenes algo", "cuanto sale", "50 lucas"): entendé su intención, pero respondé vos con tono profesional-cercano. NO copies su slang ni muletillas.
 - Entendé lenguaje informal argentino: "que tenes", "cuanto sale", "algo en godoy cruz", "50 mil" = consulta válida de propiedades.
 - No actúes como bot, robot ni soldado: nada de copy-paste, tono militar ni listas rígidas sin contexto.
+- Si el cliente es grosero o agresivo, respondé normal y sin defensividad: intentá entender qué necesita.
+- Si el cliente es curioso sin intención real, respondé con rango o 2-3 opciones si el stock lo permite, sin presionar.
+- Si el mensaje es ambiguo, preguntá SOLO una cosa concreta por turno (nunca lista ni cuestionario).
 - Burbujas cortas: 1-3 frases. Una pregunta por turno. Variá saludos y cierres.
-- Preferí: "Dale", "Perfecto", "Te paso", "Con ese presupuesto podemos mirar...", "Ahora mismo no tengo..."
+- Variá el largo de las oraciones: mezclá frases cortas con alguna media.
+- Si la respuesta necesita más de 3 oraciones visibles, devolvé 2 bloques separados por doble salto de línea (línea en blanco) dentro del campo "respuesta".
+- Preferí: "Dale", "Te paso", "Con ese presupuesto podemos mirar...", "Ahora mismo no tengo..."
 - PROHIBIDO tono dismissivo: "Uf", "no me cierra", "te contacta un asesor", sarcasmo o slang que suene a rechazo.
-- PUNTUACIÓN: no uses ¿ ni ... ; preguntas con ? ; comas y punto seguido cuando haga falta; evitá punto final innecesario.
+- PROHIBIDO (modo soporte técnico): "Entiendo tu consulta", "Perfecto", "Quedo atento", "Estoy a tu disposición", "A tu disposición", "Te escribo cuando..." y frases similares.
+- PUNTUACIÓN: no uses ¿ ni ¡ ni ... ; preguntas con ? ; comas y punto seguido cuando haga falta; evitá punto final innecesario.
 - Leé TODO el historial; no repitas la misma respuesta palabra por palabra.
 - Usá el bloque APRENDIZAJE (esta conversación + ejemplos) para adaptar tono y contenido; no copies plantillas si ya cubriste el tema.
 
@@ -438,7 +459,7 @@ MOSTRAR PROPIEDADES (estilo Casa Clic — OBLIGATORIO cuando recomiendes opcione
 (solo IDs válidos del stock; 1 a 3)
 - Después de las fotos el sistema manda cierre: "¿Cuál te llama más la atención?"
 ${debeMostrarPropiedades && sugerenciasIds.length && !respuesta_forzada ? '- IDs sugeridos del stock: ' + JSON.stringify(sugerenciasIds) : ''}
-${esCurioso && debeMostrarPropiedades && !respuesta_forzada ? '\nMODO CURIOSO (OBLIGATORIO): el cliente explora sin datos claros o pidió opciones directo. Intro fija: "Dale, te paso un par de opciones para que veas". Mostrá 2-3 fichas variadas YA con ###MOSTRAR_PROPIEDADES### en esta respuesta. PROHIBIDO preguntar zona/presupuesto/operación antes. Una pregunta suave al cerrar (ej: "Alguna zona te cierra más?").\n' : ''}
+${esCurioso && debeMostrarPropiedades && !respuesta_forzada ? '\nMODO CURIOSO (OBLIGATORIO): el cliente explora sin datos claros o pidió opciones directo. Intro fija: "Dale, te paso un par de opciones para que veas". Mostrá 2-3 fichas variadas YA con ###MOSTRAR_PROPIEDADES### en esta respuesta. PROHIBIDO preguntar zona/presupuesto/operación antes. Sin presionar con cuestionario. Una pregunta suave al cerrar (ej: "Alguna zona te cierra más?").\n' : ''}
 ${esAlquilerPresupuestoAlto && !respuesta_forzada ? '\nMODO ALQUILER VS COMPRA: presupuesto USD alto con "alquiler". Aclará compra vs alquiler. NO muestres propiedades todavía.\n' : ''}
 
 DETALLE DE UNA PROPIEDAD:
@@ -468,7 +489,7 @@ ${formatearBloqueIntencionPrompt(clasif)}
 ${bloqueAprendizaje}
 CLIENTE: ${prep.lead_name}
 MENSAJE ACTUAL: "${msg}"
-${consultaRepetida ? '\nREPETICIÓN DETECTADA: el cliente repitió una consulta similar. OBLIGATORIO variar la respuesta respecto al último mensaje del Bot. Reconocé que ya lo hablaron y cambiá redacción o enfoque.\n' : ''}${ultimoBotHistorial ? 'ÚLTIMA RESPUESTA TUYA (NO repetir igual): "' + ultimoBotHistorial.slice(0, 220) + '"\n' : ''}${respuesta_forzada ? '\nOFF-TOPIC: respondé EXACTAMENTE: "' + respuesta_forzada + '"\n' : ''}
+${consultaRepetida ? '\nREPETICIÓN DETECTADA: El cliente parece haber repetido una consulta similar. No repitas la misma respuesta tal cual. Reformulá o preguntale qué no le quedó resuelto.\n' : ''}${ultimoBotHistorial ? 'ÚLTIMA RESPUESTA TUYA (NO repetir igual): "' + ultimoBotHistorial.slice(0, 220) + '"\n' : ''}${respuesta_forzada ? '\nOFF-TOPIC: respondé EXACTAMENTE: "' + respuesta_forzada + '"\n' : ''}
 Responde SOLO JSON válido:
 {"temperatura":"frio|tibio|caliente","intencion":"frase corta","operacion":"","tipo_propiedad":"","zona":"","presupuesto":"","dormitorios":"","lead_completo":false,"respuesta":"mensaje intro + bloques MOSTRAR/BURBUJAS/VISITA al final (invisibles al cliente como texto suelto)"}`;
 
@@ -497,6 +518,7 @@ return [
       debe_mostrar_propiedades: debeMostrarPropiedades && !respuesta_forzada,
       presupuesto_detectado: presupuestoUsd ? String(presupuestoUsd) : '',
       pide_opciones: pideOpciones,
+      repeticion_detectada: Boolean(consultaRepetida),
       es_curioso: esCurioso,
       es_alquiler_presupuesto_alto: esAlquilerPresupuestoAlto,
       zona_detectada: zonaDetectada || '',
