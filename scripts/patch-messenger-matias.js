@@ -16,9 +16,22 @@ const WF_ID = 'XhceE1kxNalCTMw4';
 const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || 'adrianfredes12@gmail.com';
 const DEPLOY = process.argv.includes('--deploy');
 
-const META_MSG_URL =
-  'https://graph.facebook.com/__SET_META_GRAPH_VERSION__/me/messages';
-const META_AUTH = 'Bearer __SET_META_ACCESS_TOKEN__';
+function loadEnvValueEarly(key, fallback) {
+  const envPath = path.join(ROOT, '.env');
+  if (!fs.existsSync(envPath)) return fallback;
+  const raw = fs.readFileSync(envPath, 'utf8');
+  const m = raw.match(new RegExp(`^${key}=(.+)$`, 'm'));
+  if (!m) return fallback;
+  return String(m[1]).trim().replace(/^["']|["']$/g, '') || fallback;
+}
+
+const META_GRAPH_VERSION = 'v21.0';
+const META_MSG_URL = `https://graph.facebook.com/${META_GRAPH_VERSION}/me/messages`;
+const MESSENGER_PAGE_TOKEN = loadEnvValueEarly(
+  'MESSENGER_PAGE_TOKEN',
+  'EAAPfGQWI8MMBSUjBpOlKNbP9SWZBEXmjn9AIlQeG4SM1MM6DMQACHzPsjbeiDei7SDbiHFZANCSkEylIpJObmcLVDHbg0Gbn8wdZC4nq73AaVVS4WZCR1kTU0fX0y5pl9HfsR1moqWFPilMGXV910buhGpC9on5BjK7zKIca7ET5ncaQIUq4h8SVKOp8XSonjWMZB86EMjwZDZD',
+);
+const META_AUTH = `Bearer ${MESSENGER_PAGE_TOKEN}`;
 
 const PROP_MEDIA = JSON.parse(fs.readFileSync(MEDIA_PATH, 'utf8'));
 

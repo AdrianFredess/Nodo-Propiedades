@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { CANAL_LABEL } from '../../shared/lib/labels';
+import { CanalChip } from '../../shared/ui/CanalChip';
 import { relativeTimeFrom } from '../../shared/lib/time';
 import type { Lead } from '../../shared/types/lead';
 
@@ -88,9 +88,7 @@ export function LeadCard({
         <span>{lead.presupuesto || 'Sin presupuesto'}</span>
       </div>
       <div className="lead-card__footer lead-card__footer--compact">
-        <span className={`chip chip--sm chip--${lead.canalOrigen}`}>
-          {CANAL_LABEL[lead.canalOrigen]}
-        </span>
+        <CanalChip canal={lead.canalOrigen} />
         <span className="lead-card__time">
           {relativeTimeFrom(lead.ultimaActualizacion)}
         </span>

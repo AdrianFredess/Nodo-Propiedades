@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import {
-  CANAL_LABEL,
   PIPELINE_COLUMNA_LABEL,
   TEMPERATURA_LABEL,
 } from '../../shared/lib/labels';
+import { CanalChip } from '../../shared/ui/CanalChip';
 import { relativeTimeFrom } from '../../shared/lib/time';
 import type { Propiedad } from '../../shared/types/lead';
 
@@ -24,9 +24,7 @@ export function InteresadoRow({ interesado }: InteresadoRowProps) {
         ) : null}
       </div>
       <div className="interesado-row__meta">
-        <span className={`chip chip--sm chip--${interesado.canalOrigen}`}>
-          {CANAL_LABEL[interesado.canalOrigen]}
-        </span>
+        <CanalChip canal={interesado.canalOrigen} />
         {interesado.leadCompleto ? (
           <span className={`chip chip--sm chip--${interesado.temperatura}`}>
             {TEMPERATURA_LABEL[interesado.temperatura]}

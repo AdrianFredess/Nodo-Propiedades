@@ -119,9 +119,11 @@ function humanizarVoz(texto) {
   t = t.replace(/\bUf\b[,.]*\s*/gi, '');
   t = t.replace(/\bno me cierra\b[^.?!]*/gi, '');
   t = t.replace(
-    /\b(estoy a tu disposici[oó]n|qued[oó] a tu disposici[oó]n|mi especialidad es[^.!?]*)\b/gi,
+    /\b(?:entiendo tu consulta|quedo atento|estoy a tu disposici[oó]n|qued[oó] a tu disposici[oó]n|a tu disposici[oó]n|mi especialidad es[^.!?]*)\b/gi,
     '',
   );
+  t = t.replace(/\bperfecto[,!]?\s+/gi, '');
+  t = t.replace(/\bte escribo cuando\b[^.!?]*/gi, '');
   t = t.replace(
     /\b(con gusto (estoy|quedo) para ayudarte|cualquier cosa que necesites,? estoy ac[aá])\b/gi,
     '',
@@ -165,7 +167,7 @@ function humanizarVoz(texto) {
 }
 
 function suenaPlantillaRobot(texto) {
-  return /\b(te gustar[ií]a que un asesor|estoy a tu disposici[oó]n|mi especialidad es|encaj(?:en|an) con tu b[uú]squeda|no tengo inmuebles disponibles en este momento|se ponga en contacto con vos|te contacta un asesor|quedo a las [oó]rdenes)\b/i.test(
+  return /\b(te gustar[ií]a que un asesor|estoy a tu disposici[oó]n|quedo atento|entiendo tu consulta|mi especialidad es|encaj(?:en|an) con tu b[uú]squeda|no tengo inmuebles disponibles en este momento|se ponga en contacto con vos|te contacta un asesor|quedo a las [oó]rdenes)\b/i.test(
     String(texto || ''),
   );
 }
@@ -207,13 +209,18 @@ function evitarRepeticion(respuesta, opts) {
 
   if (!respuestaRep && !consultaRep) return out;
 
-  const variantIdx = Math.max(repCount, consultaRep ? 1 : 0, bots.length % 3);
+  const idxVarHumano = Math.max(repCount, consultaRep ? 1 : 0, bots.length % 3);
+
+  // Si hay que mostrar stock, no reescribas: el post-proceso manda fichas.
+  if (o.forzarStock) {
+    return out;
+  }
 
   if (o.esAlquilerPresupuestoAlto) {
     return armarMensajeAlquilerVsCompra(
       o.presupuestoDetectado,
       o.zonaDetectada,
-      variantIdx,
+      idxVarHumano,
     );
   }
 
@@ -223,13 +230,13 @@ function evitarRepeticion(respuesta, opts) {
       'Retomando, ',
       'Sin repetir todo, ',
     ];
-    const pref = reconocimientos[variantIdx % reconocimientos.length];
+    const pref = reconocimientos[idxVarHumano % reconocimientos.length];
     const cuerpo = out.charAt(0).toLowerCase() + out.slice(1);
     return sanitizarPuntuacion(pref + cuerpo);
   }
 
   if (respuestaRep) {
-    return reescribirSiRobot(out, o.zonaDetectada, o.presupuestoDetectado, variantIdx);
+    return reescribirSiRobot(out, o.zonaDetectada, o.presupuestoDetectado, idxVarHumano);
   }
 
   return out;

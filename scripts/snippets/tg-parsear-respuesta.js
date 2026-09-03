@@ -3,11 +3,20 @@ const promptData = $('Construir Prompt').first().json;
 
 const repeticionDetectada = Boolean(promptData.repeticion_detectada);
 
+const groqFailed = Boolean(
+  groqData &&
+    (groqData.error ||
+      groqData.errorType ||
+      String((groqData.error && groqData.error.message) || groqData.message || '').match(
+        /Bad request|unsupported|messages\.\d+/i,
+      )),
+);
 const choices = Array.isArray(groqData.choices) ? groqData.choices : [];
 const msgGroq = (choices[0] && choices[0].message) || {};
 let respuestaCompleta =
   (msgGroq.content && String(msgGroq.content).trim()) ||
   String(msgGroq.reasoning || msgGroq.reasoning_content || '').trim();
+if (groqFailed && !respuestaCompleta) respuestaCompleta = '';
 
 const chatId = String(promptData.chat_id || '');
 const textoUsuario = String(promptData.texto_usuario || '');
@@ -31,12 +40,16 @@ if (!Array.isArray(sugerenciasIds)) sugerenciasIds = [];
 
 const debeMostrar = Boolean(promptData.debe_mostrar_propiedades);
 const esCurioso = Boolean(promptData.es_curioso);
+const pideOpcionesFlag = Boolean(promptData.pide_opciones);
 const presupuestoDetectado = String(promptData.presupuesto_detectado || '');
 const intencionClasificador = String(promptData.intencion_clasificador || '');
 const forzarStockClasificador =
   debeMostrar ||
+  pideOpcionesFlag ||
   intencionClasificador === 'pedir_opciones' ||
-  intencionClasificador === 'explorar';
+  intencionClasificador === 'explorar' ||
+  intencionClasificador === 'presupuesto' ||
+  Boolean(presupuestoDetectado);
 const esSoloSaludo = Boolean(promptData.es_solo_saludo);
 const esDetalleUna = Boolean(promptData.es_detalle_una);
 const esPreguntaEspecifica = Boolean(promptData.es_pregunta_especifica);
@@ -138,14 +151,20 @@ if (mostrarMatch) {
 if (!propiedadesMostrar.length && forzarStockClasificador && sugerenciasIds.length) {
   propiedadesMostrar = sugerenciasIds.slice(0, 3);
 }
+if (
+  !propiedadesMostrar.length &&
+  sugerenciasIds.length &&
+  /\bno tengo( nada)?|sin stock|ahora mismo no tengo/i.test(working)
+) {
+  propiedadesMostrar = sugerenciasIds.slice(0, 3);
+}
 
 if (
   !propiedadesMostrar.length &&
   esCurioso &&
   sugerenciasIds.length &&
   !skipReply &&
-  !esOffTopic &&
-  !esAlquilerPresupuestoAlto
+  !esOffTopic
 ) {
   propiedadesMostrar = sugerenciasIds.slice(0, 3);
 }
@@ -173,7 +192,8 @@ function armarIntroPropiedades(presu, variantIdx, curioso) {
     const presuFmt = Number(presu).toLocaleString('es-AR');
     const opts = [
       'Dale, te paso un par de opciones en venta cerca de USD ' + presuFmt,
-      'Perfecto, mirá estas opciones que se acercan a USD ' + presuFmt,
+      'Mirá estas opciones que se acercan a USD ' +
+        Number(presu).toLocaleString('es-AR'),
     ];
     return sanitizarPuntuacion(opts[v % opts.length]);
   }
@@ -264,7 +284,7 @@ if (skipReply) {
   propiedadesMostrar = [];
   mensajeCierre = '';
   solicitudVisita = false;
-} else if (esAlquilerPresupuestoAlto) {
+} else if (esAlquilerPresupuestoAlto && !forzarStockClasificador) {
   if (
     suenaPlantillaRobot(respuestaBot) ||
     !respuestaBot ||
@@ -319,19 +339,22 @@ if (
   }
 }
 
+let historialArrEarly = historialJson;
+const consultaRepetidaEarly = esConsultaRepetida(textoUsuario, historialArrEarly);
+const idxVariante = contarBotsSimilares(respuestaBot || '', historialArrEarly);
+
 if (skipReply || esOffTopic) {
   // already set
 } else if (propiedadesMostrar.length > 0) {
-  respuestaBot = armarIntroPropiedades(presupuestoDetectado, variantIdx, esCurioso);
+  respuestaBot = armarIntroPropiedades(presupuestoDetectado, idxVariante, esCurioso);
   mensajeCierre = MENSAJE_CIERRE_PROPS;
 } else if (
   forzarStockClasificador &&
   !propiedadesMostrar.length &&
-  sugerenciasIds.length &&
-  (esSoloPreguntas(respuestaBot) || !respuestaBot || respuestaBot.length < 20 || esCurioso)
+  sugerenciasIds.length
 ) {
   propiedadesMostrar = sugerenciasIds.slice(0, 3);
-  respuestaBot = armarIntroPropiedades(presupuestoDetectado, variantIdx, esCurioso);
+  respuestaBot = armarIntroPropiedades(presupuestoDetectado, idxVariante, esCurioso);
   mensajeCierre = MENSAJE_CIERRE_PROPS;
 } else if ((esSoloSaludo || esSaludoSimple(textoUsuario)) && turno <= 2) {
   respuestaBot = SALUDOS_HUMANOS[(turno - 1) % SALUDOS_HUMANOS.length];
@@ -357,11 +380,10 @@ if (skipReply || esOffTopic) {
 } else if (
   (debeMostrar || esCurioso) &&
   !propiedadesMostrar.length &&
-  sugerenciasIds.length &&
-  (suenaARobot(respuestaBot) || !respuestaBot || respuestaBot.length < 20 || esCurioso)
+  sugerenciasIds.length
 ) {
   propiedadesMostrar = sugerenciasIds.slice(0, 3);
-  respuestaBot = armarIntroPropiedades(presupuestoDetectado, variantIdx, esCurioso);
+  respuestaBot = armarIntroPropiedades(presupuestoDetectado, idxVariante, esCurioso);
   mensajeCierre = MENSAJE_CIERRE_PROPS;
 } else if (suenaPlantillaRobot(respuestaBot)) {
   respuestaBot = reescribirSiRobot(
@@ -392,19 +414,35 @@ if (
   mensajeCierre = '';
 }
 
-const consultaRepetida = esConsultaRepetida(textoUsuario, historialJson);
-const variantIdx = contarBotsSimilares(respuestaBot, historialJson);
+const consultaRepetida = consultaRepetidaEarly;
+const botRepite =
+  Boolean(promptData.bot_repite_sin_fichas) ||
+  (typeof icBotRepiteSinFichas === 'function' && icBotRepiteSinFichas(historialJson));
+
+if (
+  !skipReply &&
+  !esOffTopic &&
+  (botRepite || consultaRepetida) &&
+  sugerenciasIds.length &&
+  !propiedadesMostrar.length &&
+  (forzarStockClasificador || debeMostrar || Boolean(presupuestoDetectado))
+) {
+  propiedadesMostrar = sugerenciasIds.slice(0, 3);
+  respuestaBot = armarIntroPropiedades(presupuestoDetectado, idxVariante + 1, esCurioso);
+  mensajeCierre = MENSAJE_CIERRE_PROPS;
+}
 
 if (!skipReply && !esOffTopic) {
   respuestaBot = evitarRepeticion(respuestaBot, {
     historialArr: historialJson,
     mensajeUsuario: textoUsuario,
-    esAlquilerPresupuestoAlto,
+    esAlquilerPresupuestoAlto: esAlquilerPresupuestoAlto && !forzarStockClasificador,
+    forzarStock: forzarStockClasificador || propiedadesMostrar.length > 0,
     presupuestoDetectado,
     zonaDetectada,
   });
-  if (propiedadesMostrar.length > 0 && consultaRepetida) {
-    respuestaBot = armarIntroPropiedades(presupuestoDetectado, variantIdx + 1, esCurioso);
+  if (propiedadesMostrar.length > 0 && (consultaRepetida || botRepite)) {
+    respuestaBot = armarIntroPropiedades(presupuestoDetectado, idxVariante + 1, esCurioso);
   }
 }
 
@@ -445,8 +483,10 @@ if (!skipReply && respuestaBot) {
   if (mensajeCierre) textoAsistente = textoAsistente + '\n\n' + mensajeCierre;
   historialJson.push(enriquecerEntradaHistorial({ role: 'assistant', content: textoAsistente }, metaTurno));
 }
-if (historialJson.length > 40) {
-  historialJson = historialJson.slice(historialJson.length - 40);
+const histStoreMax =
+  typeof IC_HISTORIAL_STORE_MAX === 'number' ? IC_HISTORIAL_STORE_MAX : 48;
+if (historialJson.length > histStoreMax) {
+  historialJson = historialJson.slice(historialJson.length - histStoreMax);
 }
 
 const sd = $getWorkflowStaticData('global');

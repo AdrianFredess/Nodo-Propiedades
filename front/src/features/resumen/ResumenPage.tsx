@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { computeGlobalMetrics, computeResumenMetrics, filterLeadsByDay } from './computeMetrics';
 import { CANAL_LABEL, TEMPERATURA_LABEL } from '../../shared/lib/labels';
+import { CanalIcon } from '../../shared/ui/CanalIcon';
 import { leadTimestampMs, sortLeadsByRecency } from '../../shared/lib/leadsOrder';
 import {
   formatDateTime,
@@ -137,16 +138,25 @@ export function ResumenPage({
             </strong>
           </div>
           <div className="resumen-day-strip__item" role="listitem">
-            <span className="resumen-day-strip__label">WhatsApp</span>
+            <span className="resumen-day-strip__label resumen-day-strip__label--canal">
+              <CanalIcon canal="whatsapp" size={14} />
+              WhatsApp
+            </span>
             <strong className="resumen-day-strip__value">{dayMetrics.whatsappDia}</strong>
           </div>
           <div className="resumen-day-strip__item" role="listitem">
-            <span className="resumen-day-strip__label">Telegram</span>
+            <span className="resumen-day-strip__label resumen-day-strip__label--canal">
+              <CanalIcon canal="telegram" size={14} />
+              Telegram
+            </span>
             <strong className="resumen-day-strip__value">{dayMetrics.telegramDia}</strong>
           </div>
           {dayMetrics.messengerDia > 0 ? (
             <div className="resumen-day-strip__item" role="listitem">
-              <span className="resumen-day-strip__label">Messenger</span>
+              <span className="resumen-day-strip__label resumen-day-strip__label--canal">
+                <CanalIcon canal="messenger" size={14} />
+                Messenger
+              </span>
               <strong className="resumen-day-strip__value">{dayMetrics.messengerDia}</strong>
             </div>
           ) : null}
@@ -184,7 +194,10 @@ export function ResumenPage({
               const pct = Math.round((value / maxCanal) * 100);
               return (
                 <div className="bar-row" key={canal}>
-                  <span>{CANAL_LABEL[canal]}</span>
+                  <span className="bar-row__canal">
+                    <CanalIcon canal={canal} size={14} />
+                    {CANAL_LABEL[canal]}
+                  </span>
                   <div className="bar-track">
                     <div
                       className="bar-fill bar-fill--canal"
@@ -234,7 +247,10 @@ export function ResumenPage({
                   <span className="resumen-lead-row__name">{lead.nombre}</span>
                   <span className="resumen-lead-row__meta">
                     {TEMPERATURA_LABEL[lead.temperatura]} ·{' '}
-                    {CANAL_LABEL[lead.canalOrigen]}
+                    <span className="inline-canal">
+                      <CanalIcon canal={lead.canalOrigen} size={12} />
+                      {CANAL_LABEL[lead.canalOrigen]}
+                    </span>
                   </span>
                   <span className="resumen-lead-row__time">
                     {formatDateTime(

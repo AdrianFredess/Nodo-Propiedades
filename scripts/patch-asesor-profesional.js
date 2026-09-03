@@ -32,6 +32,31 @@ function loadApiKey() {
 const KEY = loadApiKey();
 const PROP_MEDIA = JSON.parse(fs.readFileSync(MEDIA_PATH, 'utf8'));
 const BOT_APRENDIZAJE = JSON.parse(fs.readFileSync(LEARNING_PATH, 'utf8'));
+const STOCK_CSV_PATH = path.join(ROOT, 'csv', 'Simulacion_30_Propiedades_Mendoza.csv');
+
+function stockFallbackJson() {
+  try {
+    const raw = fs.readFileSync(STOCK_CSV_PATH, 'utf8');
+    const lines = raw.split(/\r?\n/).filter(Boolean);
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const parts = lines[i].split(',');
+      if (parts.length < 5) continue;
+      rows.push({
+        id: parts[0].trim(),
+        tipo: parts[1].trim(),
+        zona: parts[2].trim(),
+        precio: parts[3].trim(),
+        descripcion: parts.slice(4, -1).join(',').trim(),
+        estado: parts[parts.length - 1].trim(),
+        operacion: 'venta',
+      });
+    }
+    return JSON.stringify(rows.filter((r) => r.id));
+  } catch (e) {
+    return '[]';
+  }
+}
 
 function snippet(name) {
   let code = fs.readFileSync(
@@ -42,6 +67,7 @@ function snippet(name) {
     /__PROP_MEDIA_JSON__/g,
     JSON.stringify(PROP_MEDIA),
   );
+  code = code.replace(/__STOCK_FALLBACK_JSON__/g, stockFallbackJson());
   return code;
 }
 

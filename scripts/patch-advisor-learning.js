@@ -31,6 +31,31 @@ const WORKFLOWS = [
 
 const PROP_MEDIA = JSON.parse(fs.readFileSync(MEDIA_PATH, 'utf8'));
 const BOT_APRENDIZAJE = JSON.parse(fs.readFileSync(LEARNING_PATH, 'utf8'));
+const STOCK_CSV_PATH = path.join(ROOT, 'csv', 'Simulacion_30_Propiedades_Mendoza.csv');
+
+function stockFallbackJson() {
+  try {
+    const raw = fs.readFileSync(STOCK_CSV_PATH, 'utf8');
+    const lines = raw.split(/\r?\n/).filter(Boolean);
+    if (lines.length < 2) return '[]';
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const parts = lines[i].split(',');
+      if (parts.length < 5) continue;
+      const id = parts[0].trim();
+      const tipo = parts[1].trim();
+      const zona = parts[2].trim();
+      const precio = parts[3].trim();
+      const estado = parts[parts.length - 1].trim();
+      const descripcion = parts.slice(4, -1).join(',').trim();
+      if (!id) continue;
+      rows.push({ id, tipo, zona, precio, descripcion, estado, operacion: 'venta' });
+    }
+    return JSON.stringify(rows);
+  } catch (e) {
+    return '[]';
+  }
+}
 
 function loadEnvValue(key, fallback) {
   const envPath = path.join(ROOT, '.env');
@@ -61,6 +86,7 @@ function loadApiKey() {
 function snippet(name) {
   let code = fs.readFileSync(path.join(__dirname, 'snippets', name), 'utf8');
   code = code.replace(/__PROP_MEDIA_JSON__/g, JSON.stringify(PROP_MEDIA));
+  code = code.replace(/__STOCK_FALLBACK_JSON__/g, stockFallbackJson());
   return code;
 }
 
@@ -251,8 +277,22 @@ function patchSnippetsTg(wf) {
   parsear.parameters.jsCode = postProcessSnippet('tg-parsear-respuesta.js');
 }
 
+function setGroqMaxTokens(wf) {
+  for (const node of wf.nodes || []) {
+    if (node.name === 'Groq Chat Model' && node.parameters) {
+      if (!node.parameters.options) node.parameters.options = {};
+      node.parameters.options.maxTokens = 1200;
+    }
+    const body = node.parameters && node.parameters.jsonBody;
+    if (typeof body === 'string' && /max_tokens:\s*\d+/.test(body) && /gpt-oss/.test(body)) {
+      node.parameters.jsonBody = body.replace(/max_tokens:\s*\d+/, 'max_tokens: 1200');
+    }
+  }
+}
+
 function patchWa(wf) {
   patchSnippetsWa(wf);
+  setGroqMaxTokens(wf);
   const cred = sheetsCredFrom(wf);
 
   ensureNode(
@@ -308,7 +348,60 @@ function patchWa(wf) {
 
 function patchTg(wf) {
   patchSnippetsTg(wf);
+  setGroqMaxTokens(wf);
   const cred = sheetsCredFrom(wf);
+
+  const setNode = wf.nodes.find((n) => n.name === 'Set Variables');
+  if (setNode && setNode.parameters && setNode.parameters.assignments) {
+    const assigns = setNode.parameters.assignments.assignments || [];
+    const hasVoice = assigns.some((a) => a.name === 'voice_file_id');
+    if (!hasVoice) {
+      assigns.push({
+        id: 'assign-voice',
+        name: 'voice_file_id',
+        value:
+          "={{ $json.message.voice ? $json.message.voice.file_id : ($json.message.audio ? $json.message.audio.file_id : '') }}",
+        type: 'string',
+      });
+    }
+    const texto = assigns.find((a) => a.name === 'texto_usuario');
+    if (texto) {
+      texto.value =
+        "={{ $json.message.text || $json.message.caption || '' }}";
+    }
+  }
+
+  ensureNode(wf, 'tg-transcribir-audio', {
+    id: 'tg-transcribir-audio',
+    name: 'Transcribir Audio TG',
+    type: 'n8n-nodes-base.code',
+    typeVersion: 2,
+    position: [520, 304],
+    parameters: {
+      mode: 'runOnceForAllItems',
+      jsCode: snippet('tg-transcribir-audio.js'),
+    },
+  });
+
+  wf.connections['Set Variables'] = {
+    main: [[{ node: 'Transcribir Audio TG', type: 'main', index: 0 }]],
+  };
+
+  const tgReaders = [
+    { node: 'Leer Stock Propiedades', type: 'main', index: 0 },
+    { node: 'Leer Historial', type: 'main', index: 0 },
+    { node: 'Leer Politicas Pago', type: 'main', index: 0 },
+    { node: 'Leer Aprendizaje Matias TG', type: 'main', index: 0 },
+  ];
+  const existingFan = (wf.connections['Transcribir Audio TG']?.main?.[0] || []).filter(
+    (c) =>
+      c.node &&
+      c.node !== 'Transcribir Audio TG' &&
+      !tgReaders.some((r) => r.node === c.node),
+  );
+  wf.connections['Transcribir Audio TG'] = {
+    main: [[...tgReaders, ...existingFan]],
+  };
 
   ensureNode(
     wf,
@@ -342,12 +435,6 @@ function patchTg(wf) {
     ),
   );
 
-  const setVars = wf.connections['Set Variables']?.main?.[0] || [];
-  if (!setVars.some((c) => c.node === 'Leer Aprendizaje Matias TG')) {
-    setVars.push({ node: 'Leer Aprendizaje Matias TG', type: 'main', index: 0 });
-  }
-  wf.connections['Set Variables'] = { main: [setVars] };
-
   const merge = wf.nodes.find((n) => n.name === 'Esperar Lecturas');
   if (merge?.parameters) {
     const inputs = Number(merge.parameters.numberInputs) || 3;
@@ -377,6 +464,8 @@ function patchTg(wf) {
 function substituteEnv(wf) {
   const vars = {
     __SET_GOOGLE_SHEET_ID__: sheetId(),
+    __SET_GROQ_API_KEY__: loadEnvValue('GROQ_API_KEY', ''),
+    __SET_TELEGRAM_BOT_TOKEN__: loadEnvValue('TELEGRAM_BOT_TOKEN', ''),
   };
   let raw = JSON.stringify(wf);
   for (const [k, v] of Object.entries(vars)) {

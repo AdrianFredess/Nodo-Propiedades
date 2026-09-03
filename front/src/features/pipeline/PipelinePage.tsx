@@ -5,6 +5,7 @@ import {
   CANAL_LABEL,
   PIPELINE_COLUMNA_LABEL,
 } from '../../shared/lib/labels';
+import { CanalIcon } from '../../shared/ui/CanalIcon';
 import { compareLeadsByRecency } from '../../shared/lib/leadsOrder';
 import type {
   CanalOrigen,
@@ -107,7 +108,10 @@ export function PipelinePage({ leads, unreadByLead }: PipelinePageProps) {
                       className={`kanban__channel kanban__channel--${block.canal}`}
                     >
                       <div className="kanban__channel-label">
-                        {CANAL_LABEL[block.canal]}
+                        <span className="kanban__channel-name">
+                          <CanalIcon canal={block.canal} size={14} />
+                          {CANAL_LABEL[block.canal]}
+                        </span>
                         <span>{block.leads.length}</span>
                       </div>
                       {block.leads.map((lead) => {

@@ -2,11 +2,26 @@
  * Bot Telegram — Construir Prompt (asesor humano + stock + memoria local)
  */
 const PROP_MEDIA = __PROP_MEDIA_JSON__;
+const STOCK_FALLBACK = __STOCK_FALLBACK_JSON__;
 
-const setVars = $('Set Variables').first().json;
+let setVars = {};
+try {
+  setVars = $('Transcribir Audio TG').first().json || {};
+} catch (e) {
+  setVars = {};
+}
+if (!setVars.chat_id) {
+  try {
+    setVars = $('Set Variables').first().json || {};
+  } catch (e2) {
+    setVars = {};
+  }
+}
 const chatId = String(setVars.chat_id || '');
-const textoUsuario = String(setVars.texto_usuario || '').trim();
+const textoUsuario = String(setVars.texto_usuario || setVars.audio_transcripto || '').trim();
 const nombreUsuario = setVars.nombre_usuario;
+const esAudioSinTextoTg =
+  Boolean(setVars.es_audio_sin_transcripcion) && !textoUsuario;
 
 const citaBase =
   'https://deranged-defile-comrade.ngrok-free.dev/webhook/cita-form';
@@ -26,27 +41,11 @@ function pick(row, keys) {
 }
 
 function parseUsd(s) {
-  const m = String(s || '')
-    .replace(/\./g, '')
-    .match(/(\d{4,7})/);
-  return m ? parseInt(m[1], 10) : null;
+  return icParsePrecioUsd(s);
 }
 
 function extractPresupuestoUsd(text) {
-  const t = String(text || '').toLowerCase();
-  let m = t.match(
-    /(\d{1,3}(?:[.\s]\d{3})+|\d{4,7})\s*(?:usd|u\$s|dolar(?:es)?|dolares)/i,
-  );
-  if (m) return parseInt(m[1].replace(/[.\s]/g, ''), 10);
-  m = t.match(/(\d{2,3})\s*mil\s*(?:usd|u\$s|dolar(?:es)?)?/i);
-  if (m) return parseInt(m[1], 10) * 1000;
-  m = t.match(/\b(\d{2,3})k\b/i);
-  if (m) return parseInt(m[1], 10) * 1000;
-  m = t.match(/por\s+(\d{1,3}(?:[.\s]\d{3})+|\d{4,7})/i);
-  if (m) return parseInt(m[1].replace(/[.\s]/g, ''), 10);
-  m = t.match(/(\d{2,3})\s*mil\b/i);
-  if (m && !/\b(alquil|mensual|por mes)\b/i.test(t)) return parseInt(m[1], 10) * 1000;
-  return null;
+  return icExtraerPresupuestoUsd(text);
 }
 
 function extractZona(text) {
@@ -202,6 +201,9 @@ try {
 } catch (e) {
   stockItems = [];
 }
+if (!stockItems.length && Array.isArray(STOCK_FALLBACK) && STOCK_FALLBACK.length) {
+  stockItems = STOCK_FALLBACK;
+}
 
 let politicasRows = [];
 try {
@@ -220,11 +222,11 @@ try {
 }
 
 function rowToStockLine(row) {
-  const id = pick(row, ['id', 'ID', 'codigo']);
-  const tipo = pick(row, ['tipo', 'Tipo', 'tipologia']);
-  const zona = pick(row, ['zona', 'Zona', 'barrio']);
-  const precio = pick(row, ['precio', 'Precio', 'precio_usd']);
-  const operacion = pick(row, ['operacion', 'Operacion', 'tipo_operacion']);
+  const id = pick(row, ['id', 'ID', 'codigo', 'property_id']);
+  const tipo = pick(row, ['tipo', 'Tipo', 'tipologia', 'property_type']);
+  const zona = pick(row, ['zona', 'Zona', 'barrio', 'zone']);
+  const precio = pick(row, ['precio', 'Precio', 'precio_usd', 'price']);
+  const operacion = pick(row, ['operacion', 'Operacion', 'tipo_operacion', 'operation_type']);
   const desc = pick(row, ['descripcion', 'Descripcion', 'detalle']);
   const estado = pick(row, ['estado', 'Estado', 'stock']) || 'disponible';
   const m = mediaFor(id);
@@ -236,56 +238,11 @@ function rowToStockLine(row) {
 }
 
 function sugerirIds(stock, budgetUsd, zonaHint) {
-  const scored = [];
-  for (const row of stock) {
-    const id = pick(row, ['id', 'ID', 'codigo']);
-    const precio = parseUsd(pick(row, ['precio', 'Precio']));
-    const zona = pick(row, ['zona', 'Zona']).toLowerCase();
-    if (!id || !precio) continue;
-    let score = Math.abs(precio - (budgetUsd || precio));
-    if (budgetUsd && precio > budgetUsd * 1.18) score += 50000;
-    if (budgetUsd && precio < budgetUsd * 0.45) score += 30000;
-    if (zonaHint && zona.includes(zonaHint.split(' ')[0])) score -= 15000;
-    scored.push({ id, score, precio });
-  }
-  scored.sort((a, b) => a.score - b.score);
-  return scored.slice(0, 3).map((x) => x.id);
+  return icSugerirIdsStock(stock, budgetUsd, zonaHint);
 }
 
 function sugerirIdsVariados(stock) {
-  const rows = [];
-  for (const row of stock) {
-    const id = pick(row, ['id', 'ID', 'codigo']);
-    const precio = parseUsd(pick(row, ['precio', 'Precio']));
-    const zona = pick(row, ['zona', 'Zona']).toLowerCase();
-    if (!id || !precio) continue;
-    rows.push({ id, precio, zona });
-  }
-  if (!rows.length) return [];
-  rows.sort((a, b) => a.precio - b.precio);
-  const picked = [];
-  const zonasUsadas = new Set();
-  for (const r of rows) {
-    if (picked.length >= 3) break;
-    const zonaKey = (r.zona || 'x').split(' ')[0];
-    if (!zonasUsadas.has(zonaKey)) {
-      picked.push(r.id);
-      zonasUsadas.add(zonaKey);
-    }
-  }
-  if (picked.length < 3) {
-    const tiers = [0, Math.floor(rows.length / 2), rows.length - 1];
-    for (const i of tiers) {
-      const id = rows[i]?.id;
-      if (id && !picked.includes(id)) picked.push(id);
-      if (picked.length >= 3) break;
-    }
-  }
-  for (const r of rows) {
-    if (picked.length >= 3) break;
-    if (!picked.includes(r.id)) picked.push(r.id);
-  }
-  return picked.slice(0, 3);
+  return icSugerirIdsVariados(stock);
 }
 
 let stockText = '';
@@ -374,6 +331,7 @@ let operacionDetectada =
 const clasif = clasificarIntencionCliente(textoUsuario, textoHistorial, {
   stockDisponible: stockItems.length > 0,
   historialJsonArr: historialJson,
+  esAudioSinTexto: esAudioSinTextoTg,
 });
 
 presupuestoUsd = clasif.presupuesto_usd || presupuestoUsd;
@@ -451,7 +409,9 @@ const datosConocidos = {
 const esAlquilerPresupuestoAlto =
   operacionDetectada === 'alquiler' &&
   Boolean(presupuestoUsd) &&
-  presupuestoUsd >= 15000;
+  presupuestoUsd >= 15000 &&
+  !pideOpciones &&
+  !clasif.ya_aclaro_compra_alquiler;
 
 function esConsultaRepetidaPrompt(mensaje, historialArr) {
   const actualRaw = String(mensaje || '').trim();
@@ -518,7 +478,11 @@ const ultimoBotHistorial = (() => {
 })();
 
 let modoObligatorio = '';
-if (esOffTopic) {
+if (esAudioSinTextoTg) {
+  modoObligatorio =
+    '\n\nMODO AUDIO (OBLIGATORIO):\n' +
+    '- No se pudo transcribir el audio. Respondé EXACTAMENTE: "No pude escuchar bien el audio, escribime o mandalo de nuevo y te ayudo con propiedades"\n';
+} else if (esOffTopic) {
   modoObligatorio =
     '\n\nMODO OFF-TOPIC (OBLIGATORIO):\n' +
     '- El mensaje NO es de inmuebles. NO ayudes con comida, restaurantes, herramientas ni otros temas.\n' +
@@ -582,6 +546,7 @@ if (esOffTopic) {
     JSON.stringify(sugerenciasIds) +
     '\n' +
     '- Incluí ###MOSTRAR_PROPIEDADES### con esos IDs. PROHIBIDO inventar propiedades o precios.\n' +
+    '- HAY STOCK real. PROHIBIDO decir que no tenés nada si hay IDs sugeridos.\n' +
     '- Asumí VENTA/COMPRA salvo que el cliente dijo alquiler explícitamente.\n' +
     '- NO digas "al año" ni inventes alquiler.\n';
 } else if (esSoloSaludo && turno <= 2) {
@@ -608,7 +573,7 @@ const systemPrompt =
   'NEGOCIO (importante):\n' +
   '- Default: VENTA en USD. Alquiler solo si el cliente lo pidió claro.\n' +
   '- Si dice "alquiler" con presupuesto alto en USD (ej. 45 mil): NO inventes alquileres. Aclará amable que ese monto suena a compra, o que alquileres son mensuales en pesos / otro rango. Preguntá si busca alquilar o comprar.\n' +
-  '- Sin stock para el pedido: decilo natural y ofrecé alternativas (otra zona, otro tope, venta vs alquiler). Nunca prometas que "un asesor te contacta".\n\n' +
+  '- Sin stock REAL (lista vacía): decilo natural y ofrecé alternativas. Si hay IDs sugeridos, SIEMPRE mostralos. Nunca prometas que "un asesor te contacta".\n\n' +
   'VOZ HUMANA:\n' +
   '- Tranquilo, cercano, profesional. Frases cortas. Como asesor inmobiliario real de Mendoza, no un script ni un soldado.\n' +
   '- El cliente puede escribir informal ("che tenes algo", "cuanto sale", "50 lucas"): entendé su intención, pero respondé vos con tono profesional-cercano. NO copies su slang ni muletillas.\n' +
@@ -654,6 +619,11 @@ const systemPrompt =
   'Cliente: "alquiler 45000 usd godoy cruz"\n' +
   'BIEN: "Con 45 mil dólares podemos mirar opciones de compra en Godoy Cruz. Buscás comprar o alquilar? Si es alquiler, el presupuesto mensual suele expresarse en pesos; contame un poco más y te oriento"\n' +
   'MAL: "Uf, con 45 mil para alquiler no me cierra..." o plantilla con "asesor te contacte"\n\n' +
+  'Cliente: (después de presupuesto) "a ver opciones" / "mostrame" / "pasame algo"\n' +
+  'BIEN: 1 frase intro + ###MOSTRAR_PROPIEDADES### con 2-3 IDs reales (ej. MZA-014). El sistema manda fotos. NO repitas compra vs alquiler.\n' +
+  'MAL: el mismo párrafo de "buscás comprar o alquilar?" sin fichas\n\n' +
+  'Si YA aclaraste compra vs alquiler y el cliente pide opciones o insiste con presupuesto USD:\n' +
+  'BIEN: mostrar fichas YA (asumí VENTA). MAL: repetir la aclaración.\n\n' +
   'Cliente: sin stock en zona/tope\n' +
   'BIEN: "Ahora mismo no tengo nada en esa zona con ese tope, aflojamos un poco el presupuesto o miramos Capital?"\n' +
   'MAL: "no tengo inmuebles disponibles en este momento" + derivar a otro asesor\n\n' +
@@ -719,19 +689,44 @@ const systemPrompt =
   '###LEAD_COMPLETO###\n{...}\n###FIN_LEAD###\n' +
   'SEGUIMIENTO:\n###PROPIEDAD_SEGUIMIENTO###\n{"id":"...","referencia":"..."}\n###FIN_PROP###';
 
-const messages = [{ role: 'system', content: systemPrompt }];
+function sanitizarMensajeGroq(msg) {
+  if (!msg || typeof msg !== 'object') return null;
+  let role = String(msg.role || '').toLowerCase().trim();
+  if (role === 'bot') role = 'assistant';
+  if (role === 'cliente') role = 'user';
+  if (role !== 'system' && role !== 'user' && role !== 'assistant') return null;
+  let content = msg.content;
+  if (content && typeof content === 'object') {
+    content = content.text || content.content || JSON.stringify(content);
+  }
+  content = String(content || '').trim();
+  if (!content) return null;
+  return { role, content };
+}
+
+const messages = [];
+const sysMsg = sanitizarMensajeGroq({ role: 'system', content: systemPrompt });
+if (sysMsg) messages.push(sysMsg);
 if (esSoloSaludo) {
-  messages.push({ role: 'user', content: 'hola' });
-  messages.push({
+  const u = sanitizarMensajeGroq({ role: 'user', content: 'hola' });
+  const a = sanitizarMensajeGroq({
     role: 'assistant',
     content:
       'Hola, cómo estás? Soy Matías de Nodo Propiedades. Cuando quieras contame qué necesitás',
   });
+  if (u) messages.push(u);
+  if (a) messages.push(a);
 }
-for (const msg of historialJson) {
-  if (msg && msg.role && msg.content) messages.push(msg);
+const historialLimpio = icSanitizarHistorialPrompt(
+  historialJson,
+  typeof IC_HISTORIAL_PROMPT_MAX === 'number' ? IC_HISTORIAL_PROMPT_MAX : 24,
+);
+for (const msg of historialLimpio) {
+  const clean = sanitizarMensajeGroq(msg);
+  if (clean && clean.role !== 'system') messages.push(clean);
 }
-messages.push({ role: 'user', content: textoUsuario });
+const lastUser = sanitizarMensajeGroq({ role: 'user', content: textoUsuario });
+if (lastUser) messages.push(lastUser);
 
 return [
   {
@@ -748,7 +743,9 @@ return [
       politicas_source: politicasRows.length ? 'sheets' : 'fallback',
       sugerencias_ids: JSON.stringify(sugerenciasIds),
       debe_mostrar_propiedades:
-        debeMostrarPropiedades && !esOffTopic && !esAlquilerPresupuestoAlto,
+        debeMostrarPropiedades &&
+        !esOffTopic &&
+        (!esAlquilerPresupuestoAlto || pideOpciones),
       presupuesto_detectado: presupuestoUsd ? String(presupuestoUsd) : '',
       pide_opciones: pideOpciones,
       repeticion_detectada: Boolean(consultaRepetida),
@@ -767,6 +764,8 @@ return [
       intencion_clasificador: clasif.intencion,
       confianza_clasificador: clasif.confianza,
       requiere_calificar: clasif.requiere_calificar,
+      bot_repite_sin_fichas: Boolean(clasif.bot_repite_sin_fichas),
+      ya_aclaro_compra_alquiler: Boolean(clasif.ya_aclaro_compra_alquiler),
     },
   },
 ];

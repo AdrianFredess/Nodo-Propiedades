@@ -2,6 +2,7 @@
  * SIMPLE-02 — Armar prompt (Matías + stock + bloques fotos/visita — formato Casa Clic)
  */
 const PROP_MEDIA = __PROP_MEDIA_JSON__;
+const STOCK_FALLBACK = __STOCK_FALLBACK_JSON__;
 const CITA_BASE = '__CITA_WEBHOOK_BASE__';
 
 const prep = $('Code - Normalizar WhatsApp').item.json;
@@ -13,28 +14,16 @@ try {
   row = {};
 }
 
-const msg = String(prep.mensaje || '').trim();
-let historialPrev = '';
+const msg = String(prep.mensaje || prep.audio_transcripto || '').trim();
+let historialJsonArrEarly = [];
 try {
   const hj = row.historial_json;
-  if (typeof hj === 'string' && hj.trim().startsWith('[')) {
-    const arr = JSON.parse(hj);
-    if (Array.isArray(arr)) {
-      historialPrev = arr
-        .map((m) => {
-          const role = String((m && m.role) || '').toLowerCase();
-          const content = String((m && (m.content || m.mensaje || '')) || '').trim();
-          if (!content) return '';
-          if (role === 'assistant' || role === 'bot') return 'Bot: ' + content;
-          return 'Cliente: ' + content;
-        })
-        .filter(Boolean)
-        .join('\n');
-    }
-  }
+  if (typeof hj === 'string' && hj.trim().startsWith('[')) historialJsonArrEarly = JSON.parse(hj);
+  else if (Array.isArray(hj)) historialJsonArrEarly = hj;
 } catch (e) {
-  historialPrev = '';
+  historialJsonArrEarly = [];
 }
+let historialPrev = icHistorialBlock(historialJsonArrEarly);
 if (!historialPrev) historialPrev = String(row.historial || '').trim();
 
 const isKnownLead = Boolean(
@@ -48,36 +37,15 @@ const isKnownLead = Boolean(
 );
 
 function extractPresupuestoUsd(text) {
-  const t = String(text || '').toLowerCase();
-  let m = t.match(
-    /(\d{1,3}(?:[.\s]\d{3})+|\d{4,7})\s*(?:usd|u\$s|dolar(?:es)?|dolares)/i,
-  );
-  if (m) return parseInt(m[1].replace(/[.\s]/g, ''), 10);
-  m = t.match(/(\d{2,3})\s*mil\s*(?:usd|u\$s|dolar(?:es)?)?/i);
-  if (m) return parseInt(m[1], 10) * 1000;
-  m = t.match(/\b(\d{2,3})k\b/i);
-  if (m) return parseInt(m[1], 10) * 1000;
-  m = t.match(/por\s+(\d{1,3}(?:[.\s]\d{3})+|\d{4,7})/i);
-  if (m) return parseInt(m[1].replace(/[.\s]/g, ''), 10);
-  m = t.match(/(\d{2,3})\s*mil\b/i);
-  if (m && !/\b(alquil|mensual|por mes)\b/i.test(t)) return parseInt(m[1], 10) * 1000;
-  return null;
+  return icExtraerPresupuestoUsd(text);
 }
 
 const chatKey = String(prep.chat_id || prep.phone || 'unknown');
 const sd = $getWorkflowStaticData('global');
 if (!sd.offTopicCount) sd.offTopicCount = {};
 
-const esAudioSinTexto = Boolean(prep.es_audio_sin_transcripcion);
-
-let historialJsonArrEarly = [];
-try {
-  const hj = row.historial_json;
-  if (typeof hj === 'string' && hj.trim().startsWith('[')) historialJsonArrEarly = JSON.parse(hj);
-  else if (Array.isArray(hj)) historialJsonArrEarly = hj;
-} catch (e) {
-  historialJsonArrEarly = [];
-}
+const esAudioSinTexto =
+  Boolean(prep.es_audio_sin_transcripcion) && !msg;
 
 let stockItemsEarly = [];
 try {
@@ -96,6 +64,9 @@ try {
     );
 } catch (e) {
   stockItemsEarly = [];
+}
+if (!stockItemsEarly.length && Array.isArray(STOCK_FALLBACK) && STOCK_FALLBACK.length) {
+  stockItemsEarly = STOCK_FALLBACK;
 }
 
 const clasif = clasificarIntencionCliente(msg, historialPrev, {
@@ -133,7 +104,7 @@ const OFF_TOPIC_MSG_1 =
 const OFF_TOPIC_MSG_2 =
   'Acá solo propiedades. Si te interesa un depto o casa, decime.';
 const AUDIO_MSG =
-  'Todavía no puedo escuchar audios, escribime por texto y te ayudo con propiedades';
+  'No pude escuchar bien el audio, escribime o mandalo de nuevo y te ayudo con propiedades';
 const respuesta_forzada = esAudioSinTexto
   ? AUDIO_MSG
   : offTopic && offTopicCount >= 1 && offTopicCount < 3
@@ -163,10 +134,7 @@ function mediaFor(id) {
 }
 
 function parseUsd(s) {
-  const m = String(s || '')
-    .replace(/\./g, '')
-    .match(/(\d{4,7})/);
-  return m ? parseInt(m[1], 10) : null;
+  return icParsePrecioUsd(s);
 }
 
 function extractZona(text) {
@@ -199,66 +167,21 @@ function extractOperacion(text) {
 }
 
 function sugerirIds(stock, budgetUsd, zonaHint) {
-  const scored = [];
-  for (const r of stock) {
-    const id = pick(r, ['id', 'ID', 'codigo']);
-    const precio = parseUsd(pick(r, ['precio', 'Precio']));
-    const zona = pick(r, ['zona', 'Zona']).toLowerCase();
-    if (!id || !precio) continue;
-    let score = Math.abs(precio - (budgetUsd || precio));
-    if (budgetUsd && precio > budgetUsd * 1.18) score += 50000;
-    if (budgetUsd && precio < budgetUsd * 0.45) score += 30000;
-    if (zonaHint && zona.includes(zonaHint.split(' ')[0])) score -= 15000;
-    scored.push({ id, score });
-  }
-  scored.sort((a, b) => a.score - b.score);
-  return scored.slice(0, 3).map((x) => x.id);
+  return icSugerirIdsStock(stock, budgetUsd, zonaHint);
 }
 
 function sugerirIdsVariados(stock) {
-  const rows = [];
-  for (const r of stock) {
-    const id = pick(r, ['id', 'ID', 'codigo']);
-    const precio = parseUsd(pick(r, ['precio', 'Precio']));
-    const zona = pick(r, ['zona', 'Zona']).toLowerCase();
-    if (!id || !precio) continue;
-    rows.push({ id, precio, zona });
-  }
-  if (!rows.length) return [];
-  rows.sort((a, b) => a.precio - b.precio);
-  const picked = [];
-  const zonasUsadas = new Set();
-  for (const r of rows) {
-    if (picked.length >= 3) break;
-    const zonaKey = (r.zona || 'x').split(' ')[0];
-    if (!zonasUsadas.has(zonaKey)) {
-      picked.push(r.id);
-      zonasUsadas.add(zonaKey);
-    }
-  }
-  if (picked.length < 3) {
-    const tiers = [0, Math.floor(rows.length / 2), rows.length - 1];
-    for (const i of tiers) {
-      const id = rows[i]?.id;
-      if (id && !picked.includes(id)) picked.push(id);
-      if (picked.length >= 3) break;
-    }
-  }
-  for (const r of rows) {
-    if (picked.length >= 3) break;
-    if (!picked.includes(r.id)) picked.push(r.id);
-  }
-  return picked.slice(0, 3);
+  return icSugerirIdsVariados(stock);
 }
 
 let stockItems = stockItemsEarly;
 
 function rowToStockLine(r) {
-  const id = pick(r, ['id', 'ID', 'codigo']);
-  const tipo = pick(r, ['tipo', 'Tipo', 'tipologia']);
-  const zona = pick(r, ['zona', 'Zona', 'barrio']);
-  const precio = pick(r, ['precio', 'Precio', 'precio_usd']);
-  const operacion = pick(r, ['operacion', 'Operacion', 'tipo_operacion']) || 'venta';
+  const id = pick(r, ['id', 'ID', 'codigo', 'property_id']);
+  const tipo = pick(r, ['tipo', 'Tipo', 'tipologia', 'property_type']);
+  const zona = pick(r, ['zona', 'Zona', 'barrio', 'zone']);
+  const precio = pick(r, ['precio', 'Precio', 'precio_usd', 'price']);
+  const operacion = pick(r, ['operacion', 'Operacion', 'tipo_operacion', 'operation_type']) || 'venta';
   const desc = pick(r, ['descripcion', 'Descripcion', 'detalle']);
   const dorm = pick(r, ['dormitorios', 'Dormitorios', 'ambientes']);
   const m = mediaFor(id);
@@ -281,21 +204,22 @@ const presupuestoUsd = presupuestoUsdEarly;
 const zonaDetectada = clasif.zona || extractZona(msg) || extractZona(historialPrev) || '';
 const operacionDetectada =
   clasif.operacion || extractOperacion(msg) || extractOperacion(historialPrev) || '';
-const esAlquilerPresupuestoAlto =
-  operacionDetectada === 'alquiler' &&
-  Boolean(presupuestoUsd) &&
-  presupuestoUsd >= 15000;
-
 const esCurioso = clasif.modo_curioso;
 const pideOpciones =
   clasif.intencion === 'pedir_opciones' ||
   clasif.mostrar_stock ||
   esCurioso;
+const esAlquilerPresupuestoAlto =
+  operacionDetectada === 'alquiler' &&
+  Boolean(presupuestoUsd) &&
+  presupuestoUsd >= 15000 &&
+  !pideOpciones &&
+  !clasif.ya_aclaro_compra_alquiler;
 
 const debeMostrarPropiedades =
   stockItems.length > 0 &&
-  !esAlquilerPresupuestoAlto &&
-  clasif.mostrar_stock;
+  clasif.mostrar_stock &&
+  (!esAlquilerPresupuestoAlto || pideOpciones);
 
 const sugerenciasIds =
   stockItems.length > 0
@@ -441,7 +365,19 @@ Cliente: "alquiler 45000 usd godoy cruz"
 BIEN: "Con 45 mil dólares podemos mirar opciones de compra en Godoy Cruz. Buscás comprar o alquilar? Si es alquiler, el presupuesto mensual suele expresarse en pesos; contame un poco más y te oriento"
 MAL: "Uf, con 45 mil para alquiler no me cierra... ¿buscás alquilar o comprar?"
 
-Sin stock en zona/tope:
+Cliente: "80 mil dolares" / "80000 usd" / "80k"
+BIEN: intro corta + ###MOSTRAR_PROPIEDADES### con IDs reales del stock en ese rango (hay varias). PROHIBIDO decir que no tenés nada si hay IDs sugeridos.
+MAL: "no tengo nada por ese presupuesto"
+
+Cliente: (después de decir presupuesto) "a ver opciones" / "mostrame" / "pasame algo"
+BIEN: 1 frase intro + ###MOSTRAR_PROPIEDADES### ["MZA-014","MZA-021","MZA-007"] en la MISMA respuesta. El sistema manda fotos. NO repitas el párrafo de compra vs alquiler.
+MAL: volver a preguntar "buscás comprar o alquilar?" sin fichas
+
+Si YA preguntaste comprar o alquilar y el cliente pide opciones o da presupuesto otra vez:
+BIEN: mostrar 2-3 fichas YA. Asumí VENTA en USD.
+MAL: el mismo texto de aclaración otra vez
+
+Sin stock REAL (lista STOCK vacía o ningún ID sugerido):
 BIEN: "Ahora mismo no tengo nada en esa zona con ese tope, aflojamos un poco el presupuesto o miramos Capital?"
 
 STOCK (solo IDs de esta lista; nunca inventes):
@@ -458,7 +394,7 @@ MOSTRAR PROPIEDADES (estilo Casa Clic — OBLIGATORIO cuando recomiendes opcione
 ###FIN_MOSTRAR###
 (solo IDs válidos del stock; 1 a 3)
 - Después de las fotos el sistema manda cierre: "¿Cuál te llama más la atención?"
-${debeMostrarPropiedades && sugerenciasIds.length && !respuesta_forzada ? '- IDs sugeridos del stock: ' + JSON.stringify(sugerenciasIds) : ''}
+${sugerenciasIds.length && !respuesta_forzada ? '- IDs sugeridos del stock (OBLIGATORIO mostrar si el cliente dio presupuesto u opciones): ' + JSON.stringify(sugerenciasIds) + '\n- HAY STOCK que entra o se acerca a este pedido. PROHIBIDO decir que no tenés nada. Incluí ###MOSTRAR_PROPIEDADES### con esos IDs.' : ''}
 ${esCurioso && debeMostrarPropiedades && !respuesta_forzada ? '\nMODO CURIOSO (OBLIGATORIO): el cliente explora sin datos claros o pidió opciones directo. Intro fija: "Dale, te paso un par de opciones para que veas". Mostrá 2-3 fichas variadas YA con ###MOSTRAR_PROPIEDADES### en esta respuesta. PROHIBIDO preguntar zona/presupuesto/operación antes. Sin presionar con cuestionario. Una pregunta suave al cerrar (ej: "Alguna zona te cierra más?").\n' : ''}
 ${esAlquilerPresupuestoAlto && !respuesta_forzada ? '\nMODO ALQUILER VS COMPRA: presupuesto USD alto con "alquiler". Aclará compra vs alquiler. NO muestres propiedades todavía.\n' : ''}
 
@@ -483,7 +419,7 @@ TEMPERATURA:
 DATOS YA CARGADOS:
 ${JSON.stringify(datosPrev)}
 
-HISTORIAL:
+HISTORIAL COMPLETO (role+content, leé todo; no recortes mentalmente):
 ${historialBlock}
 ${formatearBloqueIntencionPrompt(clasif)}
 ${bloqueAprendizaje}
@@ -527,6 +463,8 @@ return [
       intencion_clasificador: clasif.intencion,
       confianza_clasificador: clasif.confianza,
       requiere_calificar: clasif.requiere_calificar,
+      bot_repite_sin_fichas: Boolean(clasif.bot_repite_sin_fichas),
+      ya_aclaro_compra_alquiler: Boolean(clasif.ya_aclaro_compra_alquiler),
     },
   },
 ];

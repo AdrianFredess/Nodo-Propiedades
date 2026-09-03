@@ -40,6 +40,9 @@ function extraerZonaDeTexto(texto) {
 
 function extraerOperacionDeTexto(texto) {
   const t = String(texto || '').toLowerCase();
+  if (/\b(comprar o alquilar|alquilar o comprar|busc[aá]s comprar)\b/i.test(t)) {
+    return '';
+  }
   if (/\b(alquil|rent|alquiler)\b/i.test(t)) return 'alquiler';
   if (/\b(compr|venta|vend|compra)\b/i.test(t)) return 'compra';
   return '';
@@ -92,7 +95,7 @@ function analizarHistorial(historialArr, datosPrev) {
 
   const temasYaCubiertos = [];
   const botsText = bots.join(' ').toLowerCase();
-  if (/\b(comprar o alquilar|compra vs alquiler|presupuesto mensual)\b/i.test(botsText)) {
+  if (/\b(comprar o alquilar|compra vs alquiler|presupuesto mensual|busc[aá]s comprar o alquilar|ya lo hablamos.*compra|entra en compra)\b/i.test(botsText)) {
     temasYaCubiertos.push('ya aclaraste compra vs alquiler');
   }
   if (/###MOSTRAR_PROPIEDADES###|te paso un par de opciones|mirá estas opciones/i.test(botsText)) {
@@ -172,9 +175,9 @@ function construirContextoAprendizaje(historialArr, datosPrev, msgActual) {
 
   const msg = String(msgActual || '').trim();
   if (msg && analisis.temasYaCubiertos.some((t) => t.includes('compra vs alquiler'))) {
-    if (/\b(alquil|compr|venta)\b/i.test(msg)) {
-      lineas.push('- Cliente sigue en tema operación: avanzá sin re-explicar todo desde cero');
-    }
+    lineas.push(
+      '- Ya aclaraste compra vs alquiler. Si pide opciones o insiste con presupuesto USD: mostrá fichas YA (###MOSTRAR_PROPIEDADES###). No repitas la aclaración.',
+    );
   }
 
   if (!lineas.length) {

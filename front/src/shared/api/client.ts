@@ -367,6 +367,9 @@ export function isJunkLeadKey(
     return true;
   }
   if (name === 'cliente test' || name.startsWith('prueba ')) return true;
+  if (name === 'cliente nuevo' || name === 'test user' || name === 'adrian') {
+    return true;
+  }
   // Nombres del seed histórico (si alguien los re-sembró en Sheets)
   if (
     name === 'carla méndez' ||

@@ -25,10 +25,36 @@ const META_AUTH = 'Bearer __SET_META_ACCESS_TOKEN__';
 
 const PROP_MEDIA = JSON.parse(fs.readFileSync(MEDIA_PATH, 'utf8'));
 const BOT_APRENDIZAJE = JSON.parse(fs.readFileSync(LEARNING_PATH, 'utf8'));
+const STOCK_CSV_PATH = path.join(ROOT, 'csv', 'Simulacion_30_Propiedades_Mendoza.csv');
+
+function stockFallbackJson() {
+  try {
+    const raw = fs.readFileSync(STOCK_CSV_PATH, 'utf8');
+    const lines = raw.split(/\r?\n/).filter(Boolean);
+    if (lines.length < 2) return '[]';
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const parts = lines[i].split(',');
+      if (parts.length < 5) continue;
+      const id = parts[0].trim();
+      const tipo = parts[1].trim();
+      const zona = parts[2].trim();
+      const precio = parts[3].trim();
+      const estado = parts[parts.length - 1].trim();
+      const descripcion = parts.slice(4, -1).join(',').trim();
+      if (!id) continue;
+      rows.push({ id, tipo, zona, precio, descripcion, estado, operacion: 'venta' });
+    }
+    return JSON.stringify(rows);
+  } catch (e) {
+    return '[]';
+  }
+}
 
 function snippet(name) {
   let code = fs.readFileSync(path.join(__dirname, 'snippets', name), 'utf8');
   code = code.replace(/__PROP_MEDIA_JSON__/g, JSON.stringify(PROP_MEDIA));
+  code = code.replace(/__STOCK_FALLBACK_JSON__/g, stockFallbackJson());
   return code;
 }
 
@@ -162,6 +188,61 @@ function patchNormalizer(wf) {
   const norm = wf.nodes.find((n) => n.name === 'Code - Normalizar WhatsApp');
   if (!norm) throw new Error('Code - Normalizar WhatsApp no encontrado');
   norm.parameters.jsCode = snippet('wa-normalizar-meta.js');
+}
+
+function patchAudioTranscription(wf) {
+  ensureNode(wf, 'wa-transcribir-audio', {
+    id: 'wa-transcribir-audio',
+    name: 'Transcribir Audio WA',
+    type: 'n8n-nodes-base.code',
+    typeVersion: 2,
+    position: [520, 300],
+    parameters: {
+      mode: 'runOnceForAllItems',
+      jsCode: snippet('wa-transcribir-audio.js'),
+    },
+  });
+
+  const ifMsg = wf.nodes.find((n) => n.name === 'IF - Tiene Mensaje');
+  if (ifMsg && ifMsg.parameters && ifMsg.parameters.conditions) {
+    ifMsg.parameters.conditions = {
+      options: {
+        caseSensitive: true,
+        leftValue: '',
+        typeValidation: 'loose',
+      },
+      combinator: 'or',
+      conditions: [
+        {
+          id: 'has-text',
+          leftValue: "={{ $json.mensaje || '' }}",
+          rightValue: '',
+          operator: {
+            type: 'string',
+            operation: 'notEmpty',
+            singleValue: true,
+          },
+        },
+        {
+          id: 'has-audio-fail',
+          leftValue: '={{ $json.es_audio_sin_transcripcion }}',
+          rightValue: true,
+          operator: {
+            type: 'boolean',
+            operation: 'true',
+            singleValue: true,
+          },
+        },
+      ],
+    };
+  }
+
+  wf.connections['Code - Normalizar WhatsApp'] = {
+    main: [[{ node: 'Transcribir Audio WA', type: 'main', index: 0 }]],
+  };
+  wf.connections['Transcribir Audio WA'] = {
+    main: [[{ node: 'IF - Tiene Mensaje', type: 'main', index: 0 }]],
+  };
 }
 
 function patchPrompts(wf) {
@@ -550,6 +631,7 @@ function patchAsesorNodes(wf) {
 function patchWorkflow(wf) {
   patchMetaWebhooks(wf);
   patchNormalizer(wf);
+  patchAudioTranscription(wf);
   applySheetIds(wf);
   patchLeadFlow(wf);
   patchPrompts(wf);
@@ -639,6 +721,7 @@ function substituteMetaEnv(wf) {
     __SET_META_PHONE_NUMBER_ID__: loadEnvValue('META_PHONE_NUMBER_ID', ''),
     __SET_META_ACCESS_TOKEN__: loadEnvValue('META_ACCESS_TOKEN', ''),
     __SET_META_VERIFY_TOKEN__: loadEnvValue('META_VERIFY_TOKEN', 'nodo2026'),
+    __SET_GROQ_API_KEY__: loadEnvValue('GROQ_API_KEY', ''),
     __SET_GOOGLE_SHEET_ID__: loadEnvValue(
       'GOOGLE_SHEET_ID',
       '1a84OL3Y-_ivb9c_dr-galXSM2tMiZtWy6rCJD8ZGLvQ',
