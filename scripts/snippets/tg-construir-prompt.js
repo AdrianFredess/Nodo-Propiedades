@@ -72,9 +72,25 @@ function extractZona(text) {
 
 function extractOperacion(text) {
   const t = String(text || '').toLowerCase();
+  // Preguntas del bot ("alquilar o comprar") no cuentan
+  if (/\b(comprar o alquilar|alquilar o comprar|busc[aá]s comprar|compra o alquiler|alquiler o venta)\b/i.test(t)) {
+    return '';
+  }
   if (/\b(alquil|rent)/i.test(t)) return 'alquiler';
   if (/\b(compr|venta|vend)/i.test(t)) return 'compra';
   return '';
+}
+
+function textoSoloUsuariosHistorial(historialArr) {
+  if (!Array.isArray(historialArr)) return '';
+  return historialArr
+    .filter((m) => {
+      const role = String((m && m.role) || '').toLowerCase();
+      return role === 'user' || role === 'cliente';
+    })
+    .map((m) => String((m && m.content) || ''))
+    .filter(Boolean)
+    .join('\n');
 }
 
 function extractPropiedadId(text, segId) {
@@ -315,14 +331,17 @@ if (Array.isArray(cachedHist) && cachedHist.length > historialJson.length) {
 const textoHistorial = historialJson
   .map((m) => String(m?.content || ''))
   .join('\n');
+const textoUsuariosHist = textoSoloUsuariosHistorial(historialJson);
 const textoCompleto = (textoHistorial + '\n' + textoUsuario).trim();
 
 let presupuestoUsd =
-  extractPresupuestoUsd(textoUsuario) || extractPresupuestoUsd(textoHistorial);
+  extractPresupuestoUsd(textoUsuario) || extractPresupuestoUsd(textoUsuariosHist);
 let zonaDetectada =
-  extractZona(textoUsuario) || extractZona(textoHistorial) || '';
+  extractZona(textoUsuario) || extractZona(textoUsuariosHist) || '';
+// NUNCA inferir operación desde texto del bot (historial completo):
+// "alquilar o comprar" del asistente marcaba alquiler y trababa el lead.
 let operacionDetectada =
-  extractOperacion(textoUsuario) || extractOperacion(textoHistorial) || '';
+  extractOperacion(textoUsuario) || extractOperacion(textoUsuariosHist) || '';
 
 const clasif = clasificarIntencionCliente(textoUsuario, textoHistorial, {
   stockDisponible: stockItems.length > 0,
@@ -342,6 +361,25 @@ if (esDiaNuevo) {
   zonaDetectada = clasif.zona || zonaDetectada;
   operacionDetectada = clasif.operacion || operacionDetectada;
 }
+// Default venta: presupuesto USD alto sin que el cliente diga alquiler ahora
+if (
+  !operacionDetectada &&
+  presupuestoUsd &&
+  presupuestoUsd >= 15000 &&
+  !/\b(alquil|rent|alquiler)\b/i.test(textoUsuario)
+) {
+  operacionDetectada = 'compra';
+}
+// Si el bot ya aclaró compra/alquiler y el cliente no dijo alquiler → compra
+if (
+  operacionDetectada === 'alquiler' &&
+  presupuestoUsd &&
+  presupuestoUsd >= 15000 &&
+  !/\b(alquil|rent|alquiler)\b/i.test(textoUsuario) &&
+  Boolean(clasif.ya_aclaro_compra_alquiler)
+) {
+  operacionDetectada = 'compra';
+}
 // HARD RULE: saludo puro (typos incluidos)  -> nunca stock / nunca heredar presupuesto
 const saludoPuro =
   (typeof icEsSaludoVacio === 'function' && icEsSaludoVacio(textoUsuario)) ||
@@ -349,6 +387,8 @@ const saludoPuro =
 if (saludoPuro) {
   presupuestoUsd = null;
   // no heredar zona/operación del historial para este turno
+  zonaDetectada = '';
+  operacionDetectada = '';
 }
 const esCurioso = clasif.modo_curioso && !esDiaNuevo && !saludoPuro;
 const pideOpcionesRaw =
@@ -712,11 +752,19 @@ const systemPrompt =
   '- Sin stock REAL (lista vacía): decilo natural y ofrecé alternativas. Si hay IDs sugeridos, SIEMPRE mostralos. Nunca prometas que "un asesor te contacta".\n\n' +
   'TONO Y ESTILO DE ESCRITURA (crítico, seguir siempre):\n' +
   '- Escribís como un asesor argentino real, de Mendoza, contestando por WhatsApp/Telegram desde el celular. No como un sistema, no como un CRM, no como soporte técnico.\n' +
-  '- Español informal de chat: NO uses tildes en palabras cortas de uso frecuente cuando estés escribiendo rápido y casual -- "que", "como", "mas", "dias", "tenes", "vez" se escriben SIN tilde la mayoría de las veces, igual que lo haría una persona tipeando en el celular. No apliques esto de forma forzada en cada palabra; que se note natural, no una regla mecánica.\n' +
+  '- Español informal de chat: NO uses tildes en palabras cortas de uso frecuente cuando estés escribiendo rápido y casual -- "que", "como", "mas", "dias", "tenes", "vez", "aca", "asi" se escriben SIN tilde la mayoría de las veces, igual que lo haría una persona tipeando en el celular. No apliques esto de forma forzada en cada palabra; que se note natural, no una regla mecánica.\n' +
   '- Nunca uses doble signo de exclamación o interrogación pegados a mitad de oración. Evitá abrir con "¡" salvo que sea genuinamente una alegría puntual.\n' +
+  '- Puntuación mínima: no sobrecargues de comas ni puntos donde no hacen falta.\n' +
   '- 1 a 3 oraciones por mensaje. Si necesitás decir más, partilo en dos mensajes en vez de uno largo.\n' +
   '- Nunca repitas la misma estructura de mensaje dos turnos seguidos (no uses siempre "Dale, te paso ...", variá la entrada).\n' +
   '- No uses muletillas de relleno como "un par", "un par de", "digamos", "o sea", "tipo", "onda", "viste". Si la oración las necesita para sonar natural, replanteala sin esa palabra en vez de buscarle un reemplazo -- directamente se elimina, no se sustituye.\n' +
+  '\n' +
+  'CONOCIMIENTO DEL RUBRO (importante):\n' +
+  '- Podes explicar con soltura lo GENERAL del negocio inmobiliario en Mendoza: que es una seña, diferencia alquiler vs temporario, que es una escritura, que suelen existir gastos aparte del precio (comision, sellos, escritura, expensas), formas de pago/financiacion habituales, por que ciertas zonas se buscan mas en terminos generales.\n' +
+  '- Eso es conocimiento general: respondelo vos, corto y claro. NO digas "consultá con un asesor" para algo que un asesor de chat explicaria en dos frases.\n' +
+  '- PROHIBIDO inventar cifras: nada de "5%", "10%", "3% de comision", montos en pesos/USD, plazos exactos, ni "usualmente X%" si no esta escrito en POLITICAS DE PAGO o STOCK. Habla en cualitativo ("un porcentaje del precio", "comision inmobiliaria", "gastos de escritura y sellos") y, si piden el numero exacto de Nodo, usa POLITICAS o decí que lo confirmas segun la operacion.\n' +
+  '- DATO ESPECIFICO de una operacion o propiedad: SOLO si esta en STOCK o POLITICAS. Si no esta, no inventes.\n' +
+  '- Si la pregunta mezcla general + especifico: explica lo general sin numeros inventados; el numero concreto solo de politicas/stock.\n' +
   '\n' +
   'FRASES PROHIBIDAS (nunca las uses, sin excepción):\n' +
   '"Entiendo tu consulta" / "Con gusto te ayudo" / "Quedo atento" / "Cuando quieras contame" /\n' +
@@ -734,6 +782,11 @@ const systemPrompt =
   '- En vez de "Alguna de estas te llama?" -> "Cual de estas te cierra mas?" o "Te gusta alguna o seguimos mirando?"\n' +
   '- En vez de "Te dejo estas opciones" -> una linea que reaccione a lo que el cliente dijo, por ejemplo si pidio depto de 2 ambientes hasta 100k: "Tengo opciones que entran justo en ese presupuesto"\n' +
   '- En vez de "En unos dias te escribo" (SIMPLE-04, no es este nodo pero aplica el mismo criterio) -> "Seguis mirando o ya definiste?"\n' +
+  '\n' +
+  'MEMORIA (crítico — no hacer repetir al cliente):\n' +
+  '- Si DATOS CONOCIDOS ya tiene presupuesto, zona u operación, NUNCA los vuelvas a pedir.\n' +
+  '- Si el cliente dice "ya te dije" / "te dije" / repite el monto: reconocé el dato y avanzá (fichas o una sola pregunta nueva).\n' +
+  '- Default operación = venta/compra en USD. Solo tratés como alquiler si el CLIENTE lo dijo claro en sus mensajes (no por preguntas tuyas en el historial).\n' +
   '\n' +
   'SALUDO (primer contacto del dia o de la conversacion):\n' +
   '"Buenas, soy Matias de Nodo Propiedades. En que puedo ayudarte?"\n' +

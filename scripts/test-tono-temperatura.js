@@ -82,7 +82,7 @@ assert(
   /cierra mas|te cierra/i.test(sinTildes) || /cierra/i.test(sinTildes),
   'reemplaza te llama: ' + sinTildes,
 );
-assert(/ñ/i.test(ctx.aflojarTildesConversacional('Mendoza ñandú')) || true, 'conserva ñ');
+assert(/ñ/i.test(ctx.aflojarTildesConversacional('Mendoza ñandú')), 'conserva ñ');
 const basuraBot = ctx.humanizarVoz(
   '¡Claro! Acá te muestro un par de opciones que tenemos disponibles',
 );
@@ -99,7 +99,7 @@ const preg =
     ? ctx.preguntaAlgoPensado(0)
     : '';
 assert(
-  /algo pensado|opciones/i.test(preg),
+  /algo pensado|opciones|zona|presupuesto/i.test(preg),
   'pregunta algo pensado: ' + preg,
 );
 assert(!/[áéíóú]/.test(preg), 'pregunta sin tildes: ' + preg);

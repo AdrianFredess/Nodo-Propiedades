@@ -38,9 +38,25 @@ let respuestaCompleta =
 if (groqFailed && !respuestaCompleta) respuestaCompleta = '';
 const FALLBACK_GROQ =
   'Perdon, se corto un toque. Me repetis que necesitas?';
+// Legacy: ya no se manda al cliente (silencio + cola). Se mantiene por compat.
 const FALLBACK_RATE_LIMIT =
   'Dame un segundo que se me trabo, ya te contesto';
-// Si Groq falló pero el clasificador ya pidió stock, forzar bloque MOSTRAR para el fallback
+
+function parseRetryAfterSec(errText) {
+  const s = String(errText || '');
+  const mSec = s.match(/try again in\s*([\d.]+)\s*s/i);
+  if (mSec) return Math.max(5, Math.ceil(Number(mSec[1])));
+  const mMs = s.match(/try again in\s*([\d.]+)\s*ms/i);
+  if (mMs) return Math.max(5, Math.ceil(Number(mMs[1]) / 1000));
+  return 45;
+}
+
+const retryAfterSec = isRateLimit ? parseRetryAfterSec(groqErrText) : 0;
+const esRetryGroq = Boolean(
+  groqData.es_retry_groq || promptData.es_retry_groq || $json.es_retry_groq,
+);
+
+// Si Groq falló pero el clasificador ya pidió stock, forzar bloque MOSTRAR (entrega completa sin LLM)
 if (
   groqFailed &&
   !respuestaCompleta &&
@@ -60,11 +76,12 @@ if (
       'Mira estas\n###MOSTRAR_PROPIEDADES###\n' +
       JSON.stringify(idsForce.slice(0, 3)) +
       '\n###FIN_MOSTRAR###';
-  } else {
-    respuestaCompleta = isRateLimit ? FALLBACK_RATE_LIMIT : FALLBACK_GROQ;
+  } else if (!isRateLimit) {
+    respuestaCompleta = FALLBACK_GROQ;
   }
-} else if (groqFailed && !respuestaCompleta) {
-  respuestaCompleta = isRateLimit ? FALLBACK_RATE_LIMIT : FALLBACK_GROQ;
+  // rate limit sin IDs → silencio (respuesta vacía); el retry arma la respuesta completa después
+} else if (groqFailed && !respuestaCompleta && !isRateLimit) {
+  respuestaCompleta = FALLBACK_GROQ;
 }
 
 const chatId = String(promptData.chat_id || '');
@@ -73,6 +90,15 @@ const nombreUsuario = promptData.nombre_usuario;
 let historialJson = Array.isArray(promptData.historial_json)
   ? promptData.historial_json
   : [];
+// Retry en la misma ejecución: usar historial vivo (no el snapshot de Construir Prompt)
+try {
+  const sdHist0 = $getWorkflowStaticData('global');
+  const liveHist =
+    sdHist0.historialByChat && sdHist0.historialByChat[chatId];
+  if (Array.isArray(liveHist) && liveHist.length >= historialJson.length) {
+    historialJson = liveHist;
+  }
+} catch (eHist0) {}
 const turno = promptData.turno;
 const rowExists = promptData.row_exists;
 const propiedadPrevRaw = String(
@@ -840,41 +866,79 @@ if (
   }
 }
 
-// Rate limit: programar reenvio de ficha/link si el cliente no escribe en ~1 min
+// Rate limit: silencio + reintento Groq completo (cola justa). Sin "dame un segundo".
 let reenvioRateLimit = false;
 let reenvioTipo = '';
 let reenvioIds = [];
 let reenvioLink = '';
+let retryGroq = false;
+let waitRetrySec = 0;
+let notifyOwnerGroq = false;
+const MAX_GROQ_RETRIES = 4;
+const MAX_GROQ_WAIT_MS = 5 * 60 * 1000;
+
 if (isRateLimit) {
-  if (propiedadesMostrar.length || sugerenciasIds.length) {
-    reenvioRateLimit = true;
-    reenvioTipo = 'fichas';
-    reenvioIds = (propiedadesMostrar.length
-      ? propiedadesMostrar
-      : sugerenciasIds
-    ).slice(0, 3);
-  } else if (citaLinkParse || solicitudVisita || pideVisitaTxt) {
-    reenvioRateLimit = true;
-    reenvioTipo = 'link';
-    reenvioLink = citaLinkParse;
-  } else if (idDetalle) {
-    reenvioRateLimit = true;
-    reenvioTipo = 'fichas';
-    reenvioIds = [idDetalle];
-  }
   try {
     const sdRl = $getWorkflowStaticData('global');
-    if (!sdRl.pendienteReenvio) sdRl.pendienteReenvio = {};
-    if (reenvioRateLimit) {
-      sdRl.pendienteReenvio[chatId] = {
-        at: Date.now(),
-        tipo: reenvioTipo,
-        ids: reenvioIds,
-        link: reenvioLink,
-        chat_id: chatId,
-      };
+    if (!sdRl.groqTokenCtrl) sdRl.groqTokenCtrl = {};
+    const ctrl = sdRl.groqTokenCtrl;
+    const bumpMs = Math.max(retryAfterSec, 20) * 1000;
+    ctrl.nextSlotAt = Math.max(Number(ctrl.nextSlotAt) || 0, Date.now() + bumpMs);
+
+    if (!sdRl.groqRetry) sdRl.groqRetry = {};
+    const st = sdRl.groqRetry[chatId] || { attempts: 0, since: Date.now() };
+    if (!st.since) st.since = Date.now();
+    st.attempts = Number(st.attempts || 0) + 1;
+    sdRl.groqRetry[chatId] = st;
+
+    const elapsed = Date.now() - Number(st.since);
+    // Entrega real = fichas o link. Texto stub de 429 NO cuenta.
+    const tieneEntrega =
+      Boolean(propiedadesMostrar.length) || Boolean(String(citaLinkParse || '').trim());
+
+    if (tieneEntrega) {
+      // Ya hay fichas/link → no reintentar Groq; limpiar contador
+      delete sdRl.groqRetry[chatId];
+      if (propiedadesMostrar.length || sugerenciasIds.length) {
+        reenvioRateLimit = false;
+        reenvioTipo = 'fichas';
+        reenvioIds = (propiedadesMostrar.length
+          ? propiedadesMostrar
+          : sugerenciasIds
+        ).slice(0, 3);
+      } else if (citaLinkParse) {
+        reenvioTipo = 'link';
+        reenvioLink = citaLinkParse;
+      }
+    } else if (st.attempts <= MAX_GROQ_RETRIES && elapsed < MAX_GROQ_WAIT_MS) {
+      // Silencio al cliente; esperar TPM y rellamar Groq con el mismo prompt
+      skipReply = true;
+      retryGroq = true;
+      waitRetrySec = Math.max(retryAfterSec, 20);
+      respuestaBot = '';
+      mensajeCierre = '';
+      mensajesExtra = [];
+      propiedadesMostrar = [];
+    } else {
+      // Agotado: avisar dueño YA y recién ahí un fallback mínimo al cliente
+      delete sdRl.groqRetry[chatId];
+      notifyOwnerGroq = true;
+      skipReply = false;
+      retryGroq = false;
+      respuestaBot = FALLBACK_GROQ;
+      mensajeCierre = '';
+      mensajesExtra = [];
     }
-  } catch (eRl) {}
+  } catch (eRl) {
+    notifyOwnerGroq = true;
+    skipReply = false;
+    respuestaBot = FALLBACK_GROQ;
+  }
+} else {
+  try {
+    const sdOk = $getWorkflowStaticData('global');
+    if (sdOk.groqRetry && sdOk.groqRetry[chatId]) delete sdOk.groqRetry[chatId];
+  } catch (eOk) {}
 }
 
 if (!skipReply && !esOffTopic) {
@@ -897,12 +961,24 @@ if (!skipReply && !esOffTopic) {
 }
 
 const tsHist = new Date().toISOString();
-historialJson.push(
-  enriquecerEntradaHistorial(
-    { role: 'user', content: textoUsuario, ts: tsHist },
-    { intent_detected: leadData.operacion || '' },
-  ),
-);
+const lastHist = historialJson.length
+  ? historialJson[historialJson.length - 1]
+  : null;
+const lastRole = String((lastHist && lastHist.role) || '').toLowerCase();
+const lastContent = String(
+  (lastHist && (lastHist.content || lastHist.texto)) || '',
+).trim();
+const userYaEnHistorial =
+  (lastRole === 'user' || lastRole === 'cliente') &&
+  lastContent === String(textoUsuario || '').trim();
+if (!userYaEnHistorial) {
+  historialJson.push(
+    enriquecerEntradaHistorial(
+      { role: 'user', content: textoUsuario, ts: tsHist },
+      { intent_detected: leadData.operacion || '' },
+    ),
+  );
+}
 if (!skipReply && respuestaBot) {
   const analisisPost = analizarHistorial(historialJson.slice(0, -1), {
     operacion: leadData.operacion || '',
@@ -947,9 +1023,9 @@ if (!skipReply && !esOffTopic) {
   if (soloBasura) {
     if (propiedadesMostrar.length) {
       respuestaBot = 'Mira estas';
-    } else if (isRateLimit) {
-      respuestaBot = FALLBACK_RATE_LIMIT;
-    } else if (groqFailed) {
+    } else if (isRateLimit && !retryGroq) {
+      respuestaBot = notifyOwnerGroq ? FALLBACK_GROQ : FALLBACK_RATE_LIMIT;
+    } else if (groqFailed && !retryGroq) {
       respuestaBot = FALLBACK_GROQ;
     } else if (esSaludoSimple(textoUsuario) || esSaludoTurno) {
       respuestaBot =
@@ -966,7 +1042,11 @@ if (!skipReply && !esOffTopic) {
 const PROMESA_ENTREGA_RE =
   /\b(te muestro|ah[ií] van|aca te (dejo|muestro)|ac[aá] te (dejo|muestro)|mir[aá] estas|te paso|te mando|te env[ií]o|te dejo estas|ahora te (paso|mando|muestro))\b/i;
 if (!propiedadesMostrar.length && PROMESA_ENTREGA_RE.test(String(respuestaBot || ''))) {
-  if (isRateLimit) {
+  if (isRateLimit && retryGroq) {
+    respuestaBot = '';
+  } else if (isRateLimit && notifyOwnerGroq) {
+    respuestaBot = FALLBACK_GROQ;
+  } else if (isRateLimit) {
     respuestaBot = FALLBACK_RATE_LIMIT;
   } else if (sugerenciasIds.length && (forzarStockClasificador || debeMostrar || pideStockTexto)) {
     propiedadesMostrar = sugerenciasIds.slice(0, 3);
@@ -1066,9 +1146,11 @@ return [
       reenvio_tipo: reenvioTipo,
       reenvio_ids: JSON.stringify(reenvioIds),
       reenvio_link: reenvioLink,
+      retry_groq: retryGroq,
+      wait_retry_sec: waitRetrySec,
+      notify_owner_groq: notifyOwnerGroq,
       needs_advisor_action: Boolean(
-        isRateLimit ||
-          reenvioRateLimit ||
+        notifyOwnerGroq ||
           scoreTemp.bot_paused ||
           forzarHandoffVisita,
       ),

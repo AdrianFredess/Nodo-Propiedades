@@ -6,6 +6,7 @@
 /**
  * Strip agresivo de tildes en copy outbound (TG/WA).
  * Conserva ñ/Ñ. Todo lo demas (áéíóúü) sale sin tilde.
+ * Chat casual de celular: que/como/mas/tenes/dias sin tilde.
  */
 function aflojarTildesConversacional(texto) {
   return String(texto || '')

@@ -28,7 +28,7 @@ const IC_PERSONAL_CLARO =
   /\b(hermano|hermana|mam[aá]|pap[aá]|salimos|tomamos|llamame al personal|no es por una propiedad|netflix|partido de f[uú]tbol)\b/i;
 
 const IC_INMO_KEYWORDS =
-  /\b(depto|departamento|casa|lote|local|oficina|alquiler|alquil|comprar|compra|venta|vender|propiedad|propiedades|inmueble|inmobiliaria|presupuesto|habitaci[oó]n|dormitorio|ambientes|m2|zona|barrio|visita|usd|u\$s|dolar|mza-\d+|nodo|expensas|cochera|escritur)\b/i;
+  /\b(depto|departamento|casa|lote|local|oficina|alquiler|alquil|comprar|compra|venta|vender|propiedad|propiedades|inmueble|inmobiliaria|presupuesto|habitaci[oó]n|dormitorio|ambientes|m2|zona|barrio|visita|usd|u\$s|dolar|mza-\d+|nodo|expensas|cochera|escritur|seña|senia|financi|hipotec|comisi[oó]n|sellos|boleto|escritura|temporario|pago|pesos)\b/i;
 
 const IC_PEDIR_OPCIONES =
   /\b(que ten[eé]s|qué ten[eé]s|que hay|qué hay|ten[eé]s algo|hay algo|algo en|algo por|que venden|qué venden|mostrame|mostrá|mandame|mandá|pasame|pasá|opciones|a ver(?: opciones| entonces| pues| nomas| nom[aá]s| que ten[eé]s| qu[eé] ten[eé]s| q tenes| qe tenes)?|ver opciones|catalogo|catálogo|enviame|enviá|enviame lo que tengas|envi[aá] lo que tengas|enviame lo q tengas|enviame lo que tenga|mandame lo que tengas|mand[aá] lo que tengas|mandame opciones|enviame opciones|pasame opciones|pasame lo que tengas|dame lo que tengas|enviame lo que haya|mandame lo que haya|pasame lo que haya|dame lo que haya|algo para ver|ver algo|lo que tengas|lo que tengan|lo que haya|mandame algo|mostrame algo|sorprendeme|sorprendeme|mostr[aá].*primero|primero.*mostr|mostr[aá].*algo|mand[aá].*algo|mostrame lo que haya|tirame variedad|tirame opciones)\b/i;

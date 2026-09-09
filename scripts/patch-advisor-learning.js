@@ -496,7 +496,7 @@ function wireTgFichasDelivery(wf) {
     main: [[{ node: 'Telegram Responder', type: 'main', index: 0 }], []],
   };
 
-  // Reenvio tras rate limit (~60s) si el cliente no escribio
+  // Reintento Groq tras 429 (silencio) + rescate fichas legacy
   const waitRl = {
     id: 'tg-wait-rate-limit',
     name: 'Wait Reenvio Rate Limit',
@@ -504,7 +504,11 @@ function wireTgFichasDelivery(wf) {
     typeVersion: 1.1,
     position: [2240, 520],
     webhookId: 'tg-wait-rl-' + Date.now().toString(36),
-    parameters: { resume: 'timeInterval', amount: 60, unit: 'seconds' },
+    parameters: {
+      resume: 'timeInterval',
+      amount: '={{ Math.max(5, Number($json.wait_retry_sec) || 45) }}',
+      unit: 'seconds',
+    },
   };
   const codeRl = {
     id: 'tg-code-reenvio-rl',
@@ -513,6 +517,35 @@ function wireTgFichasDelivery(wf) {
     typeVersion: 2,
     position: [2460, 520],
     parameters: { jsCode: snippet('tg-reenvio-rate-limit.js') },
+  };
+  const restoreRetry = {
+    id: 'tg-restore-retry-groq',
+    name: 'Restore Retry Groq',
+    type: 'n8n-nodes-base.code',
+    typeVersion: 2,
+    position: [2460, 360],
+    parameters: { jsCode: snippet('tg-restore-retry-groq.js') },
+  };
+  const ifRetryGroq = {
+    id: 'tg-if-retry-groq',
+    name: 'IF Retry Groq',
+    type: 'n8n-nodes-base.if',
+    typeVersion: 2.2,
+    position: [2032, 400],
+    parameters: {
+      conditions: {
+        combinator: 'and',
+        conditions: [
+          {
+            id: 'rg',
+            leftValue: '={{ Boolean($json.retry_groq) }}',
+            rightValue: true,
+            operator: { type: 'boolean', operation: 'equals' },
+          },
+        ],
+        options: { version: 2, typeValidation: 'loose' },
+      },
+    },
   };
   const ifRl = {
     id: 'tg-if-reenvio-rl',
@@ -583,16 +616,72 @@ function wireTgFichasDelivery(wf) {
         "const j=$input.first().json||{}; const ids=j.photo_ids||[]; const chat=String(j.chat_id||''); const PROP_MEDIA=__PROP_MEDIA_JSON__; const out=[]; for (const id of ids.slice(0,3)) { const m=PROP_MEDIA[id]; if(!m||!m.fotos||!m.fotos.length) continue; out.push({json:{chat_id:chat,photo_url:m.fotos[0],caption:String(m.caption||m.titulo||id).slice(0,900),parse_mode:'HTML',propiedad_id:id}}); } if(!out.length) return [{json:{skip:true}}]; out[out.length-1].json.is_last_photo=true; return out;",
     },
   };
+  const ifNotifyOwnerRl = {
+    id: 'tg-if-notify-owner-rl',
+    name: 'IF Notify Owner Groq',
+    type: 'n8n-nodes-base.if',
+    typeVersion: 2.2,
+    position: [2032, 640],
+    parameters: {
+      conditions: {
+        combinator: 'and',
+        conditions: [
+          {
+            id: 'no',
+            leftValue: '={{ Boolean($json.notify_owner_groq) }}',
+            rightValue: true,
+            operator: { type: 'boolean', operation: 'equals' },
+          },
+        ],
+        options: { version: 2, typeValidation: 'loose' },
+      },
+    },
+  };
+  const existingOwner = wf.nodes.find((n) => n.name === 'Telegram Alerta Owner');
+  const tgOwnerRl = {
+    id: 'tg-alert-owner-rl',
+    name: 'Telegram Alerta Owner RL',
+    type: 'n8n-nodes-base.httpRequest',
+    typeVersion: existingOwner?.typeVersion || 4.4,
+    position: [2240, 640],
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url:
+        (existingOwner?.parameters && existingOwner.parameters.url) ||
+        'https://api.telegram.org/bot__SET_TELEGRAM_BOT_TOKEN__/sendMessage',
+      sendBody: true,
+      specifyBody: 'json',
+      jsonBody:
+        "={{ JSON.stringify({ chat_id: '__SET_OWNER_TELEGRAM_CHAT_ID__', text: '⚠️ Groq sin tokens / fallo duro\\nChat: ' + String($json.chat_id || '') + '\\nCliente: ' + String($json.nombre || $json.nombre_usuario || '') + '\\nMsg: ' + String($json.texto_usuario || '').slice(0,200) + '\\nRevisá el chat o subí TPM (Developer).' }) }}",
+      options: {},
+    },
+  };
 
   ensureNode(wf, 'tg-wait-rate-limit', waitRl);
   ensureNode(wf, 'tg-code-reenvio-rl', codeRl);
+  ensureNode(wf, 'tg-restore-retry-groq', restoreRetry);
+  ensureNode(wf, 'tg-if-retry-groq', ifRetryGroq);
   ensureNode(wf, 'tg-if-reenvio-rl', ifRl);
   ensureNode(wf, 'tg-if-reenvio-fichas', ifRlFichas);
   ensureNode(wf, 'tg-send-reenvio-txt', tgRlTxt);
   ensureNode(wf, 'tg-code-reenvio-fotos', codeRlFotos);
+  ensureNode(wf, 'tg-if-notify-owner-rl', ifNotifyOwnerRl);
+  ensureNode(wf, 'tg-alert-owner-rl', tgOwnerRl);
   const overrideNode = wf.nodes.find((n) => n.name === 'Override Fotos Reenvio RL');
   if (overrideNode) {
     overrideNode.parameters.jsCode = snippet('tg-reenvio-fotos-override.js');
+  }
+  const restoreNode = wf.nodes.find((n) => n.name === 'Restore Retry Groq');
+  if (restoreNode?.parameters) {
+    restoreNode.parameters.jsCode = snippet('tg-restore-retry-groq.js');
+  }
+  const waitNode = wf.nodes.find((n) => n.name === 'Wait Reenvio Rate Limit');
+  if (waitNode?.parameters) {
+    waitNode.parameters.amount =
+      '={{ Math.max(5, Number($json.wait_retry_sec) || 45) }}';
+    waitNode.parameters.unit = 'seconds';
+    waitNode.parameters.resume = 'timeInterval';
   }
 
   const ifRlTrigger = {
@@ -619,15 +708,78 @@ function wireTgFichasDelivery(wf) {
   ensureNode(wf, 'tg-if-programar-rl', ifRlTrigger);
 
   const po2 = wf.connections['Parsear Respuesta']?.main?.[0] || [];
+  if (!po2.some((c) => c.node === 'IF Retry Groq')) {
+    po2.push({ node: 'IF Retry Groq', type: 'main', index: 0 });
+  }
   if (!po2.some((c) => c.node === 'IF Programar Reenvio RL')) {
     po2.push({ node: 'IF Programar Reenvio RL', type: 'main', index: 0 });
   }
+  if (!po2.some((c) => c.node === 'IF Notify Owner Groq')) {
+    po2.push({ node: 'IF Notify Owner Groq', type: 'main', index: 0 });
+  }
   wf.connections['Parsear Respuesta'] = { main: [po2] };
+
+  wf.connections['IF Retry Groq'] = {
+    main: [[{ node: 'Wait Reenvio Rate Limit', type: 'main', index: 0 }], []],
+  };
+  // Wait bifurca: si venía de retry_groq → Restore → HTTP Groq; si reenvio fichas → Preparar
+  // Simplificación: Wait siempre va a un router Code
+  const routeAfterWait = {
+    id: 'tg-route-after-wait-rl',
+    name: 'Route After Wait RL',
+    type: 'n8n-nodes-base.code',
+    typeVersion: 2,
+    position: [2350, 440],
+    parameters: {
+      jsCode: `const j = $input.first().json || {};
+let parsed = {};
+try { parsed = $('Parsear Respuesta').first().json || {}; } catch (e) { parsed = j; }
+if (parsed.retry_groq || j.retry_groq) {
+  let prompt = {};
+  try { prompt = $('Construir Prompt').first().json || {}; } catch (e2) { prompt = {}; }
+  return [{ json: { ...prompt, es_retry_groq: true, retry_groq: true, wait_retry_sec: Number(parsed.wait_retry_sec || j.wait_retry_sec) || 45, _route: 'retry_groq', messages: prompt.messages || [] } }];
+}
+return [{ json: { ...parsed, ...j, _route: 'reenvio' } }];`,
+    },
+  };
+  const ifRouteRetry = {
+    id: 'tg-if-route-retry',
+    name: 'IF Route Retry Groq',
+    type: 'n8n-nodes-base.if',
+    typeVersion: 2.2,
+    position: [2550, 440],
+    parameters: {
+      conditions: {
+        combinator: 'and',
+        conditions: [
+          {
+            id: 'rt',
+            leftValue: '={{ $json._route }}',
+            rightValue: 'retry_groq',
+            operator: { type: 'string', operation: 'equals' },
+          },
+        ],
+        options: { version: 2 },
+      },
+    },
+  };
+  ensureNode(wf, 'tg-route-after-wait-rl', routeAfterWait);
+  ensureNode(wf, 'tg-if-route-retry', ifRouteRetry);
+
   wf.connections['IF Programar Reenvio RL'] = {
     main: [[{ node: 'Wait Reenvio Rate Limit', type: 'main', index: 0 }], []],
   };
   wf.connections['Wait Reenvio Rate Limit'] = {
-    main: [[{ node: 'Preparar Reenvio Rate Limit', type: 'main', index: 0 }]],
+    main: [[{ node: 'Route After Wait RL', type: 'main', index: 0 }]],
+  };
+  wf.connections['Route After Wait RL'] = {
+    main: [[{ node: 'IF Route Retry Groq', type: 'main', index: 0 }]],
+  };
+  wf.connections['IF Route Retry Groq'] = {
+    main: [
+      [{ node: 'HTTP Groq', type: 'main', index: 0 }],
+      [{ node: 'Preparar Reenvio Rate Limit', type: 'main', index: 0 }],
+    ],
   };
   wf.connections['Preparar Reenvio Rate Limit'] = {
     main: [[{ node: 'IF Reenvio Rate Limit', type: 'main', index: 0 }]],
@@ -643,6 +795,9 @@ function wireTgFichasDelivery(wf) {
   };
   wf.connections['Override Fotos Reenvio RL'] = {
     main: [[{ node: 'Telegram Enviar Foto', type: 'main', index: 0 }]],
+  };
+  wf.connections['IF Notify Owner Groq'] = {
+    main: [[{ node: 'Telegram Alerta Owner RL', type: 'main', index: 0 }], []],
   };
 }
 
@@ -785,10 +940,9 @@ function setGroqMaxTokens(wf) {
       (node.name && /Groq/i.test(node.name) && node.type === 'n8n-nodes-base.httpRequest')
     ) {
       node.onError = 'continueRegularOutput';
-      // Reintento 429: 1 retry tras ~3s (n8n no lee retry-after; valor fijo razonable)
-      node.retryOnFail = true;
-      node.maxTries = 2;
-      node.waitBetweenTries = 3000;
+      // Cola justa maneja el spacing; no quemar TPM con retry a 3s
+      node.retryOnFail = false;
+      node.maxTries = 1;
       if (!node.parameters) node.parameters = {};
       if (!node.parameters.options) node.parameters.options = {};
       if (!node.parameters.options.response) node.parameters.options.response = {};
@@ -902,16 +1056,77 @@ function patchTg(wf) {
         "const p=$input.first().json||{}; return [{ json: { choices: [{ message: { content: '' } }], skip_reply: true, ...p } }];",
     },
   };
+  const colaTokens = {
+    id: 'tg-cola-tokens-groq',
+    name: 'Cola Tokens Groq',
+    type: 'n8n-nodes-base.code',
+    typeVersion: 2,
+    position: [1120, 304],
+    parameters: { jsCode: snippet('tg-cola-tokens-groq.js') },
+  };
+  const ifWaitCola = {
+    id: 'tg-if-wait-cola',
+    name: 'IF Wait Cola Tokens',
+    type: 'n8n-nodes-base.if',
+    typeVersion: 2.2,
+    position: [1280, 304],
+    parameters: {
+      conditions: {
+        combinator: 'and',
+        conditions: [
+          {
+            id: 'w',
+            leftValue: '={{ Number($json.wait_cola_sec) || 0 }}',
+            rightValue: 0,
+            operator: { type: 'number', operation: 'gt' },
+          },
+        ],
+        options: { version: 2, typeValidation: 'loose' },
+      },
+    },
+  };
+  const waitCola = {
+    id: 'tg-wait-cola-tokens',
+    name: 'Wait Cola Tokens',
+    type: 'n8n-nodes-base.wait',
+    typeVersion: 1.1,
+    position: [1460, 240],
+    webhookId: 'tg-wait-cola-' + Date.now().toString(36),
+    parameters: {
+      resume: 'timeInterval',
+      amount: '={{ Math.max(1, Number($json.wait_cola_sec) || 1) }}',
+      unit: 'seconds',
+    },
+  };
   ensureNode(wf, 'tg-if-llamar-ia', ifLlamar);
   ensureNode(wf, 'tg-stub-groq-skip', stub);
+  ensureNode(wf, 'tg-cola-tokens-groq', colaTokens);
+  ensureNode(wf, 'tg-if-wait-cola', ifWaitCola);
+  ensureNode(wf, 'tg-wait-cola-tokens', waitCola);
+  // Refresh snippets on existing nodes
+  const colaNode = wf.nodes.find((n) => n.name === 'Cola Tokens Groq');
+  if (colaNode?.parameters) colaNode.parameters.jsCode = snippet('tg-cola-tokens-groq.js');
+
   wf.connections['Construir Prompt'] = {
     main: [[{ node: 'IF Llamar IA TG', type: 'main', index: 0 }]],
   };
   wf.connections['IF Llamar IA TG'] = {
     main: [
-      [{ node: 'HTTP Groq', type: 'main', index: 0 }],
+      [{ node: 'Cola Tokens Groq', type: 'main', index: 0 }],
       [{ node: 'Stub Groq Skip', type: 'main', index: 0 }],
     ],
+  };
+  wf.connections['Cola Tokens Groq'] = {
+    main: [[{ node: 'IF Wait Cola Tokens', type: 'main', index: 0 }]],
+  };
+  wf.connections['IF Wait Cola Tokens'] = {
+    main: [
+      [{ node: 'Wait Cola Tokens', type: 'main', index: 0 }],
+      [{ node: 'HTTP Groq', type: 'main', index: 0 }],
+    ],
+  };
+  wf.connections['Wait Cola Tokens'] = {
+    main: [[{ node: 'HTTP Groq', type: 'main', index: 0 }]],
   };
   wf.connections['Stub Groq Skip'] = {
     main: [[{ node: 'Parsear Respuesta', type: 'main', index: 0 }]],
