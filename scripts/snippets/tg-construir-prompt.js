@@ -814,7 +814,7 @@ const systemPrompt =
   '- Propiedad en seguimiento: ' +
   (refSeg || 'ninguna') +
   (consultaRepetida
-    ? '\n- REPETICI-N DETECTADA: El cliente parece haber repetido una consulta similar. No repitas la misma respuesta tal cual. Reformulá o preguntale qué no le quedó resuelto.'
+    ? '\n- REPETICION DETECTADA: El cliente repitio la consulta. NO reformules ni preguntes preferencias. Mostra fichas YA con ###MOSTRAR_PROPIEDADES### (IDs reales del STOCK). Intro corta distinta a la del turno anterior.'
     : '') +
   (ultimoBotHistorial
     ? '\n- -aLTIMA RESPUESTA TUYA (NO repetir igual): "' +

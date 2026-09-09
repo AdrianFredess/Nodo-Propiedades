@@ -374,14 +374,13 @@ const botRepite =
   Boolean(prep.bot_repite_sin_fichas) ||
   (typeof icBotRepiteSinFichas === 'function' && icBotRepiteSinFichas(historialArr));
 
+// Spec criterio 5: mensaje repetido → fichas YA (no reformular ni pedir preferencias).
 if (
   !String(prep.respuesta_forzada || '').trim() &&
   !esSaludoTurno &&
-  !esCalificar &&
-  (botRepite || consultaRepetida) &&
+  (botRepite || consultaRepetida || repeticionDetectada) &&
   sugerenciasIds.length &&
-  !propiedadesMostrar.length &&
-  (forzarStockClasificador || debeMostrar || Boolean(presupuestoDetectado))
+  !propiedadesMostrar.length
 ) {
   propiedadesMostrar = sugerenciasIds.slice(0, 3);
   respuesta = armarIntroPropiedades(presupuestoDetectado, idxVariante + 1, esCurioso);

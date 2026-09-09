@@ -626,19 +626,19 @@ const botRepite =
   Boolean(promptData.bot_repite_sin_fichas) ||
   (typeof icBotRepiteSinFichas === 'function' && icBotRepiteSinFichas(historialJson));
 
+// Spec criterio 5: mensaje repetido → fichas YA (no reformular ni pedir preferencias).
 if (
   !skipReply &&
   !esOffTopic &&
   !esSaludoTurno &&
-  !esCalificar &&
-  (botRepite || consultaRepetida) &&
+  (botRepite || consultaRepetida || repeticionDetectada) &&
   sugerenciasIds.length &&
-  !propiedadesMostrar.length &&
-  (forzarStockClasificador || debeMostrar)
+  !propiedadesMostrar.length
 ) {
   propiedadesMostrar = sugerenciasIds.slice(0, 3);
   respuestaBot = armarIntroPropiedades(presupuestoDetectado, idxVariante + 1, esCurioso);
   mensajeCierre = MENSAJE_CIERRE_PROPS;
+  mensajesExtra = [];
 }
 
 if (!skipReply && !esOffTopic) {

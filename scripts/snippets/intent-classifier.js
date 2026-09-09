@@ -31,7 +31,7 @@ const IC_INMO_KEYWORDS =
   /\b(depto|departamento|casa|lote|local|oficina|alquiler|alquil|comprar|compra|venta|vender|propiedad|propiedades|inmueble|inmobiliaria|presupuesto|habitaci[oó]n|dormitorio|ambientes|m2|zona|barrio|visita|usd|u\$s|dolar|mza-\d+|nodo|expensas|cochera|escritur)\b/i;
 
 const IC_PEDIR_OPCIONES =
-  /\b(que ten[eé]s|qué ten[eé]s|que hay|qué hay|que venden|qué venden|mostrame|mostrá|mandame|mandá|pasame|pasá|opciones|a ver(?: opciones| entonces| pues| nomas| nom[aá]s| que ten[eé]s| qu[eé] ten[eé]s| q tenes| qe tenes)?|ver opciones|catalogo|catálogo|enviame|enviá|enviame lo que tengas|envi[aá] lo que tengas|enviame lo q tengas|enviame lo que tenga|mandame lo que tengas|mand[aá] lo que tengas|mandame opciones|enviame opciones|pasame opciones|pasame lo que tengas|dame lo que tengas|enviame lo que haya|mandame lo que haya|pasame lo que haya|dame lo que haya|algo para ver|ver algo|lo que tengas|lo que tengan|lo que haya|mandame algo|mostrame algo|sorprendeme|sorprendeme|mostr[aá].*primero|primero.*mostr|mostr[aá].*algo|mand[aá].*algo|mostrame lo que haya|tirame variedad|tirame opciones)\b/i;
+  /\b(que ten[eé]s|qué ten[eé]s|que hay|qué hay|ten[eé]s algo|hay algo|algo en|algo por|que venden|qué venden|mostrame|mostrá|mandame|mandá|pasame|pasá|opciones|a ver(?: opciones| entonces| pues| nomas| nom[aá]s| que ten[eé]s| qu[eé] ten[eé]s| q tenes| qe tenes)?|ver opciones|catalogo|catálogo|enviame|enviá|enviame lo que tengas|envi[aá] lo que tengas|enviame lo q tengas|enviame lo que tenga|mandame lo que tengas|mand[aá] lo que tengas|mandame opciones|enviame opciones|pasame opciones|pasame lo que tengas|dame lo que tengas|enviame lo que haya|mandame lo que haya|pasame lo que haya|dame lo que haya|algo para ver|ver algo|lo que tengas|lo que tengan|lo que haya|mandame algo|mostrame algo|sorprendeme|sorprendeme|mostr[aá].*primero|primero.*mostr|mostr[aá].*algo|mand[aá].*algo|mostrame lo que haya|tirame variedad|tirame opciones)\b/i;
 
 /** Pedido corto tipo "a ver" / "dale" tras presupuesto — siempre stock. */
 const IC_PEDIR_CORTO =
@@ -42,7 +42,7 @@ const IC_PEDIR_CORTO =
  * Independiente de si ya se preguntó zona/presupuesto.
  */
 const IC_PEDIR_DIRECTO =
-  /\b((enviame|envi[aá]|mandame|mand[aá]|pasame|pas[aá]|dame)\s+(lo\s+que\s+)?(tengas|tenga|haya|hay|opciones)|(mandame|enviame|pasame)\s+opciones|a\s+ver\s+(que|qu[eé]|q|qe)\s+ten[eé]s|tirame\s+(variedad|opciones)|lo\s+que\s+tengas|lo\s+que\s+haya)\b/i;
+  /\b((enviame|envi[aá]|mandame|mand[aá]|pasame|pas[aá]|dame)\s+(lo\s+que\s+)?(tengas|tenga|haya|hay|opciones)|(mandame|enviame|pasame)\s+opciones|a\s+ver\s+(que|qu[eé]|q|qe)\s+ten[eé]s|tirame\s+(variedad|opciones)|lo\s+que\s+tengas|lo\s+que\s+haya|ten[eé]s\s+algo|hay\s+algo)\b/i;
 
 const IC_SIN_CRITERIO =
   /\b(no tengo (nada )?(claro|en mente|definido|pensado)|no s[eé] (tanto|mucho|bien|nada)?|nose|no estoy seguro|sin criterio|sin idea|no defin[ií]|a[uú]n no s[eé]|todav[ií]a no s[eé]|me da igual|cualquier cosa|cualquiera|no se que|no s[eé] que|nada claro|sin nada pensado)\b/i;

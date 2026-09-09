@@ -523,7 +523,7 @@ ${formatearBloqueIntencionPrompt(clasif)}
 ${bloqueAprendizaje}
 CLIENTE: ${prep.lead_name}
 MENSAJE ACTUAL: "${msg}"
-${consultaRepetida ? '\nREPETICIÓN DETECTADA: El cliente parece haber repetido una consulta similar. No repitas la misma respuesta tal cual. Reformulá o preguntale qué no le quedó resuelto.\n' : ''}${ultimoBotHistorial ? 'ÚLTIMA RESPUESTA TUYA (NO repetir igual): "' + ultimoBotHistorial.slice(0, 220) + '"\n' : ''}${respuesta_forzada ? '\nOFF-TOPIC: respondé EXACTAMENTE: "' + respuesta_forzada + '"\n' : ''}
+${consultaRepetida ? '\nREPETICION DETECTADA: El cliente repitio la consulta. NO reformules ni preguntes preferencias. Mostra fichas YA con ###MOSTRAR_PROPIEDADES### (IDs reales del STOCK). Intro corta distinta a la del turno anterior.\n' : ''}${ultimoBotHistorial ? 'ÚLTIMA RESPUESTA TUYA (NO repetir igual): "' + ultimoBotHistorial.slice(0, 220) + '"\n' : ''}${respuesta_forzada ? '\nOFF-TOPIC: respondé EXACTAMENTE: "' + respuesta_forzada + '"\n' : ''}
 Responde SOLO JSON válido:
 {"temperatura":"frio|tibio|caliente","financiacion":"credito_preaprobado|fondos_propios|no_definido","urgencia":"inmediato|1-3m|3-6m|+6m|indefinido","zona_concreta":false,"tipo_concreto":false,"es_decisor":null,"intencion":"frase corta","operacion":"","tipo_propiedad":"","zona":"","presupuesto":"","dormitorios":"","lead_completo":false,"respuesta":"mensaje intro + bloques MOSTRAR/BURBUJAS/VISITA al final (invisibles al cliente como texto suelto)"}`;
 
