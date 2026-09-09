@@ -22,7 +22,7 @@ export function LeadCard({
   const navigate = useNavigate();
   const canSelect = lead.canalOrigen === 'telegram';
   const detailPath = `/leads/${encodeURIComponent(lead.id)}`;
-  const colClass = lead.leadCompleto ? lead.temperatura : 'conversando';
+  const colClass = lead.temperatura;
 
   function openDetail() {
     navigate(detailPath);
@@ -89,6 +89,11 @@ export function LeadCard({
       </div>
       <div className="lead-card__footer lead-card__footer--compact">
         <CanalChip canal={lead.canalOrigen} />
+        {lead.botPaused || lead.handoff ? (
+          <span className="lead-card__paused" title="Bot pausado — te toca a vos">
+            Tu turno
+          </span>
+        ) : null}
         <span className="lead-card__time">
           {relativeTimeFrom(lead.ultimaActualizacion)}
         </span>

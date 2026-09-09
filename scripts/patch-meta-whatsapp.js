@@ -65,6 +65,13 @@ function intentClassifierSnippet() {
   );
 }
 
+function leadTemperaturaSnippet() {
+  return fs.readFileSync(
+    path.join(__dirname, 'snippets', 'lead-temperatura.js'),
+    'utf8',
+  );
+}
+
 function learningSnippet() {
   let code = fs.readFileSync(
     path.join(__dirname, 'snippets', 'bot-aprendizaje.js'),
@@ -83,6 +90,8 @@ function postProcessSnippet(name) {
     shared +
     '\n' +
     intentClassifierSnippet() +
+    '\n' +
+    leadTemperaturaSnippet() +
     '\n' +
     learningSnippet() +
     '\n' +
@@ -112,6 +121,8 @@ function waSnippet(name) {
     fs.readFileSync(path.join(__dirname, 'snippets', 'humanize-voz.js'), 'utf8') +
     '\n' +
     intentClassifierSnippet() +
+    '\n' +
+    leadTemperaturaSnippet() +
     '\n' +
     learningSnippet() +
     '\n' +
@@ -251,6 +262,27 @@ function patchPrompts(wf) {
   if (!armar || !procesar) throw new Error('Nodos Armar/Procesar faltantes');
   armar.parameters.jsCode = waSnippet('wa-armar-prompt.js');
   procesar.parameters.jsCode = postProcessSnippet('wa-procesar-ia.js');
+
+  const upd = wf.nodes.find((n) => n.name === 'Google Sheets - Actualizar Temperatura');
+  if (upd?.parameters?.columns?.value) {
+    const v = upd.parameters.columns.value;
+    v.temperature = '={{ $json.temperatura }}';
+    v.estado_seguimiento = "={{ $json.estado_seguimiento || 'ninguno' }}";
+    v.bot_paused = "={{ $json.bot_paused || 'no' }}";
+    v.handoff = "={{ $json.handoff || 'no' }}";
+    v.senales_json = '={{ $json.senales_json || \"{}\" }}';
+  }
+
+  const email = wf.nodes.find((n) => n.name === 'HTTP - Email Lead Caliente');
+  if (email?.parameters) {
+    email.parameters.jsonBody =
+      "={{ JSON.stringify({ name: 'Nodo Propiedades Bot', email: 'bot@nodopropiedades.local', _subject: 'URGENTE LEAD CALIENTE WhatsApp - ' + $('Code - Procesar IA').item.json.lead_name, message: 'URGENTE LEAD CALIENTE WhatsApp\\nNombre: ' + $('Code - Procesar IA').item.json.lead_name + '\\nTel: ' + $('Code - Procesar IA').item.json.phone + '\\nChat: ' + $('Code - Procesar IA').item.json.chat_id + '\\n--- Señales ---\\n' + String($('Code - Procesar IA').item.json.notif_resumen || '') + '\\nÚltimo mensaje: ' + $('Code - Procesar IA').item.json.mensaje }) }}";
+  }
+  const tgAlert = wf.nodes.find((n) => n.name === 'HTTP - Telegram Alerta Owner');
+  if (tgAlert?.parameters) {
+    tgAlert.parameters.jsonBody =
+      "={{ JSON.stringify({ chat_id: '__SET_OWNER_TELEGRAM_CHAT_ID__', text: 'URGENTE LEAD CALIENTE WhatsApp\\nNombre: ' + $('Code - Procesar IA').item.json.lead_name + '\\nTel: ' + $('Code - Procesar IA').item.json.phone + '\\n' + String($('Code - Procesar IA').item.json.notif_resumen || '') }) }}";
+  }
 }
 
 function patchLeadFlow(wf) {

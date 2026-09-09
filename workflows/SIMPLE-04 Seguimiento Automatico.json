@@ -7,8 +7,8 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
       "position": [
-        0,
-        300
+        80,
+        480
       ],
       "parameters": {
         "rule": {
@@ -27,8 +27,8 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        0,
-        480
+        80,
+        720
       ],
       "parameters": {},
       "notes": "Solo para pruebas manuales. Productivo: schedule cada 5 min; envio si >=20 min sin respuesta."
@@ -39,8 +39,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        260,
-        300
+        530,
+        480
       ],
       "parameters": {
         "operation": "read",
@@ -73,11 +73,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        520,
-        300
+        920,
+        480
       ],
       "parameters": {
-        "jsCode": "const rows = $input.all().map((i) => i.json);\nconst now = Date.now();\nconst MS_WAIT = 20 * 60 * 1000; // 20 min desde último mensaje\nconst blocked = new Set(['cerrado', 'respondido', 'cerrado_sin_respuesta']);\n\nfunction lastMessageTs(row) {\n  const candidates = [];\n  for (const key of ['ultima_actualizacion', 'last_interaction_at', 'updated_at', 'fecha']) {\n    const raw = row[key];\n    if (raw == null || raw === '') continue;\n    const t = new Date(raw).getTime();\n    if (!Number.isNaN(t)) candidates.push(t);\n  }\n  const histRaw = row.historial_json || row.historial || '';\n  if (histRaw) {\n    try {\n      const parsed = typeof histRaw === 'string' ? JSON.parse(histRaw) : histRaw;\n      if (Array.isArray(parsed)) {\n        for (const m of parsed) {\n          if (!m || typeof m !== 'object') continue;\n          const raw = m.ts || m.timestamp || m.fecha || m.date || m.created_at;\n          if (raw == null || raw === '') continue;\n          const t = new Date(raw).getTime();\n          if (!Number.isNaN(t)) candidates.push(t);\n        }\n      }\n    } catch (_) {\n      const matches = String(histRaw).match(/\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z?/g) || [];\n      for (const m of matches) {\n        const t = new Date(m).getTime();\n        if (!Number.isNaN(t)) candidates.push(t);\n      }\n    }\n  }\n  if (!candidates.length) return { t: NaN, raw: '' };\n  const t = Math.max(...candidates);\n  return { t, raw: new Date(t).toISOString() };\n}\n\nconst out = [];\nfor (const row of rows) {\n  if (!row || row.error) continue;\n  let estado = String(row.estado_seguimiento ?? 'ninguno').trim().toLowerCase();\n  if (!estado) estado = 'ninguno';\n  if (blocked.has(estado)) continue;\n  if (estado !== 'ninguno' && estado !== 'enviado_1') continue;\n\n  const { t, raw: rawDate } = lastMessageTs(row);\n  if (!rawDate || Number.isNaN(t)) continue;\n  if (now - t < MS_WAIT) continue;\n\n  const chat_id = String(row.chat_id || row.phone || '').trim();\n  if (!chat_id) continue;\n\n  const nombre = String(row.nombre || row.lead_name || 'Cliente').trim() || 'Cliente';\n  const zona = String(row.zona || '').trim() || 'tu zona de interés';\n  const canal_origen = String(row.canal_origen || row.source || 'telegram').trim().toLowerCase();\n  const interes = String(row.temperature || row.temperatura || row.interes || '').trim();\n  const telefono = String(row.phone || row.telefono || '').trim();\n  const last_message = String(row.last_message || row.ultimo_mensaje || '').trim();\n\n  let mensaje;\n  if (estado === 'enviado_1') {\n    mensaje =\n      'Hola ' + nombre + ', te escribo porque tengo opciones frescas en ' + zona +\n      '. Si me contás presupuesto o qué estás buscando (depto, casa, etc.), te acerco las mejores. ¿Seguimos?';\n  } else {\n    mensaje =\n      'Hola ' + nombre + '! ¿Seguís buscando en ' + zona +\n      '? Puedo mostrarte más opciones o armarte un presupuesto a medida. Decime zona, tipo o presupuesto y te ayudo.';\n  }\n\n  out.push({\n    json: {\n      chat_id,\n      nombre,\n      zona,\n      canal_origen,\n      estado_seguimiento: estado,\n      ultima_actualizacion: rawDate,\n      interes,\n      telefono,\n      last_message,\n      mensaje,\n      es_ultimo_seguimiento: estado === 'enviado_1',\n    },\n  });\n}\nreturn out;\n"
+        "jsCode": "const rows = $input.all().map((i) => i.json);\nconst now = Date.now();\n\n// DEMO (tesis): tiempos comprimidos para poder mostrar el flujo.\n// PROD (real): 1.er follow ~5 días; 2.º ~10 días después del primero.\n// Setear SEGUIMIENTO_MODE=prod en el contenedor n8n en operación real.\nlet mode = 'demo';\ntry {\n  mode = String(($env && $env.SEGUIMIENTO_MODE) || 'demo').toLowerCase();\n} catch (e) {\n  mode = 'demo';\n}\nconst MS_DAY = 24 * 60 * 60 * 1000;\nconst MS_FIRST = mode === 'prod' ? 5 * MS_DAY : 20 * 60 * 1000;\nconst MS_SECOND = mode === 'prod' ? 10 * MS_DAY : 20 * 60 * 1000;\nconst blocked = new Set(['cerrado', 'respondido', 'cerrado_sin_respuesta']);\n\nfunction diaClaveAR(ms) {\n  try {\n    return new Intl.DateTimeFormat('en-CA', {\n      timeZone: 'America/Argentina/Buenos_Aires',\n      year: 'numeric',\n      month: '2-digit',\n      day: '2-digit',\n    }).format(new Date(ms));\n  } catch (e) {\n    const d = new Date(ms - 3 * 60 * 60 * 1000);\n    return (\n      d.getUTCFullYear() +\n      '-' +\n      String(d.getUTCMonth() + 1).padStart(2, '0') +\n      '-' +\n      String(d.getUTCDate()).padStart(2, '0')\n    );\n  }\n}\n\nfunction lastMessageTs(row) {\n  const candidates = [];\n  for (const key of ['ultima_actualizacion', 'last_interaction_at', 'updated_at', 'fecha']) {\n    const raw = row[key];\n    if (raw == null || raw === '') continue;\n    const t = new Date(raw).getTime();\n    if (!Number.isNaN(t)) candidates.push(t);\n  }\n  const histRaw = row.historial_json || row.historial || '';\n  if (histRaw) {\n    try {\n      const parsed = typeof histRaw === 'string' ? JSON.parse(histRaw) : histRaw;\n      if (Array.isArray(parsed)) {\n        for (const m of parsed) {\n          if (!m || typeof m !== 'object') continue;\n          const raw = m.ts || m.timestamp || m.fecha || m.date || m.created_at;\n          if (raw == null || raw === '') continue;\n          const t = new Date(raw).getTime();\n          if (!Number.isNaN(t)) candidates.push(t);\n        }\n      }\n    } catch (_) {\n      const matches = String(histRaw).match(/\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z?/g) || [];\n      for (const m of matches) {\n        const t = new Date(m).getTime();\n        if (!Number.isNaN(t)) candidates.push(t);\n      }\n    }\n  }\n  if (!candidates.length) return { t: NaN, raw: '' };\n  const t = Math.max(...candidates);\n  return { t, raw: new Date(t).toISOString() };\n}\n\nconst out = [];\nconst hoyAR = diaClaveAR(now);\nfor (const row of rows) {\n  if (!row || row.error) continue;\n  let estado = String(row.estado_seguimiento ?? 'ninguno').trim().toLowerCase();\n  if (!estado) estado = 'ninguno';\n  if (blocked.has(estado)) continue;\n  if (estado !== 'ninguno' && estado !== 'enviado_1') continue;\n\n  const { t, raw: rawDate } = lastMessageTs(row);\n  if (!rawDate || Number.isNaN(t)) continue;\n  // No pisar conversación activa: si el lead escribió HOY (AR), no mandar seguimiento.\n  if (diaClaveAR(t) === hoyAR) continue;\n  const need = estado === 'enviado_1' ? MS_SECOND : MS_FIRST;\n  if (now - t < need) continue;\n\n  const chat_id = String(row.chat_id || row.phone || '').trim();\n  if (!chat_id) continue;\n\n  const nombre = String(row.nombre || row.lead_name || 'Cliente').trim() || 'Cliente';\n  const zona = String(row.zona || '').trim() || 'tu zona';\n  const canal_origen = String(row.canal_origen || row.source || 'telegram').trim().toLowerCase();\n  const interes = String(row.temperature || row.temperatura || row.interes || '').trim();\n  const telefono = String(row.phone || row.telefono || '').trim();\n  const last_message = String(row.last_message || row.ultimo_mensaje || '').trim();\n\n  // Corto, humano, sin presión ni \"presupuesto a medida\".\n  let mensaje;\n  if (estado === 'enviado_1') {\n    mensaje =\n      'Hola ' + nombre + ', te dejo por acá. Si retomás la búsqueda avisame y lo vemos';\n  } else {\n    mensaje =\n      'Hola ' + nombre + ', seguís buscando por ' + zona + '? Si querés te paso un par de opciones';\n  }\n\n  out.push({\n    json: {\n      chat_id,\n      nombre,\n      zona,\n      canal_origen,\n      estado_seguimiento: estado,\n      ultima_actualizacion: rawDate,\n      interes,\n      telefono,\n      last_message,\n      mensaje,\n      es_ultimo_seguimiento: estado === 'enviado_1',\n      seguimiento_mode: mode,\n    },\n  });\n}\nreturn out;\n"
       }
     },
     {
@@ -86,8 +86,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        780,
-        300
+        1280,
+        480
       ],
       "parameters": {
         "conditions": {
@@ -119,8 +119,8 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        1040,
-        200
+        1670,
+        480
       ],
       "parameters": {
         "batchSize": 1,
@@ -133,8 +133,8 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.4,
       "position": [
-        1300,
-        200
+        2060,
+        480
       ],
       "parameters": {
         "mode": "rules",
@@ -219,8 +219,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1580,
-        40
+        2480,
+        240
       ],
       "parameters": {
         "additionalFields": {
@@ -245,8 +245,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        1580,
-        200
+        2480,
+        480
       ],
       "parameters": {
         "method": "POST",
@@ -284,8 +284,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        1580,
-        360
+        2480,
+        720
       ],
       "parameters": {
         "method": "POST",
@@ -316,8 +316,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        1860,
-        200
+        2900,
+        480
       ],
       "parameters": {
         "columns": {
@@ -369,8 +369,8 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        0,
-        140
+        80,
+        240
       ],
       "parameters": {
         "httpMethod": "POST",
@@ -386,8 +386,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2100,
-        360
+        3290,
+        660
       ],
       "onError": "continueRegularOutput",
       "parameters": {
@@ -404,6 +404,70 @@
             }
           }
         }
+      }
+    },
+    {
+      "id": "s04-sticky-titulo",
+      "name": "NOTE · Seguimiento",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -40
+      ],
+      "parameters": {
+        "content": "## SIMPLE-04 — Follow-up automático\nCron → candidatos tibios → mensaje por canal.",
+        "width": 520,
+        "height": 160,
+        "color": 4
+      }
+    },
+    {
+      "id": "s04-sticky-1",
+      "name": "NOTE · 1 Disparadores",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        40,
+        120
+      ],
+      "parameters": {
+        "content": "## 1 · Disparadores\nSchedule · manual · webhook test.",
+        "width": 540,
+        "height": 760,
+        "color": 5
+      }
+    },
+    {
+      "id": "s04-sticky-2",
+      "name": "NOTE · 2 Filtrar",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        450,
+        280
+      ],
+      "parameters": {
+        "content": "## 2 · Selección\nLee Leads_Bot → filtra inactivos tibios.",
+        "width": 1320,
+        "height": 480,
+        "color": 3
+      }
+    },
+    {
+      "id": "s04-sticky-3",
+      "name": "NOTE · 3 Enviar",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1980,
+        80
+      ],
+      "parameters": {
+        "content": "## 3 · Envío por canal\nTG · WA · Messenger → update Sheets → panel.",
+        "width": 1500,
+        "height": 800,
+        "color": 4
       }
     }
   ],

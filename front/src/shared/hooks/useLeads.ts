@@ -259,7 +259,9 @@ const FIELD_TO_PROP: Record<string, keyof Propiedad> = {
   requisitos: 'requisitos',
 };
 
-export function useLeads(): UseLeadsResult {
+export function useLeads(options?: {
+  onRealtimeEvent?: (event: RealtimeEvent) => void;
+}): UseLeadsResult {
   const [payload, setPayload] = useState<LeadsPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -267,6 +269,8 @@ export function useLeads(): UseLeadsResult {
   const leadCache = useRef<Map<string, Lead>>(new Map());
   const propsCache = useRef<Propiedad[]>([]);
   const backoffUntil = useRef(0);
+  const onRealtimeExtra = useRef(options?.onRealtimeEvent);
+  onRealtimeExtra.current = options?.onRealtimeEvent;
   const wsOpen = useRef(false);
   const refreshRef = useRef<() => Promise<Lead[]>>(async () => []);
   const refreshInFlight = useRef(false);
@@ -517,9 +521,37 @@ export function useLeads(): UseLeadsResult {
 
   const onRealtime = useCallback(
     (event: RealtimeEvent) => {
+      onRealtimeExtra.current?.(event);
       if (event.type === 'stock.updated') {
         applyStockEvent(event.payload);
         return;
+      }
+      if (event.type === 'chat.message' || event.type === 'advisor.action') {
+        const p =
+          event.payload !== null && typeof event.payload === 'object'
+            ? (event.payload as Record<string, unknown>)
+            : {};
+        const chatId =
+          String(p.chatId ?? p.chat_id ?? '').trim() || undefined;
+        const paused =
+          p.botPaused === true ||
+          String(p.botPaused ?? p.bot_paused ?? '').toLowerCase() === 'si' ||
+          String(p.handoff ?? '').toLowerCase() === 'si';
+        if (chatId && paused) {
+          setPayload((prev) => {
+            if (!prev) return prev;
+            let changed = false;
+            const leads = prev.leads.map((l) => {
+              if (l.chatId !== chatId && l.id !== chatId) return l;
+              changed = true;
+              const next = { ...l, botPaused: true, handoff: true };
+              leadCache.current.set(next.id, next);
+              leadCache.current.set(`chat:${next.chatId}`, next);
+              return next;
+            });
+            return changed ? { ...prev, leads } : prev;
+          });
+        }
       }
       if (event.type === 'chat.message') {
         const p =

@@ -7,8 +7,11 @@ import {
   updateLeadSeguimiento,
 } from '../../shared/api/client';
 import {
+  buildAgendaMessage,
+  buildFichasMessage,
+} from '../../shared/lib/fichaMessage';
+import {
   CANAL_LABEL,
-  PIPELINE_COLUMNA_LABEL,
   SEGUIMIENTO_LABEL,
   TEMPERATURA_LABEL,
 } from '../../shared/lib/labels';
@@ -76,7 +79,7 @@ export function LeadDetailPage({
   }, [onClearHighlight]);
 
   if (!lead && loading) {
-    return <div className="empty-state">Cargando ficha…</div>;
+    return <div className="empty-state">Cargando…</div>;
   }
 
   if (!lead) {
@@ -85,11 +88,11 @@ export function LeadDetailPage({
         <header className="page-head page-head--compact page-head--detail">
           <div>
             <h1>Lead no encontrado</h1>
-            <p>Volvé al pipeline e intentá de nuevo.</p>
+            <p>Volvé al pipeline.</p>
           </div>
         </header>
         <Link className="btn btn--ghost btn--sm" to="/pipeline">
-          Volver al pipeline
+          Volver
         </Link>
       </div>
     );
@@ -100,15 +103,16 @@ export function LeadDetailPage({
   const canSendWhatsApp =
     lead.canalOrigen === 'whatsapp' && Boolean(lead.chatId);
   const canSend = canSendTelegram || canSendWhatsApp;
+  const botPaused = Boolean(lead.botPaused || lead.handoff);
 
   async function handleSend(overrideText?: string) {
     const body = (overrideText ?? text).trim();
     if (!body) {
-      setError('Escribí un mensaje antes de enviar.');
+      setError('Escribí un mensaje.');
       return;
     }
     if (!canSend || !lead) {
-      setError('Este canal no admite envío manual desde el panel.');
+      setError('Este canal no admite envío desde el panel.');
       return;
     }
     setSending(true);
@@ -121,7 +125,7 @@ export function LeadDetailPage({
           text: body,
         });
         if (!result.ok) {
-          setError(result.error ?? 'No se pudo enviar el mensaje.');
+          setError(result.error ?? 'No se pudo enviar.');
           return;
         }
       } else {
@@ -130,7 +134,7 @@ export function LeadDetailPage({
           text: body,
         });
         if (!result.ok) {
-          setError(result.error ?? 'No se pudo enviar por WhatsApp.');
+          setError(result.error ?? 'No se pudo enviar.');
           return;
         }
       }
@@ -148,11 +152,11 @@ export function LeadDetailPage({
         side: 'bot',
         source: canSendTelegram ? 'panel' : 'panel-wa',
       });
-      setOkMsg(canSendTelegram ? 'Enviado por Telegram' : 'Enviado por WhatsApp');
+      setOkMsg('Enviado');
       if (!overrideText) setText('');
       window.setTimeout(() => setOkMsg(null), 2200);
     } catch {
-      setError('Error de conexión al enviar.');
+      setError('Error de conexión.');
     } finally {
       setSending(false);
     }
@@ -165,7 +169,6 @@ export function LeadDetailPage({
     if (!lead?.chatId) return;
     setUpdatingSeg(true);
     setError(null);
-    setOkMsg(null);
     try {
       const result = await updateLeadSeguimiento({
         chatId: lead.chatId,
@@ -173,43 +176,27 @@ export function LeadDetailPage({
         status,
       });
       if (!result.ok) {
-        setError(result.error ?? 'No se pudo actualizar el seguimiento.');
+        setError(result.error ?? 'No se pudo actualizar.');
         return;
       }
       onLeadPatch?.(lead.id, {
         estadoSeguimiento,
         ...(status ? { status } : {}),
       });
-      void emitRealtime('lead.updated', {
-        chatId: lead.chatId,
-        leadId: lead.id,
-        estadoSeguimiento,
-        status,
-        source: 'panel',
-      });
-      setOkMsg('Seguimiento actualizado');
-      window.setTimeout(() => setOkMsg(null), 2200);
+      setOkMsg('Listo');
+      window.setTimeout(() => setOkMsg(null), 1800);
     } catch {
-      setError('Error de conexión al actualizar seguimiento.');
+      setError('Error de conexión.');
     } finally {
       setUpdatingSeg(false);
     }
   }
 
-  const quickActions = [
-    {
-      label: 'Pedir presupuesto',
-      text: '¿Me contás tu presupuesto aproximado en USD para orientarte mejor?',
-    },
-    {
-      label: 'Ofrecer opciones',
-      text: '¡Claro! Acá te muestro un par de opciones que tenemos disponibles.',
-    },
-    {
-      label: 'Coordinar visita',
-      text: '¿Te gustaría coordinar una visita? Te paso el link de turnos.',
-    },
-  ];
+  function handleReactivarBot() {
+    onLeadPatch?.(lead.id, { botPaused: false, handoff: false });
+    setOkMsg('Bot reactivado en panel (marcá bot_paused=no en Sheets si hace falta)');
+    window.setTimeout(() => setOkMsg(null), 2800);
+  }
 
   return (
     <div className="page-frame page-frame--detail">
@@ -218,6 +205,12 @@ export function LeadDetailPage({
           <h1>{lead.nombre}</h1>
           <p className="lead-detail__channel-meta">
             <CanalChip canal={lead.canalOrigen} />
+            <span className={`chip chip--sm chip--${lead.temperatura}`}>
+              {TEMPERATURA_LABEL[lead.temperatura]}
+            </span>
+            {botPaused ? (
+              <span className="chip chip--sm chip--paused">Bot pausado</span>
+            ) : null}
             <span>{relativeTimeFrom(lead.ultimaActualizacion)}</span>
           </p>
         </div>
@@ -226,35 +219,65 @@ export function LeadDetailPage({
         </Link>
       </header>
 
-      {error ? <div className="error-banner error-banner--compact">{error}</div> : null}
+      {botPaused ? (
+        <div className="handoff-banner" role="status">
+          <div>
+            <strong>Te toca a vos</strong>
+            <p>La IA dejó de responder. Enviá ficha o link con un clic.</p>
+          </div>
+          <div className="handoff-banner__actions">
+            {propiedadesVistas.length > 0 && canSend ? (
+              <button
+                type="button"
+                className="btn btn--primary btn--sm"
+                disabled={sending}
+                onClick={() =>
+                  void handleSend(buildFichasMessage(propiedadesVistas))
+                }
+              >
+                Enviar ficha
+              </button>
+            ) : null}
+            {canSend ? (
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                disabled={sending}
+                onClick={() =>
+                  void handleSend(
+                    buildAgendaMessage('', {
+                      chatId: lead.chatId,
+                      nombre: lead.nombre,
+                      canal: lead.canalOrigen,
+                    }),
+                  )
+                }
+              >
+                Enviar link visita
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={handleReactivarBot}
+            >
+              Reactivar bot
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="error-banner error-banner--compact">{error}</div>
+      ) : null}
       {okMsg ? (
         <div className="success-banner success-banner--compact">{okMsg}</div>
       ) : null}
 
       <div className="detail-layout detail-layout--fill">
         <aside className="detail-side panel-card detail-side--compact">
-          <h2 className="detail-section-title">Ficha</h2>
+          <h2 className="detail-section-title">Cliente</h2>
           <dl className="detail-meta">
-            <div>
-              <dt>Etapa</dt>
-              <dd>
-                {lead.leadCompleto ? (
-                  <span className={`chip chip--sm chip--${lead.temperatura}`}>
-                    {TEMPERATURA_LABEL[lead.temperatura]}
-                  </span>
-                ) : (
-                  <span className="chip chip--sm chip--conversando">
-                    {PIPELINE_COLUMNA_LABEL.conversando}
-                  </span>
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt>Canal</dt>
-              <dd>
-                <CanalChip canal={lead.canalOrigen} />
-              </dd>
-            </div>
             <div>
               <dt>Zona</dt>
               <dd>{lead.zona || '—'}</dd>
@@ -272,10 +295,6 @@ export function LeadDetailPage({
               <dd>{SEGUIMIENTO_LABEL[lead.estadoSeguimiento]}</dd>
             </div>
             <div>
-              <dt>Estado</dt>
-              <dd>{lead.status || '—'}</dd>
-            </div>
-            <div>
               <dt>Actualizado</dt>
               <dd>{formatDateTime(lead.ultimaActualizacion)}</dd>
             </div>
@@ -284,12 +303,22 @@ export function LeadDetailPage({
           {propiedadesVistas.length > 0 ? (
             <div className="detail-props-vistas">
               <h2 className="detail-section-title detail-section-title--spaced">
-                Propiedades vistas
+                Propiedades
               </h2>
               <ul className="detail-props-vistas__list">
                 {propiedadesVistas.map((id) => (
                   <li key={id}>
                     <Link to={`/catalogo/${encodeURIComponent(id)}`}>{id}</Link>
+                    {canSend ? (
+                      <button
+                        type="button"
+                        className="btn btn--ghost btn--xs"
+                        disabled={sending}
+                        onClick={() => void handleSend(buildFichasMessage([id]))}
+                      >
+                        Enviar
+                      </button>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -298,44 +327,7 @@ export function LeadDetailPage({
 
           <div className="detail-send detail-send--compact">
             <h2 className="detail-section-title detail-section-title--spaced">
-              Acciones rápidas
-            </h2>
-            <div className="detail-quick-actions">
-              {quickActions.map((a) => (
-                <button
-                  key={a.label}
-                  type="button"
-                  className="btn btn--ghost btn--sm"
-                  disabled={!canSend || sending}
-                  onClick={() => void handleSend(a.text)}
-                >
-                  {a.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="detail-send detail-send--compact">
-            <h2 className="detail-section-title detail-section-title--spaced">
-              Seguimiento automático
-            </h2>
-            <p className="detail-send__hint detail-send__hint--compact">
-              Corta recordatorios automáticos.
-            </p>
-            <button
-              type="button"
-              className="btn btn--ghost btn--sm"
-              disabled={updatingSeg}
-              title="Cortar el seguimiento automático (no molestar más)"
-              onClick={() => void handleSeguimiento('cerrado', 'cerrado')}
-            >
-              Pausar recordatorios
-            </button>
-          </div>
-
-          <div className="detail-send detail-send--compact">
-            <h2 className="detail-section-title detail-section-title--spaced">
-              Enviar
+              Escribile
             </h2>
             {canSend ? (
               <>
@@ -344,12 +336,10 @@ export function LeadDetailPage({
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   placeholder={
-                    canSendTelegram
-                      ? 'Mensaje Telegram…'
-                      : 'Mensaje WhatsApp…'
+                    canSendTelegram ? 'Mensaje…' : 'Mensaje WhatsApp…'
                   }
-                  aria-label="Mensaje a este lead"
-                  rows={2}
+                  aria-label="Mensaje"
+                  rows={3}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                       e.preventDefault();
@@ -363,19 +353,24 @@ export function LeadDetailPage({
                   disabled={sending}
                   onClick={() => void handleSend()}
                 >
-                  {sending
-                    ? 'Enviando…'
-                    : canSendTelegram
-                      ? 'Enviar Telegram'
-                      : 'Enviar WhatsApp'}
+                  {sending ? 'Enviando…' : 'Enviar'}
                 </button>
               </>
             ) : (
               <p className="detail-send__hint">
-                Envío manual no disponible para este canal.
+                Envío no disponible en este canal.
               </p>
             )}
           </div>
+
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm detail-side__mute"
+            disabled={updatingSeg}
+            onClick={() => void handleSeguimiento('cerrado', 'cerrado')}
+          >
+            Pausar recordatorios auto
+          </button>
         </aside>
 
         <section className="detail-main panel-card detail-main--chat">

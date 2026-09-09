@@ -6,7 +6,7 @@ const repeticionDetectada = Boolean(prep.repeticion_detectada);
 let temperatura = 'frio';
 let intencion = 'consulta general';
 let respuesta =
-  'Hola, soy Matías de Nodo Propiedades. Contame qué tipo de propiedad buscás y en qué zona, así te paso opciones concretas.';
+  'Buenas, soy Matias de Nodo Propiedades. En que puedo ayudarte?';
 const iaVacia = !textoIA;
 
 let operacion = prep.operacion_prev || '';
@@ -15,6 +15,11 @@ let zona = prep.zona_prev || '';
 let presupuesto = prep.presupuesto_prev || '';
 let dormitorios = prep.dormitorios_prev || '';
 let lead_completo = false;
+let financiacionHint = '';
+let urgenciaHint = '';
+let zonaConcretaHint = null;
+let tipoConcretoHint = null;
+let esDecisorHint = null;
 
 try {
   const match = textoIA.match(/\{[\s\S]*\}/);
@@ -29,6 +34,11 @@ try {
     presupuesto = parsed.presupuesto || presupuesto;
     dormitorios = parsed.dormitorios || dormitorios;
     lead_completo = Boolean(parsed.lead_completo);
+    financiacionHint = parsed.financiacion || '';
+    urgenciaHint = parsed.urgencia || '';
+    if (typeof parsed.zona_concreta === 'boolean') zonaConcretaHint = parsed.zona_concreta;
+    if (typeof parsed.tipo_concreto === 'boolean') tipoConcretoHint = parsed.tipo_concreto;
+    if (parsed.es_decisor != null) esDecisorHint = parsed.es_decisor;
   }
 } catch (e) {}
 
@@ -46,12 +56,34 @@ const presupuestoDetectado = String(prep.presupuesto_detectado || '');
 const esAlquilerPresupuestoAlto = Boolean(prep.es_alquiler_presupuesto_alto);
 const zonaDetectada = String(prep.zona_detectada || '');
 const intencionClasificador = String(prep.intencion_clasificador || '');
+const pideOpcionesFlag = Boolean(prep.pide_opciones);
+const msgUsuarioWa = String(prep.mensaje || prep.texto_usuario || prep.body || '');
+const pideStockTextoWa =
+  /\b(a ver|enviame|envi[aá]|mandame|mand[aá]|pasame|pas[aá]|mostrame|mostr[aá]|lo que tengas|opciones)\b/i.test(
+    msgUsuarioWa,
+  ) || /^(a ver|dale|mostrame|mandame|enviame|pasame)[\s!.?]*$/i.test(msgUsuarioWa);
+const esCalificarRaw = Boolean(
+  prep.es_calificar ||
+    prep.busqueda_vaga ||
+    intencionClasificador === 'calificar',
+);
+const esCalificar = esCalificarRaw && !pideOpcionesFlag && !pideStockTextoWa && !debeMostrar;
+const esSoloSaludo = Boolean(prep.es_solo_saludo);
+const esDiaNuevo = Boolean(prep.es_dia_nuevo || prep.es_recontacto);
+const esSaludoTurno =
+  esSoloSaludo ||
+  intencionClasificador === 'saludo' ||
+  (typeof icEsSaludoVacio === 'function' && icEsSaludoVacio(msgUsuarioWa) && !pideStockTextoWa) ||
+  (esDiaNuevo && !pideOpcionesFlag && !debeMostrar && !pideStockTextoWa);
 const forzarStockClasificador =
-  debeMostrar ||
-  intencionClasificador === 'pedir_opciones' ||
-  intencionClasificador === 'explorar' ||
-  intencionClasificador === 'presupuesto' ||
-  Boolean(presupuestoDetectado);
+  !esSaludoTurno &&
+  (debeMostrar || pideOpcionesFlag || pideStockTextoWa) &&
+  (intencionClasificador === 'pedir_opciones' ||
+    intencionClasificador === 'presupuesto' ||
+    Boolean(presupuestoDetectado) ||
+    pideOpcionesFlag ||
+    pideStockTextoWa ||
+    debeMostrar);
 
 const mostrarRegex =
   /###MOSTRAR_PROPIEDADES###\s*(\[[\s\S]*?\])\s*###FIN_MOSTRAR###/i;
@@ -79,11 +111,28 @@ if (mostrarMatch) {
   working = working.replace(mostrarRegex, '').trim();
 }
 
+// HARD: clasificador dijo no stock → ignorar ###MOSTRAR### del modelo
+if ((!debeMostrar && !forzarStockClasificador) || esCalificar || esSaludoTurno) {
+  propiedadesMostrar = [];
+}
+
+// Anti-visto: IA vacía + pedido/presupuesto → forzar IDs
+if (
+  iaVacia &&
+  !esSaludoTurno &&
+  !esCalificar &&
+  !propiedadesMostrar.length &&
+  sugerenciasIds.length &&
+  (forzarStockClasificador || debeMostrar || pideStockTextoWa || Boolean(presupuestoDetectado))
+) {
+  propiedadesMostrar = sugerenciasIds.slice(0, 3);
+}
+
 const diceSinStock = /\bno tengo( nada)?|sin stock|no (hay|encuentro) (nada|opciones)|ahora mismo no tengo/i.test(
   working,
 );
 if (
-  (forzarStockClasificador || debeMostrar || diceSinStock) &&
+  (forzarStockClasificador || (debeMostrar && !esSaludoTurno) || (diceSinStock && !esSaludoTurno)) &&
   !propiedadesMostrar.length &&
   sugerenciasIds.length &&
   !String(prep.respuesta_forzada || '').trim()
@@ -95,6 +144,7 @@ if (
   !propiedadesMostrar.length &&
   esCurioso &&
   sugerenciasIds.length &&
+  !esSaludoTurno &&
   !String(prep.respuesta_forzada || '').trim()
 ) {
   propiedadesMostrar = sugerenciasIds.slice(0, 3);
@@ -118,35 +168,39 @@ if (burbujasMatch) {
 }
 
 function armarIntroPropiedades(presu, variantIdx, curioso) {
+  if (typeof introFichasHumana === 'function') {
+    return introFichasHumana({
+      textoUsuario: msgUsuarioWa,
+      presupuesto: presu,
+      zona: zonaDetectada,
+      curioso: curioso,
+      variantIdx: variantIdx,
+    });
+  }
   const v = Number(variantIdx) || 0;
-  if (presu) {
-    const presuFmt = Number(presu).toLocaleString('es-AR');
-    const opts = [
-      'Dale, te paso un par de opciones en venta cerca de USD ' + presuFmt,
-      'Con ese presupuesto te paso un par de opciones cerca de USD ' +
-        presuFmt,
-      'Mirá estas opciones que se acercan a USD ' +
-        Number(presu).toLocaleString('es-AR'),
-    ];
-    return sanitizarPuntuacion(opts[v % opts.length]);
-  }
-  if (curioso) {
-    const curiosos = [
-      'Dale, te paso un par de opciones para que veas',
-      'Te paso un par de opciones variadas para que veas lo que hay',
-    ];
-    return sanitizarPuntuacion(curiosos[v % curiosos.length]);
-  }
   const genericos = [
-    'Dale, te paso un par de opciones que tengo',
-    'Te comparto un par de alternativas que encajan con lo que venís buscando',
+    'Mira estas',
+    'Te mando estas para que veas',
+    'Ahi van estas',
   ];
-  return genericos[v % genericos.length];
+  return sanitizarPuntuacion(genericos[v % genericos.length]);
 }
 
-const MENSAJE_CIERRE_PROPS = esCurioso
-  ? 'Alguna zona te cierra más o querés ver otras?'
-  : 'Cuál te llama más la atención o querés que te cuente más detalles de alguna?';
+function pickCierreProps(variantIdx) {
+  if (typeof cierreComercialHumano === 'function') {
+    return cierreComercialHumano(variantIdx);
+  }
+  const opts = [
+    'Cual de estas te cierra mas?',
+    'Si queres te cuento mas de alguna',
+    'Decime cual te interesa y vemos visita',
+  ];
+  return sanitizarPuntuacion(
+    opts[Math.abs(Number(variantIdx) || 0) % opts.length],
+  );
+}
+
+const MENSAJE_CIERRE_PROPS = pickCierreProps(1);
 
 let mensajeCierre = '';
 let solicitudVisita = false;
@@ -203,6 +257,66 @@ const idxVariante = contarBotsSimilares(respuesta || '', historialArr);
 
 if (String(prep.respuesta_forzada || '').trim() || (esAlquilerPresupuestoAlto && !forzarStockClasificador)) {
   // already set
+} else if (esSaludoTurno) {
+  propiedadesMostrar = [];
+  mensajeCierre = '';
+  mensajesExtra = [];
+  const nombrePresentado = (function (t) {
+    const m = String(t || '').match(/\bsoy\s+([a-záéíóúñüA-ZÁÉÍÓÚÑÜ]{2,20})\b/);
+    if (!m) return '';
+    const n = m[1].toLowerCase();
+    return n.charAt(0).toUpperCase() + n.slice(1);
+  })(msgUsuarioWa);
+  if (
+    !respuesta ||
+    (typeof esSaludoUnaPalabra === 'function' && esSaludoUnaPalabra(respuesta)) ||
+    (typeof suenaPlantillaRobot === 'function' && suenaPlantillaRobot(respuesta)) ||
+    /###MOSTRAR|te paso un par de opciones|matcheen|Soy Mat[ií]as[^.!?\n]{0,60}Cuando|cuando quieras contame|USD\s*\d/i.test(
+      respuesta,
+    )
+  ) {
+    if (esDiaNuevo && nombrePresentado) {
+      respuesta =
+        'Hola ' + nombrePresentado + ', que zona o presupuesto miras ahora?';
+    } else if (esDiaNuevo) {
+      respuesta =
+        'Buenas, seguimos con la busqueda o queres que te muestre opciones?';
+    } else {
+      respuesta =
+        typeof saludoHumanoCorto === 'function'
+          ? saludoHumanoCorto(idxVariante + 1)
+          : 'Buenas, soy Matias de Nodo Propiedades. En que puedo ayudarte?';
+    }
+  } else {
+    respuesta = humanizarVoz(respuesta);
+    if (
+      (typeof esSaludoUnaPalabra === 'function' && esSaludoUnaPalabra(respuesta)) ||
+      (typeof suenaPlantillaRobot === 'function' && suenaPlantillaRobot(respuesta))
+    ) {
+      respuesta =
+        typeof saludoHumanoCorto === 'function'
+          ? saludoHumanoCorto(idxVariante + 1)
+          : 'Buenas, soy Matias de Nodo Propiedades. En que puedo ayudarte?';
+    }
+  }
+} else if (esCalificar) {
+  propiedadesMostrar = [];
+  mensajeCierre = '';
+  mensajesExtra = [];
+  if (
+    !respuesta ||
+    /###MOSTRAR|te paso un par|Alguna de estas te llama|te llama/i.test(
+      respuesta,
+    ) ||
+    (typeof suenaPlantillaRobot === 'function' && suenaPlantillaRobot(respuesta))
+  ) {
+    respuesta =
+      typeof preguntaAlgoPensado === 'function'
+        ? preguntaAlgoPensado(idxVariante)
+        : 'Tenes algo pensado de zona o presupuesto, o preferis que te muestre opciones?';
+  } else {
+    respuesta = humanizarVoz(respuesta);
+  }
 } else if (propiedadesMostrar.length > 0) {
   respuesta = armarIntroPropiedades(presupuestoDetectado, idxVariante, esCurioso);
   mensajeCierre = MENSAJE_CIERRE_PROPS;
@@ -216,6 +330,8 @@ if (String(prep.respuesta_forzada || '').trim() || (esAlquilerPresupuestoAlto &&
   mensajeCierre = MENSAJE_CIERRE_PROPS;
 } else if (
   (debeMostrar || esCurioso) &&
+  !esSaludoTurno &&
+  !esCalificar &&
   !propiedadesMostrar.length &&
   sugerenciasIds.length
 ) {
@@ -231,9 +347,26 @@ if (String(prep.respuesta_forzada || '').trim() || (esAlquilerPresupuestoAlto &&
   mensajesExtra = [];
 }
 
+const FALLBACK_GROQ =
+  'Perdon, se corto un toque. Me repetis que necesitas?';
+
 if (iaVacia && !respuesta) {
-  respuesta =
-    'Hola, soy Matías de Nodo Propiedades. Contame qué buscás y en qué zona';
+  if (
+    !esSaludoTurno &&
+    sugerenciasIds.length &&
+    (forzarStockClasificador || debeMostrar || pideStockTextoWa)
+  ) {
+    propiedadesMostrar = sugerenciasIds.slice(0, 3);
+    respuesta = armarIntroPropiedades(presupuestoDetectado, 0, esCurioso);
+    mensajeCierre = MENSAJE_CIERRE_PROPS;
+  } else if (esSaludoTurno || esSoloSaludo) {
+    respuesta =
+      typeof saludoHumanoCorto === 'function'
+        ? saludoHumanoCorto(2)
+        : 'Buenas, soy Matias de Nodo Propiedades. En que puedo ayudarte?';
+  } else {
+    respuesta = FALLBACK_GROQ;
+  }
 }
 
 const consultaRepetida = esConsultaRepetida(prep.mensaje, historialArr);
@@ -243,6 +376,8 @@ const botRepite =
 
 if (
   !String(prep.respuesta_forzada || '').trim() &&
+  !esSaludoTurno &&
+  !esCalificar &&
   (botRepite || consultaRepetida) &&
   sugerenciasIds.length &&
   !propiedadesMostrar.length &&
@@ -277,6 +412,59 @@ if (!mensajesExtra.length && respuesta && !String(prep.respuesta_forzada || '').
   if (parts.length > 1) {
     respuesta = parts[0];
     mensajesExtra = parts.slice(1, 3); // máximo 2 bloques (principal + 1 extra)
+  }
+}
+
+if (!presupuesto && presupuestoDetectado) {
+  presupuesto = 'USD ' + presupuestoDetectado;
+}
+
+const scoreTemp =
+  typeof calcularTemperaturaLead === 'function'
+    ? calcularTemperaturaLead({
+        historialArr: Array.isArray(historialArr)
+          ? historialArr
+          : parseHistorialArr(prep.historial_json_prev),
+        mensajeActual: prep.mensaje,
+        zona: zona || zonaDetectada,
+        presupuesto,
+        tipo_propiedad,
+        financiacion: financiacionHint,
+        urgencia: urgenciaHint,
+        zona_concreta: zonaConcretaHint,
+        tipo_concreto: tipoConcretoHint,
+        es_decisor: esDecisorHint,
+      })
+    : {
+        temperatura: temperatura || 'frio',
+        bot_paused: false,
+        handoff: false,
+        estado_seguimiento: 'ninguno',
+        senales: {},
+        senales_fuertes: [],
+        cierre_forzado: '',
+        notif_resumen: '',
+        motivo: 'fallback',
+        puede_clasificar: true,
+      };
+temperatura = scoreTemp.temperatura;
+
+if (temperatura === 'caliente') {
+  respuesta =
+    typeof LT_CIERRE_CALIENTE === 'string'
+      ? LT_CIERRE_CALIENTE
+      : 'Dale, con esto ya puedo avanzar. Te armo visita o preferis que te llame?';
+  mensajeCierre = '';
+  mensajesExtra = [];
+} else if (temperatura === 'tibio' && !esSaludoTurno) {
+  if (!propiedadesMostrar.length && sugerenciasIds.length && forzarStockClasificador) {
+    propiedadesMostrar = sugerenciasIds.slice(0, 2);
+    if (!String(prep.respuesta_forzada || '').trim()) {
+      respuesta = armarIntroPropiedades(presupuestoDetectado, idxVariante, false);
+    }
+  }
+  if (propiedadesMostrar.length) {
+    mensajeCierre = pickCierreProps(idxVariante + 1);
   }
 }
 
@@ -352,14 +540,32 @@ const consultaId =
 const prevCount = Number(prep.consultas_count_prev || 0) || 0;
 const consultas_count = esNuevaConsulta === 'si' ? prevCount + 1 : Math.max(prevCount, 1);
 
-if (!presupuesto && presupuestoDetectado) {
-  presupuesto = 'USD ' + presupuestoDetectado;
+respuesta = humanizarVoz(sanitizarPuntuacion(respuesta));
+// Anti "Hola]" / vacío tras sanitizar
+{
+  const soloBasura =
+    !String(respuesta || '').trim() ||
+    /^(hola|buenas?)[\s!.?\]]*$/i.test(String(respuesta || '').trim());
+  if (soloBasura) {
+    if (propiedadesMostrar.length) {
+      respuesta = 'Mira estas';
+    } else if (iaVacia) {
+      respuesta = FALLBACK_GROQ;
+    } else if (esSaludoTurno || esSoloSaludo) {
+      respuesta =
+        typeof saludoHumanoCorto === 'function'
+          ? saludoHumanoCorto(2)
+          : 'Buenas, soy Matias de Nodo Propiedades. En que puedo ayudarte?';
+    } else {
+      respuesta = FALLBACK_GROQ;
+    }
+  }
 }
-
-respuesta = sanitizarPuntuacion(respuesta);
-mensajeCierre = sanitizarPuntuacion(mensajeCierre);
+mensajeCierre = humanizarVoz(sanitizarPuntuacion(mensajeCierre));
 if (mensajesExtra.length) {
-  mensajesExtra = mensajesExtra.map(sanitizarPuntuacion).filter(Boolean);
+  mensajesExtra = mensajesExtra
+    .map((x) => humanizarVoz(sanitizarPuntuacion(x)))
+    .filter(Boolean);
 }
 
 const aprendizajeOpts = {
@@ -408,7 +614,14 @@ return [
       lead_completo: lead_completo ? 'si' : 'no',
       historial,
       historial_json,
-      status: lead_completo ? 'calificado' : 'abierto',
+      status: lead_completo || temperatura === 'caliente' || temperatura === 'tibio' ? 'calificado' : 'abierto',
+      bot_paused: scoreTemp.bot_paused ? 'si' : 'no',
+      handoff: scoreTemp.handoff ? 'si' : 'no',
+      estado_seguimiento: scoreTemp.estado_seguimiento || 'ninguno',
+      senales_json: JSON.stringify(scoreTemp.senales || {}),
+      senales_fuertes: (scoreTemp.senales_fuertes || []).join(','),
+      notif_resumen: scoreTemp.notif_resumen || '',
+      temperatura_motivo: scoreTemp.motivo || '',
       propiedades_mostrar: JSON.stringify(propiedadesMostrar),
       solicitud_visita: solicitudVisita,
       visita_propiedad_id: String(visitaData.propiedad_id || ''),

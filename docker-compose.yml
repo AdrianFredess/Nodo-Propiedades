@@ -1,6 +1,7 @@
 services:
   n8n:
-    image: n8nio/n8n:latest
+    # Pin fijo: evita que `:latest` cambie solo al reiniciar (tesis verificó 2.12.x).
+    image: n8nio/n8n:2.12.3
     restart: always
     ports:
       - "5678:5678"

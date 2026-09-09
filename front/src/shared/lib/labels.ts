@@ -48,7 +48,7 @@ export const TEMPERATURA_LABEL: Record<Temperatura, string> = {
 };
 
 export const PIPELINE_COLUMNA_LABEL: Record<PipelineColumna, string> = {
-  conversando: 'Conversando',
+  conversando: 'Conversando', // legacy; kanban usa frio/tibio/caliente
   frio: 'Frío',
   tibio: 'Tibio',
   caliente: 'Caliente',

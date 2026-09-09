@@ -17,19 +17,24 @@
 
 ---
 
-## Workflows (3 activos en `workflows/`)
+## Workflows (activos)
 
-La lógica está consolidada en un workflow por canal para simplificar el mantenimiento y despliegue:
+Ver mapa actualizado en [`docs/n8n-esquema.md`](../docs/n8n-esquema.md).
 
-| Archivo | Canal | Rol |
-|---------|-------|-----|
-| `SIMPLE-01 Telegram Bot.json` | **Telegram** | Recibe mensajes (@nodoprop_bot), gestiona leads en Sheets, procesa respuesta con Groq y responde. |
-| `SIMPLE-02 WhatsApp Bot.json` | **WhatsApp** | Webhook WhatsApp (Meta Cloud API), gestión de leads, IA y respuesta. |
-| `SIMPLE-03 Messenger Bot.json` | **Messenger** | Webhook Messenger, gestión de leads, IA y respuesta. |
+| Archivo / nombre n8n | Canal | Rol |
+|----------------------|-------|-----|
+| `Bot Telegram Inmobiliaria.json` | **Telegram** | Flujo productivo TG |
+| `SIMPLE-02 WhatsApp Bot.json` | **WhatsApp** | Meta Cloud API |
+| `SIMPLE-03 Messenger Bot.json` | **Messenger** | Webhook Messenger |
+| `SIMPLE-04 Seguimiento Automatico.json` | — | Follow-up tibios |
+| `PANEL-01` … `PANEL-06` | Panel | API leads, broadcast, stock, realtime |
+
+**Legacy:** `SIMPLE-01 Telegram Bot.json` — desactivar en n8n; no es el canal vivo.
 
 **Notas técnicas comunes:**
-- **IA (Groq)**: Utiliza `llama-3.1-70b-versatile` para analizar intención, clasificar temperatura (frio, tibio, caliente) y generar la respuesta.
+**IA (Groq)**: analiza intención, califica temperatura (`frio` / `tibio` / `caliente`) y genera la respuesta. El score se recalcula en **cada mensaje** con señales (financiación, urgencia, presupuesto, zona, tipo+decisor); ver `docs/validacion/temperatura-leads.md`.
 - **CRM (Google Sheets)**: Cada bot busca el lead por una `dedupe_key` (ej: `whatsapp:12345678`), crea el lead si no existe, y actualiza interacciones/temperatura.
+- **Panel**: kanban por `temperature` (Frío/Tibio/Caliente); no gatea por `lead_completo`.
 - **Estructura Sheets**: Se utiliza un documento de Google Sheets con hojas: `Leads`, `Propiedades`, `Interacciones`, etc.
 
 ---

@@ -88,8 +88,8 @@ const FILTER_CODE = `const rows = $input.all().map((i) => i.json);
 const now = Date.now();
 
 // DEMO (tesis): tiempos comprimidos para poder mostrar el flujo.
-// PROD (real): 1.er follow ~5 días; 2.º ~10 días después del primero (no intensivo).
-// Setear SEGUIMIENTO_MODE=prod en el contenedor n8n cuando pases a operación real.
+// PROD (real): 1.er follow ~5 días; 2.º ~10 días después del primero.
+// Setear SEGUIMIENTO_MODE=prod en el contenedor n8n en operación real.
 let mode = 'demo';
 try {
   mode = String(($env && $env.SEGUIMIENTO_MODE) || 'demo').toLowerCase();
@@ -100,6 +100,26 @@ const MS_DAY = 24 * 60 * 60 * 1000;
 const MS_FIRST = mode === 'prod' ? 5 * MS_DAY : 20 * 60 * 1000;
 const MS_SECOND = mode === 'prod' ? 10 * MS_DAY : 20 * 60 * 1000;
 const blocked = new Set(['cerrado', 'respondido', 'cerrado_sin_respuesta']);
+
+function diaClaveAR(ms) {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date(ms));
+  } catch (e) {
+    const d = new Date(ms - 3 * 60 * 60 * 1000);
+    return (
+      d.getUTCFullYear() +
+      '-' +
+      String(d.getUTCMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(d.getUTCDate()).padStart(2, '0')
+    );
+  }
+}
 
 function lastMessageTs(row) {
   const candidates = [];
@@ -136,6 +156,7 @@ function lastMessageTs(row) {
 }
 
 const out = [];
+const hoyAR = diaClaveAR(now);
 for (const row of rows) {
   if (!row || row.error) continue;
   let estado = String(row.estado_seguimiento ?? 'ninguno').trim().toLowerCase();
@@ -145,6 +166,8 @@ for (const row of rows) {
 
   const { t, raw: rawDate } = lastMessageTs(row);
   if (!rawDate || Number.isNaN(t)) continue;
+  // No pisar conversación activa: si el lead escribió HOY (AR), no mandar seguimiento.
+  if (diaClaveAR(t) === hoyAR) continue;
   const need = estado === 'enviado_1' ? MS_SECOND : MS_FIRST;
   if (now - t < need) continue;
 
@@ -152,22 +175,20 @@ for (const row of rows) {
   if (!chat_id) continue;
 
   const nombre = String(row.nombre || row.lead_name || 'Cliente').trim() || 'Cliente';
-  const zona = String(row.zona || '').trim() || 'tu zona de interés';
+  const zona = String(row.zona || '').trim() || 'tu zona';
   const canal_origen = String(row.canal_origen || row.source || 'telegram').trim().toLowerCase();
   const interes = String(row.temperature || row.temperatura || row.interes || '').trim();
   const telefono = String(row.phone || row.telefono || '').trim();
   const last_message = String(row.last_message || row.ultimo_mensaje || '').trim();
 
-  // Mensajes cortos, sin presión (como haría un asesor real).
+  // Corto, humano, sin presión ni "presupuesto a medida".
   let mensaje;
   if (estado === 'enviado_1') {
     mensaje =
-      'Hola ' + nombre + ', te dejo por acá un toque. Si más adelante retomás la búsqueda en ' +
-      zona + ', escribime y lo vemos sin problema. ¡Que andes bien!';
+      'Hola ' + nombre + ', te dejo por acá. Si retomás la búsqueda avisame y lo vemos';
   } else {
     mensaje =
-      'Hola ' + nombre + ', ¿seguís con ganas de ver algo por ' + zona +
-      '? Si querés te paso un par de opciones nuevas, sin compromiso.';
+      'Hola ' + nombre + ', seguís buscando por ' + zona + '? Si querés te paso un par de opciones';
   }
 
   out.push({
@@ -278,8 +299,11 @@ VISITAS:`,
 
 async function main() {
   await patchS04();
-  await patchTgRespondido();
-  await patchWaHuman();
+  // Por defecto solo SIMPLE-04. Usar --all para TG/WA humano legacy.
+  if (process.argv.includes('--all')) {
+    await patchTgRespondido();
+    await patchWaHuman();
+  }
 }
 
 main().catch((e) => {

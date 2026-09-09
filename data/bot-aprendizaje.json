@@ -46,11 +46,11 @@
       "id": "mza-saludo-primer-contacto",
       "tags": ["saludo", "frio"],
       "contexto_cliente": "Hola, buenas tardes",
-      "respuesta_matias": "Hola, cómo estás? Soy Matías de Nodo Propiedades. Cuando quieras contame qué necesitás",
+      "respuesta_matias": "Hola, soy Matias de Nodo Propiedades. En que puedo ayudarte?",
       "zona": "",
       "operacion": "",
       "presupuesto": "",
-      "notas": "Saludo tranquilo; cero cuestionario de compra/alquiler en el primer mensaje"
+      "notas": "Saludo presentacion corta; sin plantilla Cuando necesites; cero cuestionario"
     },
     {
       "id": "mza-informal-50k-stock",
@@ -106,11 +106,11 @@
       "id": "mza-saludo-buenas",
       "tags": ["saludo", "frio", "informal"],
       "contexto_cliente": "buenas",
-      "respuesta_matias": "Buen día. Soy Matías, de Nodo Propiedades. Contame cuando quieras qué buscás",
+      "respuesta_matias": "Buenas, soy Matias de Nodo Propiedades. En que puedo ayudarte?",
       "zona": "",
       "operacion": "",
       "presupuesto": "",
-      "notas": "Saludo ultra corto; presentación sin interrogatorio"
+      "notas": "Saludo presentacion corta; sin plantilla Cuando necesites/quieras"
     },
     {
       "id": "mza-alquiler-chico-informal",

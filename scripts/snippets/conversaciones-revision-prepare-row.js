@@ -23,6 +23,7 @@ function leadCompletoToBool(v) {
 }
 
 const repeticionDetectada = Boolean($json.repeticion_detectada);
+const rateLimit = Boolean($json.rate_limit);
 const leadCompleto = leadCompletoToBool($json.lead_completo);
 
 // Proxy determinístico de "turnos" sin tocar el clasificador/IA
@@ -30,7 +31,8 @@ const turnos = Number($json.turno || $json.consultas_count || 0) || 0;
 const sinClasificar = !leadCompleto && turnos >= UMBRAL_TURNOS_SIN_CLASIFICAR;
 
 let motivo = '';
-if (repeticionDetectada) motivo = 'REPETICION';
+if (rateLimit) motivo = 'rate_limit';
+else if (repeticionDetectada) motivo = 'REPETICION';
 else if (sinClasificar) motivo = 'SIN_CLASIFICAR';
 
 const registrar_revision = Boolean(motivo);

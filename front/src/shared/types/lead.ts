@@ -53,6 +53,9 @@ export interface Lead {
   /** ID de stock vinculado (propiedad_seguimiento) */
   propiedadId?: string;
   propiedadReferencia?: string;
+  /** IA pausada — el asesor humano debe continuar */
+  botPaused?: boolean;
+  handoff?: boolean;
 }
 
 export interface Propiedad {

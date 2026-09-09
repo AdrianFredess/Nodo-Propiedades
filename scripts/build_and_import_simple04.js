@@ -155,9 +155,9 @@ for (const row of rows) {
       mensaje:
         'Hola ' +
         nombre +
-        '! ¿Seguís buscando en ' +
+        ', seguís buscando por ' +
         zona +
-        '? Puedo mostrarte más opciones o armarte un presupuesto a medida. Decime zona, tipo o presupuesto y te ayudo.',
+        '? Si querés te paso un par de opciones',
     },
   });
 }

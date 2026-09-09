@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import {
   Navigate,
   Route,
@@ -10,10 +11,13 @@ import { CatalogoPage } from './features/catalogo/CatalogoPage';
 import { PropiedadDetailPage } from './features/catalogo/PropiedadDetailPage';
 import { PublicPropiedadPage } from './features/catalogo/PublicPropiedadPage';
 import { LeadDetailPage } from './features/lead-detail/LeadDetailPage';
+import { AdvisorActionBanner } from './features/notifications/AdvisorActionBanner';
 import { PipelinePage } from './features/pipeline/PipelinePage';
 import { ResumenPage } from './features/resumen/ResumenPage';
+import { useAdvisorActions } from './shared/hooks/useAdvisorActions';
 import { useChatUnread } from './shared/hooks/useChatUnread';
 import { useLeads } from './shared/hooks/useLeads';
+import type { RealtimeEvent } from './shared/hooks/useRealtime';
 import { useTempNotifications } from './shared/hooks/useTempNotifications';
 import { formatDateTime } from './shared/lib/time';
 import type { Propiedad } from './shared/types/lead';
@@ -81,6 +85,19 @@ export default function App() {
   const openLeadId = openLeadIdFromPath(location.pathname);
 
   const {
+    latest: advisorLatest,
+    dismiss: dismissAdvisor,
+    unreadCount: advisorUnread,
+    pushFromEvent,
+  } = useAdvisorActions();
+  const onRealtimeEvent = useCallback(
+    (event: RealtimeEvent) => {
+      pushFromEvent(event);
+    },
+    [pushFromEvent],
+  );
+
+  const {
     leads,
     propiedades,
     payload,
@@ -92,7 +109,7 @@ export default function App() {
     patchLead,
     appendChatMessage,
     realtimeStatus,
-  } = useLeads();
+  } = useLeads({ onRealtimeEvent });
 
   const { toasts, dismiss, markAllRead, unreadCount } =
     useTempNotifications(leads);
@@ -112,85 +129,100 @@ export default function App() {
           : undefined;
 
   return (
-    <Routes>
-      <Route path="/p/:propiedadId/:token" element={<PublicPropiedadPage />} />
-      <Route
-        element={
-          <AppShell
-            payload={payload}
-            lastUpdated={lastUpdated}
-            tempToasts={toasts}
-            tempUnread={unreadCount}
-            onDismissTemp={dismiss}
-            onMarkTempRead={markAllRead}
-            realtimeStatus={realtimeStatus}
+    <>
+      <AdvisorActionBanner
+        action={advisorLatest}
+        onDismiss={dismissAdvisor}
+        onSent={(action, text) => {
+          appendChatMessage({
+            leadId: action.leadId,
+            chatId: action.chatId,
+            text,
+            side: 'bot',
+            source: 'panel-advisor',
+          });
+        }}
+      />
+      <Routes>
+        <Route path="/p/:propiedadId/:token" element={<PublicPropiedadPage />} />
+        <Route
+          element={
+            <AppShell
+              payload={payload}
+              lastUpdated={lastUpdated}
+              tempToasts={toasts}
+              tempUnread={unreadCount + advisorUnread}
+              onDismissTemp={dismiss}
+              onMarkTempRead={markAllRead}
+              realtimeStatus={realtimeStatus}
+            />
+          }
+        >
+          <Route
+            index
+            element={
+              <>
+                {error ? <div className="error-banner">{error}</div> : null}
+                {loading && !payload ? (
+                  <div className="empty-state">Cargando panel…</div>
+                ) : (
+                  <ResumenPage
+                    leads={leads}
+                    sourceLabel={payload?.source ?? 'live'}
+                    lastUpdatedLabel={
+                      lastUpdated ? formatDateTime(lastUpdated) : '—'
+                    }
+                  />
+                )}
+              </>
+            }
           />
-        }
-      >
-        <Route
-          index
-          element={
-            <>
-              {error ? <div className="error-banner">{error}</div> : null}
-              {loading && !payload ? (
-                <div className="empty-state">Cargando panel…</div>
-              ) : (
-                <ResumenPage
-                  leads={leads}
-                  sourceLabel={payload?.source ?? 'live'}
-                  lastUpdatedLabel={
-                    lastUpdated ? formatDateTime(lastUpdated) : '—'
-                  }
-                />
-              )}
-            </>
-          }
-        />
-        <Route
-          path="pipeline"
-          element={
-            <div className="pipeline-route">
-              {error ? <div className="error-banner">{error}</div> : null}
-              <PipelinePage leads={leads} unreadByLead={unreadByLead} />
-            </div>
-          }
-        />
-        <Route
-          path="catalogo"
-          element={
-            <CatalogoPage
-              propiedades={propiedades}
-              loading={loading}
-              error={error}
-              realtimeLabel={realtimeLabel}
-              onLocalPatch={patchPropiedad}
-            />
-          }
-        />
-        <Route
-          path="catalogo/:propiedadId"
-          element={
-            <PropiedadDetailRoute
-              propiedades={propiedades}
-              loading={loading}
-            />
-          }
-        />
-        <Route
-          path="leads/:leadId"
-          element={
-            <LeadDetailRoute
-              findLead={findLead}
-              loading={loading}
-              getHighlightKeys={getHighlightKeys}
-              clearHighlight={clearHighlight}
-              appendChatMessage={appendChatMessage}
-              patchLead={patchLead}
-            />
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+          <Route
+            path="pipeline"
+            element={
+              <div className="pipeline-route">
+                {error ? <div className="error-banner">{error}</div> : null}
+                <PipelinePage leads={leads} unreadByLead={unreadByLead} />
+              </div>
+            }
+          />
+          <Route
+            path="catalogo"
+            element={
+              <CatalogoPage
+                propiedades={propiedades}
+                loading={loading}
+                error={error}
+                realtimeLabel={realtimeLabel}
+                onLocalPatch={patchPropiedad}
+              />
+            }
+          />
+          <Route
+            path="catalogo/:propiedadId"
+            element={
+              <PropiedadDetailRoute
+                propiedades={propiedades}
+                loading={loading}
+              />
+            }
+          />
+          <Route
+            path="leads/:leadId"
+            element={
+              <LeadDetailRoute
+                findLead={findLead}
+                loading={loading}
+                getHighlightKeys={getHighlightKeys}
+                clearHighlight={clearHighlight}
+                appendChatMessage={appendChatMessage}
+                patchLead={patchLead}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </>
   );
 }

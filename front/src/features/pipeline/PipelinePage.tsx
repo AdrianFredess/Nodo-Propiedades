@@ -18,18 +18,13 @@ interface PipelinePageProps {
   unreadByLead?: Map<string, number>;
 }
 
-const COLUMNS: PipelineColumna[] = [
-  'conversando',
-  'frio',
-  'tibio',
-  'caliente',
-];
+const COLUMNS: PipelineColumna[] = ['frio', 'tibio', 'caliente'];
 
 /** Orden de canal dentro de cada columna (mismo kanban). */
 const CHANNEL_ORDER: CanalOrigen[] = ['telegram', 'whatsapp', 'messenger'];
 
+/** Columna = temperatura en Sheets (frio|tibio|caliente). leadCompleto NO gatea el kanban. */
 function columnOf(lead: Lead): PipelineColumna {
-  if (!lead.leadCompleto) return 'conversando';
   return lead.temperatura;
 }
 
@@ -55,7 +50,7 @@ export function PipelinePage({ leads, unreadByLead }: PipelinePageProps) {
 
   const grouped = useMemo(() => {
     const map: Record<PipelineColumna, Lead[]> = {
-      conversando: [],
+      conversando: [], // legacy; ya no se usa en kanban
       frio: [],
       tibio: [],
       caliente: [],
@@ -83,7 +78,7 @@ export function PipelinePage({ leads, unreadByLead }: PipelinePageProps) {
         </div>
       </header>
 
-      <div className="kanban kanban--4 kanban--compact">
+      <div className="kanban kanban--3 kanban--compact">
         {COLUMNS.map((col) => {
           const blocks = blocksForColumn(grouped[col]);
           let ordinal = 0;

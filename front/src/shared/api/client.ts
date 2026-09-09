@@ -345,6 +345,22 @@ export function mapLead(raw: unknown): Lead | null {
     historial: mapHistorial(r.historial),
     propiedadId: propiedadId || undefined,
     propiedadReferencia: propiedadReferencia || undefined,
+    botPaused:
+      r.botPaused === true ||
+      String(r.botPaused ?? r.bot_paused ?? '')
+        .trim()
+        .toLowerCase() === 'si' ||
+      String(r.bot_paused ?? '')
+        .trim()
+        .toLowerCase() === 'true',
+    handoff:
+      r.handoff === true ||
+      String(r.handoff ?? '')
+        .trim()
+        .toLowerCase() === 'si' ||
+      String(r.handoff ?? '')
+        .trim()
+        .toLowerCase() === 'true',
   };
 }
 
