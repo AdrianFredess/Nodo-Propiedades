@@ -7,8 +7,14 @@
  * Eventos típicos: lead.updated | chat.message | stock.updated | leads.refresh
  */
 import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { synthesizeArgentine, ttsInfo } from './tts.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const BOT_CONFIG_PATH = path.resolve(__dirname, '..', '..', 'data', 'bot-config.json');
 
 const PORT = Number(process.env.WS_BRIDGE_PORT || 3099);
 const HOST = process.env.WS_BRIDGE_HOST || '0.0.0.0';
@@ -108,6 +114,54 @@ const server = http.createServer(async (req, res) => {
       emitRate: { windowMs: EMIT_WINDOW_MS, max: EMIT_MAX_PER_WINDOW },
       tts: ttsInfo(),
     });
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/bot-config') {
+    try {
+      const raw = fs.readFileSync(BOT_CONFIG_PATH, 'utf8');
+      json(res, 200, { ok: true, config: JSON.parse(raw) });
+    } catch (err) {
+      json(res, 200, {
+        ok: true,
+        config: {
+          tono: 'profesional_cercano',
+          umbral_derivacion: 'normal',
+          horario_humano_desde: '09:00',
+          horario_humano_hasta: '18:00',
+          mensaje_derivacion: 'te_paso',
+          vendedor_nombre: 'Adrian',
+          panel_base_url: 'http://localhost:5173',
+        },
+      });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/bot-config') {
+    let body;
+    try {
+      body = await readBody(req);
+    } catch {
+      json(res, 400, { ok: false, error: 'json_invalido' });
+      return;
+    }
+    const cfg = {
+      tono: String(body.tono || 'profesional_cercano'),
+      umbral_derivacion: String(body.umbral_derivacion || 'normal'),
+      horario_humano_desde: String(body.horario_humano_desde || '09:00'),
+      horario_humano_hasta: String(body.horario_humano_hasta || '18:00'),
+      mensaje_derivacion: String(body.mensaje_derivacion || 'te_paso'),
+      vendedor_nombre: String(body.vendedor_nombre || 'Adrian'),
+      panel_base_url: String(body.panel_base_url || 'http://localhost:5173'),
+    };
+    try {
+      fs.mkdirSync(path.dirname(BOT_CONFIG_PATH), { recursive: true });
+      fs.writeFileSync(BOT_CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
+      json(res, 200, { ok: true, config: cfg, note: 'Guardado. Redeploy patch para inyectar en n8n.' });
+    } catch (err) {
+      json(res, 500, { ok: false, error: err instanceof Error ? err.message : 'write_fail' });
+    }
     return;
   }
 

@@ -20,6 +20,7 @@ const links = [
   { to: '/', label: 'Resumen', end: true },
   { to: '/pipeline', label: 'Pipeline', end: false },
   { to: '/catalogo', label: 'Catálogo', end: false },
+  { to: '/config', label: 'Config bot', end: false },
 ];
 
 function realtimeText(status: RealtimeStatus | undefined): string {

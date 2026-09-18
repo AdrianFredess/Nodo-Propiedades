@@ -69,12 +69,23 @@ if (!stockItemsEarly.length && Array.isArray(STOCK_FALLBACK) && STOCK_FALLBACK.l
   stockItemsEarly = STOCK_FALLBACK;
 }
 
+const botConfigWa =
+  typeof cargarBotConfig === 'function'
+    ? cargarBotConfig(
+        (typeof $getWorkflowStaticData === 'function' &&
+          $getWorkflowStaticData('global') &&
+          $getWorkflowStaticData('global').botConfig) ||
+          {},
+      )
+    : { umbral_derivacion: 'normal', vendedor_nombre: 'Adrian', panel_base_url: 'http://localhost:5173' };
+
 const clasif = clasificarIntencionCliente(msg, historialPrev, {
   esAudioSinTexto,
   isKnownLead,
   stockDisponible: stockItemsEarly.length > 0,
   historialJsonArr: historialJsonArrEarly,
   ultimaActualizacion: row.ultima_actualizacion || row.last_interaction_at || row.updated_at || '',
+  umbral_derivacion: botConfigWa.umbral_derivacion,
 });
 
 const esDiaNuevo = Boolean(clasif.es_dia_nuevo || clasif.es_recontacto);

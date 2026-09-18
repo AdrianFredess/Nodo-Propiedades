@@ -83,18 +83,44 @@ function loadApiKey() {
   return '';
 }
 
+function botConfigJson() {
+  try {
+    const p = path.join(__dirname, '..', 'data', 'bot-config.json');
+    return JSON.stringify(JSON.parse(fs.readFileSync(p, 'utf8')));
+  } catch (e) {
+    return JSON.stringify({
+      tono: 'profesional_cercano',
+      umbral_derivacion: 'normal',
+      horario_humano_desde: '09:00',
+      horario_humano_hasta: '18:00',
+      mensaje_derivacion: 'te_paso',
+      vendedor_nombre: 'Adrian',
+      panel_base_url: 'http://localhost:5173',
+    });
+  }
+}
+
+function injectBotConfig(code) {
+  return String(code || '').replace(
+    /const BOT_CONFIG_EMBED = null; \/\/ __BOT_CONFIG_LINE__/,
+    'const BOT_CONFIG_EMBED = ' + botConfigJson() + '; // __BOT_CONFIG_LINE__',
+  );
+}
+
 function snippet(name) {
   let code = fs.readFileSync(path.join(__dirname, 'snippets', name), 'utf8');
   code = code.replace(/__PROP_MEDIA_JSON__/g, JSON.stringify(PROP_MEDIA));
   code = code.replace(/__STOCK_FALLBACK_JSON__/g, stockFallbackJson());
+  code = injectBotConfig(code);
   return code;
 }
 
 function intentClassifierSnippet() {
-  return fs.readFileSync(
+  let code = fs.readFileSync(
     path.join(__dirname, 'snippets', 'intent-classifier.js'),
     'utf8',
   );
+  return injectBotConfig(code);
 }
 
 function leadTemperaturaSnippet() {
@@ -836,7 +862,7 @@ function wireAdvisorActionEmit(wf) {
       sendBody: true,
       specifyBody: 'json',
       jsonBody:
-        "={{ JSON.stringify({ type: 'advisor.action', payload: { chatId: String($json.chat_id || ''), leadId: 'telegram:' + String($json.chat_id || ''), nombre: String($json.nombre || $json.nombre_usuario || 'Cliente'), source: 'telegram', kind: $json.rate_limit ? ($json.reenvio_tipo === 'link' ? 'link' : ($json.reenvio_tipo === 'fichas' || String($json.propiedades_mostrar || '[]') !== '[]' ? 'fichas' : 'rate_limit')) : ($json.solicitud_visita || String($json.bot_paused || '') === 'si' ? (String($json.cita_link || '') ? 'link' : 'handoff') : 'handoff'), propIds: (function(){ try { return JSON.parse($json.reenvio_ids || $json.propiedades_mostrar || '[]'); } catch(e) { return []; } })(), link: String($json.reenvio_link || $json.cita_link || ''), rateLimit: Boolean($json.rate_limit), botPaused: String($json.bot_paused || '') === 'si', handoff: String($json.handoff || '') === 'si', needsAdvisor: true, detail: $json.rate_limit ? 'Sin tokens — reenviá ficha/link al cliente' : 'Bot pausado — tomá el chat' } }) }}",
+        "={{ JSON.stringify({ type: 'advisor.action', payload: { chatId: String($json.chat_id || ''), leadId: 'telegram:' + String($json.chat_id || ''), nombre: String($json.nombre || $json.nombre_usuario || 'Cliente'), source: 'telegram', kind: $json.rate_limit ? ($json.reenvio_tipo === 'link' ? 'link' : ($json.reenvio_tipo === 'fichas' || String($json.propiedades_mostrar || '[]') !== '[]' ? 'fichas' : 'rate_limit')) : ($json.solicitud_visita || String($json.bot_paused || '') === 'si' ? (String($json.cita_link || '') ? 'link' : 'handoff') : 'handoff'), propIds: (function(){ try { return JSON.parse($json.reenvio_ids || $json.propiedades_mostrar || '[]'); } catch(e) { return []; } })(), link: String($json.reenvio_link || $json.cita_link || ''), rateLimit: Boolean($json.rate_limit), botPaused: String($json.bot_paused || '') === 'si', handoff: String($json.handoff || '') === 'si', needsAdvisor: true, detail: String($json.aviso_vendedor_texto || $json.notif_resumen || ($json.rate_limit ? 'Sin tokens — reenviá ficha/link al cliente' : 'Bot pausado — tomá el chat')), derivacionCategoria: String($json.derivacion_categoria || ''), derivacionMotivo: String($json.derivacion_motivo || '') } }) }}",
     },
   };
   const ifAdv = {
@@ -908,15 +934,36 @@ function patchTgTemperaturaSheets(wf) {
     );
   }
 
+  const ifHot = wf.nodes.find((n) => n.name === 'IF Temperatura Caliente');
+  if (ifHot?.parameters?.conditions) {
+    ifHot.parameters.conditions.combinator = 'or';
+    ifHot.parameters.conditions.conditions = [
+      {
+        id: 'c-hot',
+        leftValue:
+          "={{ String($('Parsear Respuesta').first().json.temperatura || '').toLowerCase() }}",
+        operator: { operation: 'equals', type: 'string' },
+        rightValue: 'caliente',
+      },
+      {
+        id: 'c-aviso',
+        leftValue:
+          "={{ Boolean($('Parsear Respuesta').first().json.aviso_vendedor) }}",
+        operator: { type: 'boolean', operation: 'equals' },
+        rightValue: true,
+      },
+    ];
+  }
+
   const email = wf.nodes.find((n) => n.name === 'Email Lead Caliente');
   if (email?.parameters) {
     email.parameters.jsonBody =
-      "={{ JSON.stringify({ name: 'Nodo Propiedades Bot', email: 'bot@nodopropiedades.local', _subject: 'URGENTE LEAD CALIENTE Telegram - ' + $('Parsear Respuesta').first().json.nombre, message: 'URGENTE LEAD CALIENTE Telegram\\nNombre: ' + $('Parsear Respuesta').first().json.nombre + '\\nChat: ' + $('Parsear Respuesta').first().json.chat_id + '\\n--- Señales ---\\n' + String($('Parsear Respuesta').first().json.notif_resumen || '') + '\\nZona: ' + $('Parsear Respuesta').first().json.zona + '\\nPresupuesto: ' + $('Parsear Respuesta').first().json.presupuesto }) }}";
+      "={{ JSON.stringify({ name: 'Nodo Propiedades Bot', email: 'bot@nodopropiedades.local', _subject: 'AVISO Nodo Telegram - ' + $('Parsear Respuesta').first().json.nombre, message: String($('Parsear Respuesta').first().json.aviso_vendedor_texto || $('Parsear Respuesta').first().json.notif_resumen || '') }) }}";
   }
   const tgAlert = wf.nodes.find((n) => n.name === 'Telegram Alerta Owner');
   if (tgAlert?.parameters) {
     tgAlert.parameters.jsonBody =
-      "={{ JSON.stringify({ chat_id: '__SET_OWNER_TELEGRAM_CHAT_ID__', text: 'URGENTE LEAD CALIENTE Telegram\\nNombre: ' + $('Parsear Respuesta').first().json.nombre + '\\nChat: ' + $('Parsear Respuesta').first().json.chat_id + '\\n' + String($('Parsear Respuesta').first().json.notif_resumen || '') }) }}";
+      "={{ JSON.stringify({ chat_id: '__SET_OWNER_TELEGRAM_CHAT_ID__', text: String($('Parsear Respuesta').first().json.aviso_vendedor_texto || $('Parsear Respuesta').first().json.notif_resumen || ('AVISO Nodo\\n' + $('Parsear Respuesta').first().json.nombre + '\\nChat: ' + $('Parsear Respuesta').first().json.chat_id)), disable_web_page_preview: false }) }}";
   }
 }
 
@@ -1022,6 +1069,7 @@ function patchTg(wf) {
   wireTgFichasDelivery(wf);
   refreshConversacionesRevisionSnippet(wf, 'telegram');
   wireAdvisorActionEmit(wf);
+  wireTelegramOwnerCredential(wf);
 
   // Si skip_reply (handoff), no llamar Groq
   const ifLlamar = {
@@ -1249,12 +1297,65 @@ function substituteEnv(wf) {
     __SET_GOOGLE_SHEET_ID__: sheetId(),
     __SET_GROQ_API_KEY__: loadEnvValue('GROQ_API_KEY', ''),
     __SET_TELEGRAM_BOT_TOKEN__: loadEnvValue('TELEGRAM_BOT_TOKEN', ''),
+    __SET_OWNER_TELEGRAM_CHAT_ID__: loadEnvValue(
+      'OWNER_TELEGRAM_CHAT_ID',
+      loadEnvValue('TELEGRAM_OWNER_CHAT_ID', ''),
+    ),
   };
   let raw = JSON.stringify(wf);
   for (const [k, v] of Object.entries(vars)) {
     if (v) raw = raw.split(k).join(v);
   }
   return JSON.parse(raw);
+}
+
+/** Alerta owner vía nodo Telegram (credencial n8n), no HTTP con placeholder. */
+function wireTelegramOwnerCredential(wf) {
+  const responder = wf.nodes.find((n) => n.name === 'Telegram Responder');
+  const cred = responder?.credentials?.telegramApi || {
+    id: '__SET_TELEGRAM_CREDENTIAL_ID__',
+    name: 'Telegram Bot Inmobiliaria',
+  };
+  const ownerChat = '__SET_OWNER_TELEGRAM_CHAT_ID__';
+
+  function asTelegramNode(existing, textExpr) {
+    const n = existing || {};
+    return {
+      ...n,
+      type: 'n8n-nodes-base.telegram',
+      typeVersion: 1.2,
+      credentials: { telegramApi: cred },
+      onError: 'continueRegularOutput',
+      parameters: {
+        operation: 'sendMessage',
+        chatId: ownerChat,
+        text: textExpr,
+        additionalFields: {
+          appendAttribution: false,
+          disable_web_page_preview: true,
+          // Sin parse_mode: underscores en motivos (pide_humano) rompían Markdown → 400
+        },
+      },
+    };
+  }
+
+  const alerta = wf.nodes.find((n) => n.name === 'Telegram Alerta Owner');
+  if (alerta) {
+    const idx = wf.nodes.indexOf(alerta);
+    wf.nodes[idx] = asTelegramNode(
+      alerta,
+      "={{ String($('Parsear Respuesta').first().json.aviso_vendedor_texto || $('Parsear Respuesta').first().json.notif_resumen || ('AVISO Nodo\\n' + $('Parsear Respuesta').first().json.nombre + '\\nChat: ' + $('Parsear Respuesta').first().json.chat_id)) }}",
+    );
+  }
+
+  const alertaRl = wf.nodes.find((n) => n.name === 'Telegram Alerta Owner RL');
+  if (alertaRl) {
+    const idx = wf.nodes.indexOf(alertaRl);
+    wf.nodes[idx] = asTelegramNode(
+      alertaRl,
+      "={{ 'Groq sin tokens / fallo\\nChat: ' + String($json.chat_id || '') + '\\nCliente: ' + String($json.nombre || $json.nombre_usuario || '') + '\\nMsg: ' + String($json.texto_usuario || '').slice(0,200) }}",
+    );
+  }
 }
 
 function putSettings(wf) {

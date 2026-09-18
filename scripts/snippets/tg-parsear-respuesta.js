@@ -817,7 +817,7 @@ if (
   respuestaBot =
     'Dale, coordinamos.' +
     linkBit +
-    ' Ya le aviso al asesor de Nodo y te confirma el dia por aca.';
+    ' El asesor te confirma el dia por aca.';
   mensajeCierre = '';
   mensajesExtra = [];
   solicitudVisita = true;
@@ -847,6 +847,117 @@ if (forzarHandoffVisita) {
     scoreTemp.temperatura === 'frio' ? 'tibio' : scoreTemp.temperatura;
   temperatura = scoreTemp.temperatura;
 }
+
+// --- Derivacion A/B/C (clasificador deterministico) ---
+const botConfigParse =
+  typeof cargarBotConfig === 'function'
+    ? cargarBotConfig(
+        (function () {
+          try {
+            return JSON.parse(String(promptData.bot_config_json || '{}'));
+          } catch (e) {
+            return {};
+          }
+        })(),
+      )
+    : { vendedor_nombre: 'Adrian', panel_base_url: 'http://localhost:5173' };
+
+const cuatroDatos =
+  Boolean(String(leadData.zona || promptData.zona_detectada || '').trim()) &&
+  Boolean(String(leadData.presupuesto || promptData.presupuesto_detectado || '').trim()) &&
+  Boolean(String(leadData.operacion || promptData.operacion_detectada || '').trim()) &&
+  (Boolean(leadCompleto) ||
+    /\b(urgente|esta semana|lo antes|rapido|rápido)\b/i.test(textoUsuario) ||
+    Boolean(String(leadData.urgencia || '').trim()));
+
+let derivacion =
+  typeof clasificarDerivacionHumano === 'function'
+    ? clasificarDerivacionHumano(textoUsuario, {
+        umbral: botConfigParse.umbral_derivacion || 'normal',
+        leadCompleto: Boolean(leadCompleto),
+        tieneCuatroDatos: cuatroDatos,
+        solicitudVisita: Boolean(solicitudVisita || forzarHandoffVisita),
+      })
+    : {
+        categoria: String(promptData.derivacion_categoria || 'A'),
+        motivo: String(promptData.derivacion_motivo || 'auto'),
+        alertar: Boolean(promptData.derivacion_alertar),
+        pausar: Boolean(promptData.derivacion_pausar),
+      };
+
+if (forzarHandoffVisita && derivacion.categoria === 'A') {
+  derivacion = { categoria: 'B', motivo: 'visita', alertar: true, pausar: false };
+}
+if (leadCompleto && derivacion.categoria === 'A') {
+  derivacion = {
+    categoria: 'B',
+    motivo: 'lead_completo',
+    alertar: true,
+    pausar: false,
+  };
+}
+
+const mensajeDerivacionTxt =
+  String(promptData.mensaje_derivacion_cliente || '').trim() ||
+  (typeof mensajeDerivacionCliente === 'function'
+    ? mensajeDerivacionCliente(botConfigParse)
+    : 'Te paso con el vendedor, en un momento te escribe.');
+
+if (derivacion.categoria === 'C' && !skipReply) {
+  respuestaBot = mensajeDerivacionTxt;
+  mensajesExtra = [];
+  mensajeCierre = '';
+  propiedadesMostrar = [];
+  scoreTemp.bot_paused = true;
+  scoreTemp.handoff = true;
+  scoreTemp.estado_seguimiento = 'respondido';
+  if (scoreTemp.temperatura === 'frio') scoreTemp.temperatura = 'tibio';
+  temperatura = scoreTemp.temperatura;
+} else if (derivacion.categoria === 'B') {
+  scoreTemp.handoff = true;
+  // B: no pausar el bot (sigue la charla)
+  if (!forzarHandoffVisita && derivacion.motivo !== 'visita') {
+    scoreTemp.bot_paused = false;
+  }
+}
+
+const avisoVendedorTexto =
+  typeof armarAvisoVendedorContexto === 'function'
+    ? armarAvisoVendedorContexto({
+        titulo:
+          derivacion.categoria === 'C'
+            ? 'DERIVACION C'
+            : derivacion.categoria === 'B'
+              ? 'AVISO B'
+              : 'LEAD',
+        nombre: leadData.nombre || nombreUsuario,
+        canal: 'telegram',
+        chatId: chatId,
+        leadId: 'telegram:' + String(chatId || ''),
+        zona: leadData.zona || promptData.zona_detectada || '',
+        presupuesto: leadData.presupuesto || promptData.presupuesto_detectado || '',
+        operacion: leadData.operacion || promptData.operacion_detectada || '',
+        urgencia: leadData.urgencia || '',
+        resumen: leadData.resumen || textoUsuario,
+        ultimoMensaje: textoUsuario,
+        motivo: derivacion.motivo || '',
+        panelBase: botConfigParse.panel_base_url,
+      })
+    : String(scoreTemp.notif_resumen || '');
+
+if (derivacion.alertar && avisoVendedorTexto) {
+  scoreTemp.notif_resumen = avisoVendedorTexto;
+}
+
+// Regla de oro (Parche 2): no narrar "ya le aviso al asesor" — la entrega al
+// vendedor es async y puede fallar. Reescribir a confirmacion sin promesa.
+respuestaBot = String(respuestaBot || '')
+  .replace(
+    /\b(ya\s+le\s+aviso|ya\s+avis[eé]|le\s+aviso\s+al\s+asesor|aviso\s+al\s+asesor)\b[^.!?]*/gi,
+    'El asesor te confirma por aca',
+  )
+  .replace(/\s{2,}/g, ' ')
+  .trim();
 
 // Ban cierre pasivo
 if (
@@ -1038,10 +1149,19 @@ if (!skipReply && !esOffTopic) {
   }
 }
 
-// Regla de oro: nunca narrar entrega futura si no hay fichas en este turno
+// Regla de oro: nunca narrar entrega de FICHAS si no hay fichas en este turno.
+// No aplica a derivacion C ("Te paso con el vendedor") ni handoff de visita.
 const PROMESA_ENTREGA_RE =
-  /\b(te muestro|ah[ií] van|aca te (dejo|muestro)|ac[aá] te (dejo|muestro)|mir[aá] estas|te paso|te mando|te env[ií]o|te dejo estas|ahora te (paso|mando|muestro))\b/i;
-if (!propiedadesMostrar.length && PROMESA_ENTREGA_RE.test(String(respuestaBot || ''))) {
+  /\b(te muestro|ah[ií] van|aca te (dejo|muestro)|ac[aá] te (dejo|muestro)|mir[aá] estas|te paso (estas|opciones|fichas|las|los|unos)|te mando|te env[ií]o|te dejo estas|ahora te (paso|mando|muestro))\b/i;
+const skipPromesaEntrega =
+  (derivacion && derivacion.categoria === 'C') ||
+  forzarHandoffVisita ||
+  Boolean(scoreTemp && scoreTemp.bot_paused && derivacion && derivacion.alertar);
+if (
+  !skipPromesaEntrega &&
+  !propiedadesMostrar.length &&
+  PROMESA_ENTREGA_RE.test(String(respuestaBot || ''))
+) {
   if (isRateLimit && retryGroq) {
     respuestaBot = '';
   } else if (isRateLimit && notifyOwnerGroq) {
@@ -1136,7 +1256,7 @@ return [
       estado_seguimiento: scoreTemp.estado_seguimiento || 'ninguno',
       senales_json: JSON.stringify(scoreTemp.senales || {}),
       senales_fuertes: (scoreTemp.senales_fuertes || []).join(','),
-      notif_resumen: scoreTemp.notif_resumen || '',
+      notif_resumen: scoreTemp.notif_resumen || avisoVendedorTexto || '',
       temperatura_motivo: scoreTemp.motivo || '',
       es_off_topic: esOffTopic,
       off_topic_count: offTopicCount,
@@ -1152,8 +1272,13 @@ return [
       needs_advisor_action: Boolean(
         notifyOwnerGroq ||
           scoreTemp.bot_paused ||
-          forzarHandoffVisita,
+          forzarHandoffVisita ||
+          derivacion.alertar,
       ),
+      aviso_vendedor: Boolean(derivacion.alertar),
+      aviso_vendedor_texto: avisoVendedorTexto || '',
+      derivacion_categoria: derivacion.categoria || 'A',
+      derivacion_motivo: derivacion.motivo || 'auto',
       cita_link: citaLinkParse,
       ...regAprendizaje,
     },

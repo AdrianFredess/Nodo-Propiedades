@@ -343,12 +343,31 @@ let zonaDetectada =
 let operacionDetectada =
   extractOperacion(textoUsuario) || extractOperacion(textoUsuariosHist) || '';
 
+const botConfig =
+  typeof cargarBotConfig === 'function'
+    ? cargarBotConfig(
+        (typeof $getWorkflowStaticData === 'function' &&
+          $getWorkflowStaticData('global') &&
+          $getWorkflowStaticData('global').botConfig) ||
+          {},
+      )
+    : {
+        tono: 'profesional_cercano',
+        umbral_derivacion: 'normal',
+        horario_humano_desde: '09:00',
+        horario_humano_hasta: '18:00',
+        mensaje_derivacion: 'te_paso',
+        vendedor_nombre: 'Adrian',
+        panel_base_url: 'http://localhost:5173',
+      };
+
 const clasif = clasificarIntencionCliente(textoUsuario, textoHistorial, {
   stockDisponible: stockItems.length > 0,
   historialJsonArr: historialJson,
   esAudioSinTexto: esAudioSinTextoTg,
   ultimaActualizacion: ultimaActualizacionStr,
   diasSinContacto,
+  umbral_derivacion: botConfig.umbral_derivacion,
 });
 
 const esDiaNuevo = Boolean(clasif.es_dia_nuevo || clasif.es_recontacto);
@@ -788,6 +807,21 @@ const systemPrompt =
   '- Si el cliente dice "ya te dije" / "te dije" / repite el monto: reconocé el dato y avanzá (fichas o una sola pregunta nueva).\n' +
   '- Default operación = venta/compra en USD. Solo tratés como alquiler si el CLIENTE lo dijo claro en sus mensajes (no por preguntas tuyas en el historial).\n' +
   '\n' +
+  'CONFIG BOT (panel — no reescribas el tono base; solo aplica estos parametros):\n' +
+  '- Tono prefijado: ' +
+  botConfig.tono +
+  '\n' +
+  '- Horario atencion humana: ' +
+  botConfig.horario_humano_desde +
+  ' a ' +
+  botConfig.horario_humano_hasta +
+  ' (Mendoza). Si preguntan fuera de horario, mencionalo natural ("te contesta a partir de las ' +
+  botConfig.horario_humano_desde +
+  '").\n' +
+  '- Vendedor unico: ' +
+  botConfig.vendedor_nombre +
+  '\n' +
+  '\n' +
   'SALUDO (primer contacto del dia o de la conversacion):\n' +
   '"Buenas, soy Matias de Nodo Propiedades. En que puedo ayudarte?"\n' +
   'Simple, cordial, sin "cuando necesites" ni nada que suene a mensaje automatico de bienvenida.\n' +
@@ -906,7 +940,8 @@ const systemPrompt =
   citaLink +
   '\n' +
   '- Cuando el cliente quiere visitar / pregunta dia / confirma (ok/dale): manda el link + ###SOLICITUD_VISITA###.\n' +
-  '- Mensaje tipo: "Dale, coordinamos. Link: ... Ya le aviso al asesor y te confirma por aca."\n' +
+  '- Mensaje tipo: "Dale, coordinamos. Link: ... El asesor te confirma por aca."\n' +
+  '- PROHIBIDO prometer "ya le aviso" / "ya avise al asesor" (la entrega al vendedor la confirma el sistema aparte).\n' +
   '- PROHIBIDO "cualquier cosa avisame" / cierres pasivos.\n' +
   '- Despues de coordinar visita el sistema PAUSA al bot (handoff). No sigas charlando vos.\n' +
   '###SOLICITUD_VISITA###\n{"propiedad_id":"ID","zona":"...","presupuesto":"...","nota":"..."}\n###FIN_VISITA###\n\n' +
@@ -1011,6 +1046,15 @@ return [
       requiere_calificar: clasif.requiere_calificar,
       bot_repite_sin_fichas: Boolean(clasif.bot_repite_sin_fichas),
       ya_aclaro_compra_alquiler: Boolean(clasif.ya_aclaro_compra_alquiler),
+      derivacion_categoria: clasif.derivacion_categoria || 'A',
+      derivacion_motivo: clasif.derivacion_motivo || 'auto',
+      derivacion_alertar: Boolean(clasif.derivacion_alertar),
+      derivacion_pausar: Boolean(clasif.derivacion_pausar),
+      bot_config_json: JSON.stringify(botConfig),
+      mensaje_derivacion_cliente:
+        typeof mensajeDerivacionCliente === 'function'
+          ? mensajeDerivacionCliente(botConfig)
+          : 'Te paso con el vendedor, en un momento te escribe.',
     },
   },
 ];

@@ -448,6 +448,58 @@ const scoreTemp =
       };
 temperatura = scoreTemp.temperatura;
 
+const botConfigWaParse =
+  typeof cargarBotConfig === 'function'
+    ? cargarBotConfig(
+        (typeof $getWorkflowStaticData === 'function' &&
+          $getWorkflowStaticData('global') &&
+          $getWorkflowStaticData('global').botConfig) ||
+          {},
+      )
+    : { vendedor_nombre: 'Adrian', panel_base_url: 'http://localhost:5173' };
+let derivacionWa =
+  typeof clasificarDerivacionHumano === 'function'
+    ? clasificarDerivacionHumano(prep.mensaje, {
+        umbral: botConfigWaParse.umbral_derivacion || 'normal',
+        leadCompleto: Boolean(lead_completo),
+        solicitudVisita: Boolean(solicitudVisita),
+      })
+    : { categoria: 'A', motivo: 'auto', alertar: false, pausar: false };
+if (lead_completo && derivacionWa.categoria === 'A') {
+  derivacionWa = { categoria: 'B', motivo: 'lead_completo', alertar: true, pausar: false };
+}
+if (solicitudVisita && derivacionWa.categoria === 'A') {
+  derivacionWa = { categoria: 'B', motivo: 'visita', alertar: true, pausar: false };
+}
+const avisoWa =
+  typeof armarAvisoVendedorContexto === 'function'
+    ? armarAvisoVendedorContexto({
+        titulo: derivacionWa.categoria === 'C' ? 'DERIVACION C' : 'AVISO B',
+        nombre: prep.lead_name || prep.phone || 'Cliente',
+        canal: 'whatsapp',
+        chatId: prep.chat_id,
+        leadId: 'whatsapp:' + String(prep.chat_id || prep.phone || ''),
+        zona: zona || '',
+        presupuesto: presupuesto || '',
+        operacion: operacion || '',
+        resumen: prep.mensaje,
+        ultimoMensaje: prep.mensaje,
+        motivo: derivacionWa.motivo,
+        panelBase: botConfigWaParse.panel_base_url,
+      })
+    : '';
+if (derivacionWa.categoria === 'C') {
+  respuesta =
+    typeof mensajeDerivacionCliente === 'function'
+      ? mensajeDerivacionCliente(botConfigWaParse)
+      : 'Te paso con el vendedor, en un momento te escribe.';
+  scoreTemp.bot_paused = true;
+  scoreTemp.handoff = true;
+} else if (derivacionWa.categoria === 'B') {
+  scoreTemp.handoff = true;
+}
+if (derivacionWa.alertar && avisoWa) scoreTemp.notif_resumen = avisoWa;
+
 if (temperatura === 'caliente') {
   respuesta =
     typeof LT_CIERRE_CALIENTE === 'string'
@@ -619,7 +671,7 @@ return [
       estado_seguimiento: scoreTemp.estado_seguimiento || 'ninguno',
       senales_json: JSON.stringify(scoreTemp.senales || {}),
       senales_fuertes: (scoreTemp.senales_fuertes || []).join(','),
-      notif_resumen: scoreTemp.notif_resumen || '',
+      notif_resumen: scoreTemp.notif_resumen || avisoWa || '',
       temperatura_motivo: scoreTemp.motivo || '',
       propiedades_mostrar: JSON.stringify(propiedadesMostrar),
       solicitud_visita: solicitudVisita,
@@ -630,6 +682,13 @@ return [
       repeticion_detectada: repeticionDetectada,
       intent_detected: intencionClasificador || intencion,
       objeciones: JSON.stringify(analisisPost.objeciones || []),
+      aviso_vendedor: Boolean(derivacionWa.alertar),
+      aviso_vendedor_texto: avisoWa || '',
+      derivacion_categoria: derivacionWa.categoria || 'A',
+      derivacion_motivo: derivacionWa.motivo || 'auto',
+      needs_advisor_action: Boolean(
+        scoreTemp.bot_paused || derivacionWa.alertar || solicitudVisita,
+      ),
       ...regAprendizaje,
     },
   },

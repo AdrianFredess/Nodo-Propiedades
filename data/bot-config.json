@@ -1,0 +1,9 @@
+{
+  "tono": "profesional_cercano",
+  "umbral_derivacion": "normal",
+  "horario_humano_desde": "09:00",
+  "horario_humano_hasta": "18:00",
+  "mensaje_derivacion": "te_paso",
+  "vendedor_nombre": "Adrian",
+  "panel_base_url": "http://localhost:5173"
+}

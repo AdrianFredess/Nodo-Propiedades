@@ -843,6 +843,15 @@ function clasificarIntencionCliente(msg, historial, opts) {
     esOffTopic = false;
   }
 
+  const derivacion = clasificarDerivacionHumano(msg, {
+    umbral: (opts && opts.umbral_derivacion) || 'normal',
+    leadCompleto: Boolean(opts && opts.lead_completo),
+    tieneCuatroDatos: Boolean(opts && opts.tiene_cuatro_datos),
+    solicitudVisita: Boolean(
+      (opts && opts.solicitud_visita) || IC_VISITA.test(String(msg || '')),
+    ),
+  });
+
   return {
     intencion,
     confianza,
@@ -863,7 +872,167 @@ function clasificarIntencionCliente(msg, historial, opts) {
     score_off: scoreOff,
     ya_aclaro_compra_alquiler: yaAclamoCompraAlquiler,
     bot_repite_sin_fichas: esSaludo || busquedaVagaHoy ? false : botRepiteSinFichas,
+    derivacion_categoria: derivacion.categoria,
+    derivacion_motivo: derivacion.motivo,
+    derivacion_alertar: derivacion.alertar,
+    derivacion_pausar: derivacion.pausar,
   };
+}
+
+/**
+ * Categorías de derivación a humano (1 vendedor). Determinístico — no LLM.
+ * A = bot solo | B = bot sigue + aviso | C = corta y deriva
+ */
+function clasificarDerivacionHumano(msg, opts) {
+  const o = opts || {};
+  const t = String(msg || '');
+  const tl = t.toLowerCase();
+  const umbral = String(o.umbral || 'normal').toLowerCase();
+
+  // --- C: deriva directo ---
+  if (
+    /\b(quiero hablar con (una )?persona|pasame (con |a )?(un )?(humano|asesor|vendedor|alguien)|hablar con (el |un )?(asesor|vendedor|humano)|atenci[oó]n humana|un humano)\b/i.test(
+      t,
+    )
+  ) {
+    return { categoria: 'C', motivo: 'pide_humano', alertar: true, pausar: true };
+  }
+  const mayusSostenidas =
+    t.length >= 12 &&
+    t === t.toUpperCase() &&
+    /[A-ZÁÉÍÓÚÑ]{6,}/.test(t) &&
+    !/^[A-Z0-9\s\-]+$/.test(t.replace(/[¿?¡!.,]/g, ''));
+  if (
+    mayusSostenidas ||
+    /\b(hijo de|la concha|pelotud|imb[eé]cil|idiota|esto no sirve|una mierda|forro|la puta|carajo|bosta)\b/i.test(
+      tl,
+    )
+  ) {
+    return { categoria: 'C', motivo: 'frustracion', alertar: true, pausar: true };
+  }
+  if (
+    /\b(te lo dejo en|cierro hoy|permuta|contraoferta|rebaj(a|ame|emos)|hagamos trato|descontame|ultimo precio|último precio|bajame (el )?precio|te ofrezco)\b/i.test(
+      tl,
+    )
+  ) {
+    return { categoria: 'C', motivo: 'negociacion', alertar: true, pausar: true };
+  }
+  if (
+    /\b(mi reserva|ya pagu[eé]|la se[ñn]a que (di|pagu)|reclamo|no me devolv|estaf|me mintieron)\b/i.test(
+      tl,
+    )
+  ) {
+    return { categoria: 'C', motivo: 'reclamo', alertar: true, pausar: true };
+  }
+  if (
+    /\b(boleto|clausula|cláusula|juicio|hipoteca de (esta|la|mi)|escritura de (esta|mza|la propiedad)|condiciones legales de (esta|la))\b/i.test(
+      tl,
+    ) &&
+    !/\b(que es (una |la )?escritura|que es (una |la )?se[ñn]a|gastos aparte|en general)\b/i.test(
+      tl,
+    )
+  ) {
+    return { categoria: 'C', motivo: 'legal_puntual', alertar: true, pausar: true };
+  }
+
+  // --- B: bot sigue + aviso paralelo ---
+  if (
+    Boolean(o.solicitudVisita) ||
+    /\b(ya (la |lo )?vi( en persona)?|fui a ver(la|lo)?|estuve en (la )?propiedad|quiero agendar|agendemos|coordin(ar|emos) visita)\b/i.test(
+      tl,
+    )
+  ) {
+    return { categoria: 'B', motivo: 'visita', alertar: true, pausar: false };
+  }
+  if (Boolean(o.leadCompleto) || Boolean(o.tieneCuatroDatos)) {
+    return { categoria: 'B', motivo: 'lead_completo', alertar: true, pausar: false };
+  }
+
+  // Umbral: ante ambigüedad, B más temprano si agresivo
+  if (umbral === 'agresivo' && t.length > 40 && !IC_INMO_KEYWORDS.test(t) && !IC_ACK.test(t)) {
+    return { categoria: 'B', motivo: 'ambiguedad_agresivo', alertar: true, pausar: false };
+  }
+  if (
+    umbral === 'conservador' &&
+    /\b(no (lo )?entiendo|no me queda claro|otra vez)\b/i.test(tl)
+  ) {
+    return { categoria: 'B', motivo: 'confusion_conservador', alertar: true, pausar: false };
+  }
+
+  return { categoria: 'A', motivo: 'auto', alertar: false, pausar: false };
+}
+
+const BOT_CONFIG_EMBED = null; // __BOT_CONFIG_LINE__
+const BOT_CONFIG_DEFAULTS = Object.assign(
+  {
+    tono: 'profesional_cercano',
+    umbral_derivacion: 'normal',
+    horario_humano_desde: '09:00',
+    horario_humano_hasta: '18:00',
+    mensaje_derivacion: 'te_paso',
+    vendedor_nombre: 'Adrian',
+    panel_base_url: 'http://localhost:5173',
+  },
+  BOT_CONFIG_EMBED && typeof BOT_CONFIG_EMBED === 'object' ? BOT_CONFIG_EMBED : {},
+);
+
+function cargarBotConfig(overrides) {
+  const o = overrides && typeof overrides === 'object' ? overrides : {};
+  return {
+    tono: String(o.tono || BOT_CONFIG_DEFAULTS.tono),
+    umbral_derivacion: String(o.umbral_derivacion || BOT_CONFIG_DEFAULTS.umbral_derivacion),
+    horario_humano_desde: String(
+      o.horario_humano_desde || BOT_CONFIG_DEFAULTS.horario_humano_desde,
+    ),
+    horario_humano_hasta: String(
+      o.horario_humano_hasta || BOT_CONFIG_DEFAULTS.horario_humano_hasta,
+    ),
+    mensaje_derivacion: String(
+      o.mensaje_derivacion || BOT_CONFIG_DEFAULTS.mensaje_derivacion,
+    ),
+    vendedor_nombre: String(o.vendedor_nombre || BOT_CONFIG_DEFAULTS.vendedor_nombre),
+    panel_base_url: String(o.panel_base_url || BOT_CONFIG_DEFAULTS.panel_base_url).replace(
+      /\/$/,
+      '',
+    ),
+  };
+}
+
+function mensajeDerivacionCliente(cfg) {
+  const c = cargarBotConfig(cfg);
+  const nom = c.vendedor_nombre || 'el vendedor';
+  // Nunca "ya le aviso" (regla de oro: no prometer entrega no confirmada)
+  if (c.mensaje_derivacion === 'te_contacta') {
+    return nom + ' te escribe por aca para seguir con esto.';
+  }
+  if (c.mensaje_derivacion === 'ya_aviso') {
+    return 'Te paso con ' + nom + '. El te escribe por aca.';
+  }
+  return 'Te paso con ' + nom + ', en un momento te escribe.';
+}
+
+function armarAvisoVendedorContexto(p) {
+  const x = p || {};
+  const canal = String(x.canal || 'telegram');
+  const leadId = String(x.leadId || canal + ':' + String(x.chatId || ''));
+  const panelBase = String(x.panelBase || BOT_CONFIG_DEFAULTS.panel_base_url).replace(
+    /\/$/,
+    '',
+  );
+  const link = panelBase + '/leads/' + encodeURIComponent(leadId);
+  const lineas = [
+    'AVISO NODO - ' + String(x.titulo || 'Derivacion').replace(/_/g, ' '),
+    'Cliente: ' + String(x.nombre || 'Sin nombre'),
+    'Canal: ' + canal,
+    'Motivo: ' + String(x.motivo || '').replace(/_/g, ' '),
+    'Zona: ' + (x.zona || '-'),
+    'Presupuesto: ' + (x.presupuesto || '-'),
+    'Operacion: ' + (x.operacion || '-'),
+    'Urgencia: ' + (x.urgencia || '-'),
+    'Resumen: ' + String(x.resumen || x.ultimoMensaje || '').slice(0, 220).replace(/[_*`\[\]]/g, ' '),
+    'Panel: ' + link,
+  ];
+  return lineas.join('\n');
 }
 
 function formatearBloqueIntencionPrompt(clasif) {
@@ -879,6 +1048,8 @@ function formatearBloqueIntencionPrompt(clasif) {
       busqueda_vaga: Boolean(c.busqueda_vaga),
       es_dia_nuevo: Boolean(c.es_dia_nuevo),
       es_recontacto: Boolean(c.es_recontacto),
+      derivacion_categoria: c.derivacion_categoria || 'A',
+      derivacion_motivo: c.derivacion_motivo || 'auto',
     }),
   ];
   if (c.es_dia_nuevo || c.es_recontacto) {
@@ -922,6 +1093,15 @@ function formatearBloqueIntencionPrompt(clasif) {
   }
   if (c.intencion === 'off_topic') {
     lines.push('- Off-topic claro: redirigí a propiedades en una frase, sin recomendar otros rubros.');
+  }
+  if (c.derivacion_categoria === 'C') {
+    lines.push(
+      '- DERIVACION C (humano): NO improvises sobre negociacion/reclamo/legal puntual. Respondé SOLO la frase corta de derivacion al vendedor. No hagas mas preguntas.',
+    );
+  } else if (c.derivacion_categoria === 'B') {
+    lines.push(
+      '- DERIVACION B: seguí ayudando al cliente normal. El sistema avisa al vendedor en paralelo; no digas "te paso con un asesor" salvo que el cliente lo pida.',
+    );
   }
   return lines.join('\n');
 }

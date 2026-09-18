@@ -7,6 +7,7 @@ import {
   useParams,
 } from 'react-router-dom';
 import { AppShell } from './app/layout/AppShell';
+import { ConfigBotPage } from './features/config/ConfigBotPage';
 import { CatalogoPage } from './features/catalogo/CatalogoPage';
 import { PropiedadDetailPage } from './features/catalogo/PropiedadDetailPage';
 import { PublicPropiedadPage } from './features/catalogo/PublicPropiedadPage';
@@ -198,6 +199,7 @@ export default function App() {
               />
             }
           />
+          <Route path="config" element={<ConfigBotPage />} />
           <Route
             path="catalogo/:propiedadId"
             element={

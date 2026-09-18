@@ -3134,3 +3134,67 @@
     justify-content: flex-start;
   }
 }
+
+.config-bot {
+  max-width: 960px;
+  padding: 1rem 1.25rem 2rem;
+}
+
+.config-bot__head h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.45rem;
+}
+
+.config-bot__grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+@media (max-width: 800px) {
+  .config-bot__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.config-bot__form fieldset {
+  border: 1px solid var(--np-line, #ddd);
+  border-radius: 8px;
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+}
+
+.config-bot__form label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.35rem 0;
+}
+
+.config-bot__form input[type='text'],
+.config-bot__form input[type='time'] {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.4rem;
+}
+
+.config-bot__preview {
+  border: 1px solid var(--np-line, #ddd);
+  border-radius: 8px;
+  padding: 1rem;
+  background: var(--np-warm-bg, #faf7f2);
+}
+
+.config-bot__preview pre {
+  white-space: pre-wrap;
+  margin: 0;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.config-bot__status {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+
