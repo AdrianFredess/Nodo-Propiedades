@@ -897,14 +897,9 @@ function clasificarDerivacionHumano(msg, opts) {
   ) {
     return { categoria: 'C', motivo: 'pide_humano', alertar: true, pausar: true };
   }
-  const mayusSostenidas =
-    t.length >= 12 &&
-    t === t.toUpperCase() &&
-    /[A-ZÁÉÍÓÚÑ]{6,}/.test(t) &&
-    !/^[A-Z0-9\s\-]+$/.test(t.replace(/[¿?¡!.,]/g, ''));
+  // Mayúsculas o "!!!" por urgencia, quejas leves y sarcasmo ambiguo no son C.
   if (
-    mayusSostenidas ||
-    /\b(hijo de|la concha|pelotud|imb[eé]cil|idiota|esto no sirve|una mierda|forro|la puta|carajo|bosta)\b/i.test(
+    /\b(hijo de|la concha|pelotud|imb[eé]cil|idiota|esto no sirve|una mierda|forro|la puta|carajo|bosta|chantas?)\b/i.test(
       tl,
     )
   ) {
