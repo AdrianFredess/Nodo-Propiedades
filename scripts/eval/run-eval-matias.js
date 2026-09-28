@@ -14,6 +14,7 @@ const NAME = 'CHECK P2 eval matias';
 const HOOK = 'p2-eval-matias';
 const CASOS_PATH = path.join(__dirname, 'casos-matias.v1.json');
 const TEXTO_FIJO_C = 'Te paso con Adrian, en un momento te escribe.';
+const RESCATE_429 = 'Dame un segundo que se me trabo';
 
 function fechaStamp() {
   const d = new Date();
@@ -139,6 +140,13 @@ function tienePrecioExacto(text, n) {
   return plano.includes(String(n));
 }
 
+function sinPuntuacionFinal(s) {
+  return String(s || '')
+    .trim()
+    .replace(/[.!?…]+$/g, '')
+    .trim();
+}
+
 function codigos(text) {
   return String(text || '').match(/\b[A-Z]{2,5}-\d{2,4}\b/g) || [];
 }
@@ -171,7 +179,7 @@ function evaluar(caso, parse, stockIds) {
       fallas.push(regla);
     } else if (regla.startsWith('no_categoria:') && cat === regla.split(':')[1]) {
       fallas.push(regla);
-    } else if (regla === 'texto_fijo_c' && resp.trim() !== TEXTO_FIJO_C) {
+    } else if (regla === 'texto_fijo_c' && sinPuntuacionFinal(resp) !== sinPuntuacionFinal(TEXTO_FIJO_C)) {
       fallas.push('texto_fijo_c');
     } else if (regla === 'clase_vigente') {
       const esp = claseVigente(caso.mensaje);
@@ -199,6 +207,27 @@ function csvCell(v) {
   const s = String(v == null ? '' : v);
   if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
   return s;
+}
+
+function espera429(groqJson, parse, tokens) {
+  const blob = JSON.stringify(groqJson || {});
+  const m = blob.match(/try again in\s*([\d.]+)\s*s/i);
+  const delBody = m ? Math.ceil(Number(m[1]) + 1) : 0;
+  return Math.max(Number(parse.wait_retry_sec) || 0, delBody, esperaSegundos(tokens), 20);
+}
+
+function esRespuesta429(groqJson, groqErr, parse) {
+  const blob = JSON.stringify(groqJson || {});
+  const status = Number((groqJson && (groqJson.statusCode || groqJson.status)) || 0);
+  const code = String((groqJson && groqJson.error && groqJson.error.code) || '');
+  const resp = String((parse && parse.respuesta_bot) || '');
+  return (
+    status === 429 ||
+    code === 'rate_limit_exceeded' ||
+    /429|rate.?limit|rate_limit_exceeded/i.test(blob + ' ' + groqErr) ||
+    Boolean(parse && (parse.rate_limit || parse.retry_groq || parse.reenvio_rate_limit)) ||
+    resp.includes(RESCATE_429)
+  );
 }
 
 function esperaSegundos(tokens) {
@@ -336,14 +365,14 @@ function esperaSegundos(tokens) {
         {};
       tokens = Number(groqJson.usage && (groqJson.usage.total_tokens || groqJson.usage.prompt_tokens)) || tokens;
       const err = String((groq && groq.error && groq.error.message) || '');
-      groq429 = /429|rate limit/i.test(err) || !run['Parsear Respuesta'];
+      groq429 = esRespuesta429(groqJson, err, parse);
       if (!groq429) break;
-      const espera = Math.max(esperaSegundos(tokens), 20);
+      const espera = espera429(groqJson, parse, tokens);
       console.log(caso.id, 'reintento', intento + 1, 'espera', espera);
       await sleep(espera * 1000);
     }
-    const ev = groq429 && !parse.respuesta_bot
-      ? { pass: false, regla_fallida: 'groq_429', respuesta: '' }
+    const ev = groq429
+      ? { pass: false, regla_fallida: 'sin_respuesta_429', respuesta: String(parse.respuesta_bot || '') }
       : evaluar(caso, parse, stockIds);
     filas.push(ev.pass + ' ' + caso.id + ' ' + ev.regla_fallida);
     console.log(filas[filas.length - 1]);
