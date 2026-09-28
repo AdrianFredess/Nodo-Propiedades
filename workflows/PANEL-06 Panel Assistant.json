@@ -6,7 +6,10 @@
       "name": "Webhook Assistant",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [200, 300],
+      "position": [
+        200,
+        300
+      ],
       "webhookId": "panel-assistant",
       "parameters": {
         "httpMethod": "POST",
@@ -20,7 +23,10 @@
       "name": "Armar Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 300],
+      "position": [
+        440,
+        300
+      ],
       "parameters": {
         "jsCode": "const root = $input.first().json;\nconst body = root.body && typeof root.body === 'object' ? root.body : root;\n\nconst userCommand = String(body.userCommand || '').trim();\nconst draftSpeech = String(body.draftSpeech || '').trim();\nconst intent = String(body.intent || 'unknown').trim();\nconst traits = Array.isArray(body.traits) ? body.traits.map(String) : [];\nconst styleSamples = Array.isArray(body.styleSamples) ? body.styleSamples.map(String).slice(0, 4) : [];\nconst systemPrompt = String(body.systemPrompt || '').trim();\n\nif (!draftSpeech) {\n  return [{ json: { error: 'missing_draft', speech: '' } }];\n}\n\nconst samplesBlock = styleSamples.length\n  ? '\\nMUESTRAS DE TU FORMA DE HABLAR (solo estilo, no copies el tema):\\n' +\n    styleSamples.map((s, i) => `${i + 1}. \"${s}\"`).join('\\n')\n  : '';\n\nconst traitsBlock = traits.length\n  ? '\\nREGLAS DE ESTILO:\\n- ' + traits.join('\\n- ')\n  : '';\n\nconst system =\n  (systemPrompt ||\n    'Sos el asistente de voz de Adrian en Nodo Propiedades (Mendoza). Hablá como argentino criollo educado, cálido y profesional.') +\n  traitsBlock +\n  samplesBlock +\n  '\\n\\nRespondé SOLO con JSON válido: {\"speech\":\"texto para decir en voz alta\"}.\\n' +\n  'Mantené TODOS los datos del borrador (nombres, números, zonas). 1–2 oraciones. Directo. Sin markdown.';\n\nconst user = [\n  `Comando del usuario: ${userCommand || '(sin comando)'}`,\n  `Intención detectada: ${intent}`,\n  `Borrador factual (reescribí con tu estilo, sin cambiar datos):\\n${draftSpeech}`,\n].join('\\n');\n\nreturn [\n  {\n    json: {\n      messages: [\n        { role: 'system', content: system },\n        { role: 'user', content: user },\n      ],\n      draftSpeech,\n    },\n  },\n];"
       }
@@ -30,7 +36,10 @@
       "name": "HTTP Groq",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [680, 300],
+      "position": [
+        680,
+        300
+      ],
       "credentials": {
         "openAiApi": {
           "id": "__SET_GROQ_CREDENTIAL_ID__",
@@ -59,7 +68,10 @@
       "name": "Parsear Speech",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [920, 300],
+      "position": [
+        920,
+        300
+      ],
       "parameters": {
         "jsCode": "const groq = $input.first().json;\nconst prep = $('Armar Prompt').first().json;\nconst draft = String(prep.draftSpeech || '').trim();\n\nconst msg = groq.choices?.[0]?.message || {};\nlet raw =\n  (msg.content && String(msg.content).trim()) ||\n  String(msg.reasoning || msg.reasoning_content || '').trim();\n\nfunction stripChe(t) {\n  return String(t || '')\n    .replace(/\\b[Cc]he\\b[,.;:!?]*\\s*/g, '')\n    .replace(/\\s{2,}/g, ' ')\n    .trim();\n}\n\nlet speech = draft;\ntry {\n  const jsonMatch = raw.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    if (parsed.speech) speech = String(parsed.speech).trim();\n  } else if (raw) {\n    speech = raw.replace(/^[\"']|[\"']$/g, '').trim();\n  }\n} catch (e) {\n  speech = raw || draft;\n}\n\nspeech = stripChe(speech);\nif (!speech) speech = draft;\n\nreturn [{ json: { speech, ok: true } }];"
       }
@@ -69,33 +81,167 @@
       "name": "Responder JSON",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1160, 300],
+      "position": [
+        1160,
+        300
+      ],
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ JSON.stringify($json) }}",
         "options": {
           "responseHeaders": {
             "entries": [
-              { "name": "Access-Control-Allow-Origin", "value": "*" },
-              { "name": "Access-Control-Allow-Headers", "value": "Content-Type, X-Panel-Token" }
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, X-Panel-Token"
+              }
             ]
           }
+        }
+      }
+    },
+    {
+      "id": "panel-auth-check",
+      "name": "Check Panel Auth",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\r\n\r\nconst item = $input.first().json || {};\r\nconst headers = item.headers || {};\r\nconst norm = {};\r\nfor (const [k, v] of Object.entries(headers)) norm[String(k).toLowerCase()] = v;\r\nconst authHeader = String(norm.authorization || '');\r\nconst bearer = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7).trim() : '';\r\nconst got = String(norm['x-panel-token'] || bearer || '').trim();\r\nlet expected = '';\r\ntry {\r\n  expected = String(($env && $env.PANEL_API_TOKEN) || '').trim();\r\n} catch (e) {\r\n  expected = '';\r\n}\r\nlet authOk = false;\r\nif (expected && got) {\r\n  const a = Buffer.from(expected);\r\n  const b = Buffer.from(got);\r\n  authOk = a.length === b.length && crypto.timingSafeEqual(a, b);\r\n}\r\nreturn [{ json: { ...item, _authOk: authOk } }];\r\n"
+      }
+    },
+    {
+      "id": "panel-auth-if",
+      "name": "IF Panel Auth OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "version": 2,
+            "typeValidation": "strict",
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "id": "auth-ok",
+              "leftValue": "={{ $json._authOk }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "panel-auth-fail",
+      "name": "Responder Auth Fail",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        500,
+        480
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: 'unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
         }
       }
     }
   ],
   "connections": {
     "Webhook Assistant": {
-      "main": [[{ "node": "Armar Prompt", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Check Panel Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Armar Prompt": {
-      "main": [[{ "node": "HTTP Groq", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "HTTP Groq",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "HTTP Groq": {
-      "main": [[{ "node": "Parsear Speech", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Parsear Speech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parsear Speech": {
-      "main": [[{ "node": "Responder JSON", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Responder JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Panel Auth": {
+      "main": [
+        [
+          {
+            "node": "IF Panel Auth OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Panel Auth OK": {
+      "main": [
+        [
+          {
+            "node": "Armar Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder Auth Fail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {

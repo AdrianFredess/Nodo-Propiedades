@@ -46,7 +46,7 @@ export const config = {
     'VITE_LEAD_ACTIONS_URL',
     'http://localhost:5678/webhook/panel-lead-actions',
   ),
-  /** Header X-Panel-Token — vacío = no enviar (auth off en n8n si PANEL_API_TOKEN vacío) */
+  /** Header X-Panel-Token. Tiene que coincidir con PANEL_API_TOKEN de n8n. */
   panelApiToken: envUrl('VITE_PANEL_API_TOKEN', ''),
   /** ws://localhost:3099/ws — vacío desactiva realtime */
   wsUrl: envUrl('VITE_WS_URL', 'ws://127.0.0.1:3099/ws'),

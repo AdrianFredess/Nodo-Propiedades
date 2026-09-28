@@ -1016,6 +1016,12 @@
       "parameters": {
         "method": "POST",
         "url": "http://127.0.0.1:5678/webhook/panel-realtime-emit",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Panel-Token", "value": "={{ $env.PANEL_API_TOKEN }}" }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ type: 'chat.message', payload: { chatId: String(($('Code - Procesar IA').first().json.chat_id || '')), mensajeCliente: String(($('Code - Normalizar WhatsApp').item.json.mensaje || $('Code - Procesar IA').first().json.mensaje || '')), respuestaBot: String(($('Code - Procesar IA').first().json.respuesta_wa || '')), nombre: String(($('Code - Procesar IA').first().json.lead_name || '')), temperatura: String(($('Code - Procesar IA').first().json.temperatura || '')), presupuesto: String(($('Code - Procesar IA').first().json.presupuesto || '')), historial_json: String(($('Code - Procesar IA').first().json.historial_json || '[]')), status: String(($('Code - Procesar IA').first().json.status || 'abierto')), source: 'whatsapp' } }) }}",
@@ -1042,6 +1048,12 @@
       "parameters": {
         "method": "POST",
         "url": "http://127.0.0.1:5678/webhook/panel-realtime-emit",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Panel-Token", "value": "={{ $env.PANEL_API_TOKEN }}" }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ type: 'lead.updated', payload: { chatId: String(($('Code - Procesar IA').first().json.chat_id || '')), nombre: String(($('Code - Procesar IA').first().json.lead_name || '')), temperatura: String(($('Code - Procesar IA').first().json.temperatura || '')), presupuesto: String(($('Code - Procesar IA').first().json.presupuesto || '')), status: String(($('Code - Procesar IA').first().json.status || 'abierto')), lastMessage: String(($('Code - Procesar IA').first().json.respuesta_wa || '')), source: 'whatsapp' } }) }}",

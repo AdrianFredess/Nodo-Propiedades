@@ -1,6 +1,6 @@
 /**
  * Parches cuidadosos (capa 1–3):
- * 1) Auth suave X-Panel-Token en PANEL-01/02/03 (solo si PANEL_API_TOKEN está en env n8n)
+ * 1) Auth X-Panel-Token en PANEL-01/02/03. Sin token configurado, responde 401.
  * 2) Emit realtime en SIMPLE-02
  * 3) Dual-write historial_json + criterios TIB + fallback IA vacío en SIMPLE-02
  * 4) Fallback Groq en Bot Telegram (Parsear Respuesta)
@@ -92,7 +92,12 @@ try {
 } catch (e) {
   expected = '';
 }
-const authOk = !expected || got === expected;
+let authOk = false;
+if (expected && got) {
+  const a = Buffer.from(expected);
+  const b = Buffer.from(got);
+  authOk = a.length === b.length && require('crypto').timingSafeEqual(a, b);
+}
 return [{ json: { ...root, _authOk: authOk } }];`;
 
 function ifAuthParams() {

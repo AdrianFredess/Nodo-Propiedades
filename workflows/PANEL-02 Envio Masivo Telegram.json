@@ -338,6 +338,70 @@
           "name": "Cuenta de Google Sheets"
         }
       }
+    },
+    {
+      "id": "panel-auth-check",
+      "name": "Check Panel Auth",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\r\n\r\nconst item = $input.first().json || {};\r\nconst headers = item.headers || {};\r\nconst norm = {};\r\nfor (const [k, v] of Object.entries(headers)) norm[String(k).toLowerCase()] = v;\r\nconst authHeader = String(norm.authorization || '');\r\nconst bearer = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7).trim() : '';\r\nconst got = String(norm['x-panel-token'] || bearer || '').trim();\r\nlet expected = '';\r\ntry {\r\n  expected = String(($env && $env.PANEL_API_TOKEN) || '').trim();\r\n} catch (e) {\r\n  expected = '';\r\n}\r\nlet authOk = false;\r\nif (expected && got) {\r\n  const a = Buffer.from(expected);\r\n  const b = Buffer.from(got);\r\n  authOk = a.length === b.length && crypto.timingSafeEqual(a, b);\r\n}\r\nreturn [{ json: { ...item, _authOk: authOk } }];\r\n"
+      }
+    },
+    {
+      "id": "panel-auth-if",
+      "name": "IF Panel Auth OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "version": 2,
+            "typeValidation": "strict",
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "id": "auth-ok",
+              "leftValue": "={{ $json._authOk }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "panel-auth-fail",
+      "name": "Responder Auth Fail",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        500,
+        480
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: 'unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      }
     }
   ],
   "connections": {
@@ -423,9 +487,9 @@
       "main": [
         [
           {
-            "index": 0,
-            "node": "Preparar Destinos",
-            "type": "main"
+            "node": "Check Panel Auth",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -469,6 +533,35 @@
         [
           {
             "node": "Emit Chat Realtime",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Panel Auth": {
+      "main": [
+        [
+          {
+            "node": "IF Panel Auth OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Panel Auth OK": {
+      "main": [
+        [
+          {
+            "node": "Preparar Destinos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder Auth Fail",
             "type": "main",
             "index": 0
           }

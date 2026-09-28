@@ -393,6 +393,12 @@
       "parameters": {
         "method": "POST",
         "url": "http://127.0.0.1:5678/webhook/panel-realtime-emit",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Panel-Token", "value": "={{ $env.PANEL_API_TOKEN }}" }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ type: 'leads.refresh', payload: { source: 'seguimiento' } }) }}",

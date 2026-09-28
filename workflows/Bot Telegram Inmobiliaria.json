@@ -666,6 +666,12 @@
       "parameters": {
         "method": "POST",
         "url": "http://127.0.0.1:5678/webhook/panel-realtime-emit",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Panel-Token", "value": "={{ $env.PANEL_API_TOKEN }}" }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ type: 'chat.message', payload: { chatId: String(($('Parsear Respuesta').first().json.chat_id || $('Set Variables').first().json.chat_id || '')), mensajeCliente: String(($('Set Variables').first().json.texto_usuario || '')), respuestaBot: String(($('Parsear Respuesta').first().json.respuesta_bot || '')), nombre: String(($('Parsear Respuesta').first().json.nombre || $('Set Variables').first().json.nombre_usuario || '')), temperatura: String(($('Parsear Respuesta').first().json.temperatura || '')), presupuesto: String(($('Parsear Respuesta').first().json.presupuesto || '')), historial_json: String(($('Parsear Respuesta').first().json.historial_json || '[]')), status: 'abierto', source: 'telegram', botPaused: String(($('Parsear Respuesta').first().json.bot_paused || 'no')) === 'si', handoff: String(($('Parsear Respuesta').first().json.handoff || 'no')) === 'si', rateLimit: Boolean($('Parsear Respuesta').first().json.rate_limit), needsAdvisor: Boolean($('Parsear Respuesta').first().json.needs_advisor_action), propiedadesMostrar: String(($('Parsear Respuesta').first().json.propiedades_mostrar || '[]')), citaLink: String(($('Parsear Respuesta').first().json.cita_link || '')), solicitudVisita: Boolean($('Parsear Respuesta').first().json.solicitud_visita) } }) }}",
@@ -691,6 +697,12 @@
       "parameters": {
         "method": "POST",
         "url": "http://127.0.0.1:5678/webhook/panel-realtime-emit",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Panel-Token", "value": "={{ $env.PANEL_API_TOKEN }}" }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ type: 'lead.updated', payload: { chatId: String(($('Parsear Respuesta').first().json.chat_id || $json.chat_id || '')), nombre: String(($('Parsear Respuesta').first().json.nombre || '')), temperatura: String(($('Parsear Respuesta').first().json.temperatura || $json.temperatura || '')), presupuesto: String(($('Parsear Respuesta').first().json.presupuesto || '')), status: 'abierto', lastMessage: String(($('Parsear Respuesta').first().json.respuesta_bot || '')), source: 'telegram-sync' } }) }}",

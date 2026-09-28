@@ -6,7 +6,10 @@
       "name": "Webhook Stock Update",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [200, 300],
+      "position": [
+        200,
+        300
+      ],
       "webhookId": "panel-stock-update",
       "parameters": {
         "httpMethod": "POST",
@@ -20,7 +23,10 @@
       "name": "Preparar Patch",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 300],
+      "position": [
+        440,
+        300
+      ],
       "parameters": {
         "jsCode": "const root = $input.first().json;\nconst body = root.body && typeof root.body === 'object' ? root.body : root;\nconst id = String(body.id || body.ID || body.codigo || '').trim();\nif (!id) {\n  return [{ json: { ok: false, error: 'id_requerido' } }];\n}\n\nconst ALLOWED = new Set([\n  'zona', 'tipo', 'operacion', 'precio', 'ambientes', 'estado', 'descripcion',\n  'honorarios', 'reserva', 'medios_pago', 'alias_cbu', 'requisitos',\n]);\n\nconst FIELD_ALIAS = {\n  mediosPago: 'medios_pago',\n  aliasCbu: 'alias_cbu',\n};\n\nconst patch = {};\nif (body.patch && typeof body.patch === 'object') {\n  for (const [k, v] of Object.entries(body.patch)) {\n    const key = FIELD_ALIAS[k] || k;\n    if (!ALLOWED.has(key)) continue;\n    patch[key] = v == null ? '' : String(v);\n  }\n} else {\n  let field = String(body.field || body.columna || body.column || '').trim();\n  field = FIELD_ALIAS[field] || field;\n  if (!ALLOWED.has(field)) {\n    return [{ json: { ok: false, error: 'field_invalido', field } }];\n  }\n  patch[field] = body.value == null ? '' : String(body.value);\n}\n\nif (!Object.keys(patch).length) {\n  return [{ json: { ok: false, error: 'patch_vacio' } }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    id,\n    patch,\n    sheetRow: { id, ...patch },\n  },\n}];"
       }
@@ -30,7 +36,10 @@
       "name": "IF Patch Valido",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [680, 300],
+      "position": [
+        680,
+        300
+      ],
       "parameters": {
         "conditions": {
           "combinator": "and",
@@ -54,7 +63,10 @@
       "name": "Mapear Fila Input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 180],
+      "position": [
+        900,
+        180
+      ],
       "parameters": {
         "jsCode": "const prep = $('Preparar Patch').first().json;\nreturn [{ json: { ...prep.sheetRow } }];"
       }
@@ -64,7 +76,10 @@
       "name": "Actualizar Stock",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [1120, 180],
+      "position": [
+        1120,
+        180
+      ],
       "onError": "continueRegularOutput",
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -86,7 +101,9 @@
         },
         "columns": {
           "mappingMode": "autoMapInputData",
-          "matchingColumns": ["id"],
+          "matchingColumns": [
+            "id"
+          ],
           "schema": [],
           "value": {}
         },
@@ -98,7 +115,10 @@
       "name": "Emit WS stock.updated",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1340, 180],
+      "position": [
+        1340,
+        180
+      ],
       "onError": "continueRegularOutput",
       "parameters": {
         "method": "POST",
@@ -121,14 +141,20 @@
       "name": "Responder OK",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1560, 180],
+      "position": [
+        1560,
+        180
+      ],
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ JSON.stringify({ ok: true, id: $('Preparar Patch').first().json.id, patch: $('Preparar Patch').first().json.patch }) }}",
         "options": {
           "responseHeaders": {
             "entries": [
-              { "name": "Access-Control-Allow-Origin", "value": "*" }
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
             ]
           }
         }
@@ -139,7 +165,10 @@
       "name": "Responder Error",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [900, 420],
+      "position": [
+        900,
+        420
+      ],
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ $json }}",
@@ -147,34 +176,182 @@
           "responseCode": 400,
           "responseHeaders": {
             "entries": [
-              { "name": "Access-Control-Allow-Origin", "value": "*" }
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
             ]
           }
+        }
+      }
+    },
+    {
+      "id": "panel-auth-check",
+      "name": "Check Panel Auth",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\r\n\r\nconst item = $input.first().json || {};\r\nconst headers = item.headers || {};\r\nconst norm = {};\r\nfor (const [k, v] of Object.entries(headers)) norm[String(k).toLowerCase()] = v;\r\nconst authHeader = String(norm.authorization || '');\r\nconst bearer = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7).trim() : '';\r\nconst got = String(norm['x-panel-token'] || bearer || '').trim();\r\nlet expected = '';\r\ntry {\r\n  expected = String(($env && $env.PANEL_API_TOKEN) || '').trim();\r\n} catch (e) {\r\n  expected = '';\r\n}\r\nlet authOk = false;\r\nif (expected && got) {\r\n  const a = Buffer.from(expected);\r\n  const b = Buffer.from(got);\r\n  authOk = a.length === b.length && crypto.timingSafeEqual(a, b);\r\n}\r\nreturn [{ json: { ...item, _authOk: authOk } }];\r\n"
+      }
+    },
+    {
+      "id": "panel-auth-if",
+      "name": "IF Panel Auth OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "version": 2,
+            "typeValidation": "strict",
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "id": "auth-ok",
+              "leftValue": "={{ $json._authOk }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "panel-auth-fail",
+      "name": "Responder Auth Fail",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        500,
+        480
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: 'unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
         }
       }
     }
   ],
   "connections": {
     "Webhook Stock Update": {
-      "main": [[{ "node": "Preparar Patch", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Check Panel Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Preparar Patch": {
-      "main": [[{ "node": "IF Patch Valido", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "IF Patch Valido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "IF Patch Valido": {
       "main": [
-        [{ "node": "Mapear Fila Input", "type": "main", "index": 0 }],
-        [{ "node": "Responder Error", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Mapear Fila Input",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Mapear Fila Input": {
-      "main": [[{ "node": "Actualizar Stock", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Actualizar Stock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Actualizar Stock": {
-      "main": [[{ "node": "Emit WS stock.updated", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Emit WS stock.updated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Emit WS stock.updated": {
-      "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Responder OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Panel Auth": {
+      "main": [
+        [
+          {
+            "node": "IF Panel Auth OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Panel Auth OK": {
+      "main": [
+        [
+          {
+            "node": "Preparar Patch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder Auth Fail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {

@@ -22,7 +22,7 @@
       "id": "p05-auth",
       "name": "Check Panel Auth",
       "parameters": {
-        "jsCode": "const root = $input.first().json;\nconst headers = root.headers || {};\nconst norm = {};\nfor (const [k, v] of Object.entries(headers)) {\n  norm[String(k).toLowerCase()] = v;\n}\nconst authHeader = String(norm.authorization || '');\nconst bearer = authHeader.toLowerCase().startsWith('bearer ')\n  ? authHeader.slice(7).trim()\n  : '';\nconst got = String(norm['x-panel-token'] || bearer || '').trim();\nlet expected = '';\ntry {\n  expected = String(($env && $env.PANEL_API_TOKEN) || '').trim();\n} catch (e) {\n  expected = '';\n}\nconst authOk = !expected || got === expected;\nreturn [{ json: { ...root, _authOk: authOk } }];"
+        "jsCode": "const crypto = require('crypto');\r\n\r\nconst item = $input.first().json || {};\r\nconst headers = item.headers || {};\r\nconst norm = {};\r\nfor (const [k, v] of Object.entries(headers)) norm[String(k).toLowerCase()] = v;\r\nconst authHeader = String(norm.authorization || '');\r\nconst bearer = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7).trim() : '';\r\nconst got = String(norm['x-panel-token'] || bearer || '').trim();\r\nlet expected = '';\r\ntry {\r\n  expected = String(($env && $env.PANEL_API_TOKEN) || '').trim();\r\n} catch (e) {\r\n  expected = '';\r\n}\r\nlet authOk = false;\r\nif (expected && got) {\r\n  const a = Buffer.from(expected);\r\n  const b = Buffer.from(got);\r\n  authOk = a.length === b.length && crypto.timingSafeEqual(a, b);\r\n}\r\nreturn [{ json: { ...item, _authOk: authOk } }];\r\n"
       },
       "position": [
         400,
@@ -264,7 +264,16 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "url": "http://127.0.0.1:5678/webhook/panel-realtime-emit"
+        "url": "http://127.0.0.1:5678/webhook/panel-realtime-emit",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Panel-Token",
+              "value": "={{ $env.PANEL_API_TOKEN }}"
+            }
+          ]
+        }
       },
       "position": [
         1940,
@@ -348,7 +357,16 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "url": "http://127.0.0.1:5678/webhook/panel-realtime-emit"
+        "url": "http://127.0.0.1:5678/webhook/panel-realtime-emit",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Panel-Token",
+              "value": "={{ $env.PANEL_API_TOKEN }}"
+            }
+          ]
+        }
       },
       "position": [
         1940,
