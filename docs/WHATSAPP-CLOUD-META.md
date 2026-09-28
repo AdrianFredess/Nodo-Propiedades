@@ -385,7 +385,7 @@ Ventaja: conservás Matías, Groq, Sheets, alertas Telegram, fotos, email visita
 
 ### 7.2 Opción B — Stack WF-09B (documentado, no incluido en repo)
 
-Los docs `LEER PRIMERO - Meta Produccion Final.md` y `Stack Final Meta Produccion.md` referencian workflows `WF-09B`, `WF-10`, `WF-11` que **no están en `workflows/`** del repo actual. Si los tenés en otra copia o los regenerás, el endpoint sería `/webhook/meta-whatsapp-prod`.
+Los docs archivados en `docs/_legacy/` (`LEER PRIMERO - Meta Produccion Final.md` y `Stack Final Meta Produccion.md`) referencian workflows `WF-09B`, `WF-10`, `WF-11` que **no están en `workflows/`** del repo actual. Si los tenés en otra copia o los regenerás, el endpoint sería `/webhook/meta-whatsapp-prod`.
 
 Para Nodo Propiedades hoy, **Opción A es más directa**.
 
@@ -560,7 +560,7 @@ Parches actuales: `pnpm run patch-meta-all` (SIMPLE-02, PANEL-05, SIMPLE-04, Mes
 |---------|-----------|
 | `docs/Meta WhatsApp Cloud API - Setup.md` | Resumen técnico placeholders y payloads |
 | `docs/Meta Ventana 24h y Templates.md` | Reglas de templates fuera de ventana |
-| `docs/Stack Final Meta Produccion.md` | Stack WF-09B (si tenés esos workflows) |
+| `docs/_legacy/Stack Final Meta Produccion.md` | Stack WF-09B archivado (no es el runtime) |
 | `docs/BOT-ASESOR.md` | Persona Matías, fotos, Meta Cloud |
 | `docs/ARRANQUE-LOCAL.md` | Docker, ngrok, panel |
 | `openspec/INTEGRATIONS.md` | Integraciones Groq, Meta, Telegram |

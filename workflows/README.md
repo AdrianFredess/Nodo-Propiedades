@@ -22,9 +22,9 @@
 
 ## Legacy / no reemplazan prod
 
-| Archivo | Notas |
-|---------|--------|
-| **SIMPLE-01 Telegram Bot.json** | Prototipo por keywords + polling. **NO** es el bot de producción. Se conserva solo como referencia histórica. |
-| **SIMPLE-03 Messenger Bot.json** | `XhceE1kxNalCTMw4` | **Listo (repo)** — Matías + Meta Graph + WS emit; requiere webhook Meta activo |
+| Archivo | ID | Notas |
+|---------|----|--------|
+| **SIMPLE-01 Telegram Bot.json** | `64c3f53b-2064-405a-bff0-b89fd34cd75d` | Prototipo por keywords + polling. **NO** es el bot de producción. Se conserva solo como referencia histórica. |
+| **SIMPLE-03 Messenger Bot.json** | `XhceE1kxNalCTMw4` | **Listo (repo)** — Matías + Meta Graph + WS emit; requiere webhook Meta activo. Token: `__SET_MESSENGER_PAGE_TOKEN__`. |
 
-Export sanitizado: tokens y chat de owner reemplazados por `__SET_*__`. Credenciales n8n se reasignan al importar.
+Placeholders `__SET_*__` en los JSON versionados. Credenciales n8n se reasignan al importar. El token real no va en el repo.

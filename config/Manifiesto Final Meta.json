@@ -16,8 +16,8 @@
     "WF-08 Manual Lead Tester.json",
     "WF-09B Meta WhatsApp Cloud Webhook Produccion.json",
     "Configuracion Base.example.json",
-    "Prompt AI Agent Inmobiliario.txt",
-    "AI Output Schema.json",
+    "docs/_legacy/ai/Prompt AI Agent Inmobiliario.txt",
+    "docs/_legacy/ai/AI Output Schema.json",
     "Google Sheets - Leads.csv",
     "Google Sheets - Propiedades.csv",
     "Google Sheets - Seguimientos.csv",
@@ -29,12 +29,12 @@
     "WF-00 Orquestador Principal Importable.json",
     "WF-01 Intake Multicanal.json",
     "WF-09 Meta WhatsApp Cloud Webhook.json",
-    "Blueprint Sistema Inmobiliario n8n.md"
+    "docs/_legacy/Blueprint Sistema Inmobiliario n8n.md"
   ],
   "support_docs": [
-    "LEER PRIMERO - Meta Produccion Final.md",
-    "Stack Final Meta Produccion.md",
-    "Importacion Exacta en n8n.md",
+    "docs/_legacy/LEER PRIMERO - Meta Produccion Final.md",
+    "docs/_legacy/Stack Final Meta Produccion.md",
+    "docs/_legacy/Importacion Exacta en n8n.md",
     "Meta WhatsApp Cloud API - Setup.md",
     "Meta Ventana 24h y Templates.md"
   ]

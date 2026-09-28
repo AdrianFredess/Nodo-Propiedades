@@ -596,7 +596,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer EAAPfGQWI8MMBSUjBpOlKNbP9SWZBEXmjn9AIlQeG4SM1MM6DMQACHzPsjbeiDei7SDbiHFZANCSkEylIpJObmcLVDHbg0Gbn8wdZC4nq73AaVVS4WZCR1kTU0fX0y5pl9HfsR1moqWFPilMGXV910buhGpC9on5BjK7zKIca7ET5ncaQIUq4h8SVKOp8XSonjWMZB86EMjwZDZD"
+              "value": "Bearer __SET_MESSENGER_PAGE_TOKEN__"
             },
             {
               "name": "Content-Type",
@@ -728,7 +728,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer EAAPfGQWI8MMBSUjBpOlKNbP9SWZBEXmjn9AIlQeG4SM1MM6DMQACHzPsjbeiDei7SDbiHFZANCSkEylIpJObmcLVDHbg0Gbn8wdZC4nq73AaVVS4WZCR1kTU0fX0y5pl9HfsR1moqWFPilMGXV910buhGpC9on5BjK7zKIca7ET5ncaQIUq4h8SVKOp8XSonjWMZB86EMjwZDZD"
+              "value": "Bearer __SET_MESSENGER_PAGE_TOKEN__"
             },
             {
               "name": "Content-Type",
@@ -833,7 +833,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer EAAPfGQWI8MMBSUjBpOlKNbP9SWZBEXmjn9AIlQeG4SM1MM6DMQACHzPsjbeiDei7SDbiHFZANCSkEylIpJObmcLVDHbg0Gbn8wdZC4nq73AaVVS4WZCR1kTU0fX0y5pl9HfsR1moqWFPilMGXV910buhGpC9on5BjK7zKIca7ET5ncaQIUq4h8SVKOp8XSonjWMZB86EMjwZDZD"
+              "value": "Bearer __SET_MESSENGER_PAGE_TOKEN__"
             },
             {
               "name": "Content-Type",
@@ -865,7 +865,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer EAAPfGQWI8MMBSUjBpOlKNbP9SWZBEXmjn9AIlQeG4SM1MM6DMQACHzPsjbeiDei7SDbiHFZANCSkEylIpJObmcLVDHbg0Gbn8wdZC4nq73AaVVS4WZCR1kTU0fX0y5pl9HfsR1moqWFPilMGXV910buhGpC9on5BjK7zKIca7ET5ncaQIUq4h8SVKOp8XSonjWMZB86EMjwZDZD"
+              "value": "Bearer __SET_MESSENGER_PAGE_TOKEN__"
             },
             {
               "name": "Content-Type",
@@ -956,7 +956,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer EAAPfGQWI8MMBSUjBpOlKNbP9SWZBEXmjn9AIlQeG4SM1MM6DMQACHzPsjbeiDei7SDbiHFZANCSkEylIpJObmcLVDHbg0Gbn8wdZC4nq73AaVVS4WZCR1kTU0fX0y5pl9HfsR1moqWFPilMGXV910buhGpC9on5BjK7zKIca7ET5ncaQIUq4h8SVKOp8XSonjWMZB86EMjwZDZD"
+              "value": "Bearer __SET_MESSENGER_PAGE_TOKEN__"
             },
             {
               "name": "Content-Type",

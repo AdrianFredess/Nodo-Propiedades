@@ -11,9 +11,12 @@ type MediaEntry = {
 
 const MEDIA = propiedadMedia as Record<string, MediaEntry>;
 
-/** Mismo form de cita que usa el bot TG (webhook n8n vía ngrok). */
-export const CITA_FORM_BASE =
-  'https://deranged-defile-comrade.ngrok-free.dev/webhook/cita-form';
+/** Mismo form de cita que usa el bot TG (webhook n8n). */
+const publicBase = String(import.meta.env.VITE_PUBLIC_BASE_URL || 'http://localhost:5678').replace(
+  /\/$/,
+  '',
+);
+export const CITA_FORM_BASE = publicBase + '/webhook/cita-form';
 
 export function buildAgendaLink(
   chatId: string,

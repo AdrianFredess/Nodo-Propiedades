@@ -17,9 +17,29 @@ function loadApiKey() {
   }
   throw new Error('Sin N8N_API_KEY');
 }
+function publicBaseUrl() {
+  const envPath = path.join(__dirname, '..', '.env');
+  let fromFile = '';
+  if (fs.existsSync(envPath)) {
+    const raw = fs.readFileSync(envPath, 'utf8');
+    for (const key of ['PUBLIC_BASE_URL', 'WEBHOOK_URL']) {
+      const m = raw.match(new RegExp('^' + key + '=(.+)$', 'm'));
+      if (m && String(m[1]).trim()) {
+        fromFile = String(m[1]).trim().replace(/^["']|["']$/g, '');
+        break;
+      }
+    }
+  }
+  const base = String(process.env.PUBLIC_BASE_URL || process.env.WEBHOOK_URL || fromFile || '').replace(
+    /\/$/,
+    '',
+  );
+  if (!base) throw new Error('Falta PUBLIC_BASE_URL (o WEBHOOK_URL) en .env');
+  return base;
+}
+
 const KEY = loadApiKey();
-const CITA_BASE =
-  'https://deranged-defile-comrade.ngrok-free.dev/webhook/cita-form';
+const CITA_BASE = publicBaseUrl() + '/webhook/cita-form';
 
 function request(method, urlPath, body) {
   const url = new URL(urlPath, 'http://localhost:5678');

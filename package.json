@@ -16,7 +16,8 @@
     "check-meta-wa": "node scripts/check-meta-whatsapp.js",
     "patch-advisor-learning": "node scripts/patch-advisor-learning.js",
     "aggregate-bot-learning": "node scripts/aggregate-bot-learning.js",
-    "setup-aprendizaje-sheet": "node scripts/setup-aprendizaje-sheet.js"
+    "setup-aprendizaje-sheet": "node scripts/setup-aprendizaje-sheet.js",
+    "check:secrets": "node scripts/check-secrets.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.6.0",

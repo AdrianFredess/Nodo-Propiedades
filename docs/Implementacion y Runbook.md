@@ -12,9 +12,9 @@ Este paquete deja una base casi desplegable para un sistema de captacion, filtra
 - `WF-06 Advisor Alert.json`
 - `WF-07 Error Logger.json`
 - `Configuracion Base.example.json`
-- `Prompt AI Agent Inmobiliario.txt`
-- `AI Output Schema.json`
-- `Payloads de prueba.json`
+- `docs/_legacy/ai/Prompt AI Agent Inmobiliario.txt`
+- `docs/_legacy/ai/AI Output Schema.json`
+- `docs/_legacy/ai/Payloads de prueba.json`
 - `Google Sheets - Leads.csv`
 - `Google Sheets - Propiedades.csv`
 - `Google Sheets - Seguimientos.csv`
@@ -56,7 +56,7 @@ Este paquete deja una base casi desplegable para un sistema de captacion, filtra
    - `__SET_META_VERIFY_TOKEN__`
    - `__SET_META_APP_SECRET__`
    - `__SET_ADVISOR_PHONE__`
-8. Pegar el contenido de `Prompt AI Agent Inmobiliario.txt` en el nodo `AI Agent - Analyze Lead`.
+8. Pegar el contenido de `docs/_legacy/ai/Prompt AI Agent Inmobiliario.txt` en el nodo `AI Agent - Analyze Lead`.
 9. Ajustar el proveedor del nodo de IA segun tu stack real.
 10. Activar primero los workflows internos y al final el de intake.
 
@@ -78,7 +78,7 @@ El nodo de IA debe recibir:
 - resumen simple de propiedades si existe
 
 ### Salida obligatoria
-La salida debe cumplir `AI Output Schema.json`.
+La salida debe cumplir `docs/_legacy/ai/AI Output Schema.json`.
 
 ### Regla critica
 Siempre pasar la salida del nodo IA por `Code - Validate AI Output`. Nunca usar la salida del modelo directamente para enviar mensajes o derivar al asesor.

@@ -8,7 +8,7 @@
 - Placeholders reemplazados
 - Credenciales conectadas
 - Prompt del AI Agent pegado
-- Salida del agente validada contra `AI Output Schema.json`
+- Salida del agente validada contra `docs/_legacy/ai/AI Output Schema.json`
 - Catalogo con propiedades activas reales
 - Asesor y telefono interno cargados
 

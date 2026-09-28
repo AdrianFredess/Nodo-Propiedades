@@ -14,11 +14,19 @@ CRM inmobiliario en **n8n**: bots por canal (Telegram / WhatsApp / Messenger), I
 
 | | En repo / docs “Meta final” | Uso local habitual |
 |--|----------------------------|-------------------|
-| IA | Ollama + AI Agent (WF-00…13) | **Groq** (`llama-3.3-70b-versatile`) en bots SIMPLE / bot TG en n8n |
+| IA | Ollama + AI Agent (WF-00…13) | **Groq** (`openai/gpt-oss-120b`) en bots SIMPLE / bot TG en n8n |
 | WhatsApp | Meta Cloud API | **Meta Cloud API** (`meta-whatsapp` webhook) |
 | Sheets CRM | `Leads` / `Interacciones` (csv/) | **`Leads_Bot` + `Consultas`** |
 
-Los workflows `WF-*` de `docs/LEER PRIMERO - Meta Produccion Final.md` son un plan de despliegue Meta/Ollama; no son el runtime mínimo de los SIMPLE.
+Los workflows `WF-*` archivados en `docs/_legacy/` son un plan de despliegue Meta/Ollama; no son el runtime mínimo de los SIMPLE.
+
+## Tesis (UTN FRM)
+
+- Versión evaluada: commit `3f132c3` (24/08/2026), tag `tesis-evaluacion-3f132c3`.
+- Comparación SIMPLE-01 vs IA: se agregó en `ff70391` (27/08). Ese commit solo suma el CSV y una línea del README de validación.
+- Evidencia en `docs/validacion/`. Anexo F en `docs/tesis/anexo-F-SYSTEM_MIN.md`.
+- Reproducir la prueba de componente (un turno, prompt mínimo, no el flujo n8n): `py -3 scripts/run_validacion_batch.py` con `GROQ_API_KEY` en el entorno. Comparación: `py -3 scripts/comparar_simple01_vs_ia.py`.
+- Todo lo posterior a `3f132c3` es desarrollo que excede lo evaluado.
 
 ## Secretos
 
@@ -39,5 +47,5 @@ Los workflows `WF-*` de `docs/LEER PRIMERO - Meta Produccion Final.md` son un pl
 
 ## Scripts legacy (n8n cerrado si tocan SQLite)
 
-Ver `docs/LEER PRIMERO - Meta Produccion Final.md` y scripts `_post_import.js`, etc., si retomás el stack completo WF/Meta.
+Ver `docs/_legacy/LEER PRIMERO - Meta Produccion Final.md` y scripts `_post_import.js`, etc., si retomás el stack completo WF/Meta.
 

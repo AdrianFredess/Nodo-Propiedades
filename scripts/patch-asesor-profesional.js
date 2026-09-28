@@ -605,11 +605,10 @@ function loadEnvValue(key, fallback) {
 }
 
 function citaWebhookBase() {
-  const webhook = loadEnvValue(
-    'WEBHOOK_URL',
-    'https://deranged-defile-comrade.ngrok-free.dev',
-  );
-  return webhook.replace(/\/$/, '');
+  const fromEnv = process.env.PUBLIC_BASE_URL || loadEnvValue('PUBLIC_BASE_URL', '');
+  const webhook = fromEnv || loadEnvValue('WEBHOOK_URL', '');
+  if (!webhook) throw new Error('Falta PUBLIC_BASE_URL (o WEBHOOK_URL) en .env');
+  return String(webhook).replace(/\/$/, '');
 }
 
 function waSnippet(name, extra = {}) {

@@ -23,8 +23,7 @@ const nombreUsuario = setVars.nombre_usuario;
 const esAudioSinTextoTg =
   Boolean(setVars.es_audio_sin_transcripcion) && !textoUsuario;
 
-const citaBase =
-  'https://deranged-defile-comrade.ngrok-free.dev/webhook/cita-form';
+const citaBase = '__CITA_WEBHOOK_BASE__' + '/webhook/cita-form';
 const citaLink =
   citaBase +
   '?chat_id=' +

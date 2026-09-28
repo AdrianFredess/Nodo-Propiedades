@@ -11,8 +11,28 @@ const https = require('https');
 const path = require('path');
 const { DatabaseSync } = require('node:sqlite');
 
-const NGROK =
-  process.env.N8N_HOST || 'deranged-defile-comrade.ngrok-free.dev';
+function publicHost() {
+  const envPath = path.join(__dirname, '..', '.env');
+  let fromFile = '';
+  if (fs.existsSync(envPath)) {
+    const raw = fs.readFileSync(envPath, 'utf8');
+    for (const key of ['PUBLIC_BASE_URL', 'N8N_HOST', 'WEBHOOK_URL']) {
+      const m = raw.match(new RegExp('^' + key + '=(.+)$', 'm'));
+      if (m && String(m[1]).trim()) {
+        fromFile = String(m[1]).trim().replace(/^["']|["']$/g, '');
+        break;
+      }
+    }
+  }
+  const raw = process.env.PUBLIC_BASE_URL || process.env.N8N_HOST || process.env.WEBHOOK_URL || fromFile;
+  const host = String(raw || '')
+    .replace(/^https?:\/\//, '')
+    .replace(/\/$/, '');
+  if (!host) throw new Error('Falta PUBLIC_BASE_URL (o N8N_HOST) en .env');
+  return host;
+}
+
+const NGROK = publicHost();
 const WEBHOOK_ID =
   process.env.TELEGRAM_WEBHOOK_ID ||
   'f0e1d2c3-b4a5-9687-8765-inmobiliaria01';

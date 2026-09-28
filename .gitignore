@@ -56,12 +56,14 @@ db_dump.txt
 waha-data/
 
 # Tesis / temporales locales
+_tmp_*
+scripts/audit_output/
+scripts/_wf_import_payload_out.json
 _tmp_tesis*
 _tmp_tesis_docx/
 docs/Devolucion_*.pdf
 docs/INFORME-CLAUDE-*.md
 docs/Nodo_Propiedades_Tesis_v*.docx
-!docs/Nodo_Propiedades_Tesis_v73.docx
 docs/Nodo_Propiedades_Tesis_v*.pdf
 
 # Python / scripts temporales de parcheo

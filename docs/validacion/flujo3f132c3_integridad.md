@@ -43,8 +43,22 @@ En la corrida de los 30 (`13699`–`13729`) ninguno de esos nodos corrió.
 - Spreadsheet de lectura (el del commit): `1sAXgJDFkFbiLPDdqw4vYyCeVC4heWAJ3n92jlrIW-SU`, hoja `Hoja 1`
 - Credencial: la misma de producción (`Cuenta de Google Sheets`)
 - Resultado de `Leer Stock Propiedades`: **falló** con `invalid_grant` (refresh token vencido). La misma falla aparece en la ejecución de producción `13694` de hoy.
-- Propiedades leídas: **0**. El ítem único del nodo es el error de OAuth, no una ficha.
-- No hay copia de Drive. El catálogo no se consultó. La temperatura sale del modelo con el prompt de `3f132c3` y stock vacío.
+- Propiedades leídas: **0** (28/09/2026). El ítem único del nodo es el error de OAuth, no una ficha.
+- No hay copia de Drive. El catálogo no se consultó.
+
+## Esta corrida no vale para la tesis
+
+CSV renombrado: `resultados_clasificacion_flujo3f132c3_2026-09-28T20-46-53-894Z-INVALIDA.csv`.
+
+- Las 15 filas con respuesta vacía (CAL-07, CAL-10, TIB-11, TIB-12, TIB-14, TIB-15, TIB-16, TIB-17, TIB-20, FRI-21, FRI-23, FRI-24, FRI-25, FRI-29, FRI-30) cortaron en `HTTP Groq`. `Parsear Respuesta` no corrió.
+- HTTP status: **429** en las 15. Mensaje de Groq: límite TPM 8000 del modelo `openai/gpt-oss-120b`. El header `retry-after` no vino. El cuerpo dice `try again in …` (milisegundos o segundos, según la fila).
+- CAL-01 (exec 13699) también tiene `invalid_grant` en el ítem de stock, y aun así Groq respondió. El corte de las 15 no es el OAuth: es el 429.
+- Las 15 que respondieron lo hicieron con stock vacío. No miden el sistema evaluado.
+- Re-corrida con chat `891000001`–`891000030` y espaciado ≥30 s: **no se hizo**. Precondición: `Leer Stock Propiedades` tiene que devolver más de 0 propiedades. Hoy sigue en 0.
+
+## Sheets en producción (últimas 20 ejecuciones de `8JoSfkcn3pE1f0av`)
+
+Las 20 fallan `invalid_grant` en `Leer Historial`, `Leer Stock Propiedades`, `Leer Politicas Pago` y `Actualizar Historial`. `Guardar Lead` y `Sync Leads_Bot` no aparecen en esas 20 ejecuciones. SIMPLE-02 (`npq6sC6YLaUBpHac`): 0 ejecuciones recientes en la API.
 
 ## Escrituras en producción
 

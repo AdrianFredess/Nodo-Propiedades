@@ -70,13 +70,34 @@ function request(method, urlPath, body) {
   });
 }
 
+function publicBaseUrl() {
+  const envPath = path.join(__dirname, '..', '.env');
+  let fromFile = '';
+  if (fs.existsSync(envPath)) {
+    const raw = fs.readFileSync(envPath, 'utf8');
+    for (const key of ['PUBLIC_BASE_URL', 'WEBHOOK_URL']) {
+      const m = raw.match(new RegExp('^' + key + '=(.+)$', 'm'));
+      if (m && String(m[1]).trim()) {
+        fromFile = String(m[1]).trim().replace(/^["']|["']$/g, '');
+        break;
+      }
+    }
+  }
+  const base = String(process.env.PUBLIC_BASE_URL || process.env.WEBHOOK_URL || fromFile || '').replace(
+    /\/$/,
+    '',
+  );
+  if (!base) throw new Error('Falta PUBLIC_BASE_URL (o WEBHOOK_URL) en .env');
+  return base;
+}
+
 const FORM_HTML_CODE = `const q = $input.first().json.query || {};
 const chatId = String(q.chat_id || q.chatId || '').trim();
 const nombre = String(q.nombre || '').trim();
 const zona = String(q.zona || '').trim();
 const propiedad = String(q.propiedad || q.propiedad_id || '').trim();
 const canal = String(q.canal || 'telegram').trim();
-const action = 'https://deranged-defile-comrade.ngrok-free.dev/webhook/cita-submit';
+const action = '${publicBaseUrl()}/webhook/cita-submit';
 const html = \`<!DOCTYPE html>
 <html lang="es">
 <head>

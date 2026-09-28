@@ -23,12 +23,20 @@ Ampliar la muestra del capítulo 5 **sin pseudorreplicación**, registrando cada
    - tiempo (relómetro desde envío hasta respuesta en Telegram)
    - si hubo JSON parseable (`lead_completo` true/false en ejecución n8n)
 
-### Opción B — Groq API batch (misma lógica de modelo + parser mitigado)
+### Opción B — Groq API batch (prueba de componente, no el flujo completo)
+Un turno aislado, prompt mínimo `SYSTEM_MIN`, sin n8n ni Telegram. Modelo `openai/gpt-oss-120b`.
 ```powershell
 $env:GROQ_API_KEY = "tu-clave"
-py -3 D:\DevCaches\Temp\build_tesis_artifacts.py
+py -3 scripts/run_validacion_batch.py
 ```
-Genera `resultados_clasificacion_crudo.csv` con 30 ejecuciones reales al modelo `llama-3.3-70b-versatile`.
+Genera `resultados_clasificacion_crudo.csv`.
+
+Comparación de keywords SIMPLE-01 contra esa IA:
+```powershell
+py -3 scripts/comparar_simple01_vs_ia.py
+py -3 scripts/comparar_simple01_vs_ia.py --palabra-completa
+```
+El flag `--palabra-completa` solo imprime; no pisa el CSV.
 
 ### F3
 Ya corrido sobre la versión mitigada (`lead_completo=false` si el JSON del bloque falla; el flujo no aborta). Ver `resultados_F3_mitigado_crudo.csv`.

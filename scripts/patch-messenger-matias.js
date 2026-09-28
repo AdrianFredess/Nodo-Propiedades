@@ -27,11 +27,11 @@ function loadEnvValueEarly(key, fallback) {
 
 const META_GRAPH_VERSION = 'v21.0';
 const META_MSG_URL = `https://graph.facebook.com/${META_GRAPH_VERSION}/me/messages`;
-const MESSENGER_PAGE_TOKEN = loadEnvValueEarly(
-  'MESSENGER_PAGE_TOKEN',
-  'EAAPfGQWI8MMBSUjBpOlKNbP9SWZBEXmjn9AIlQeG4SM1MM6DMQACHzPsjbeiDei7SDbiHFZANCSkEylIpJObmcLVDHbg0Gbn8wdZC4nq73AaVVS4WZCR1kTU0fX0y5pl9HfsR1moqWFPilMGXV910buhGpC9on5BjK7zKIca7ET5ncaQIUq4h8SVKOp8XSonjWMZB86EMjwZDZD',
-);
-const META_AUTH = `Bearer ${MESSENGER_PAGE_TOKEN}`;
+const MESSENGER_PAGE_TOKEN = loadEnvValueEarly('MESSENGER_PAGE_TOKEN', '');
+if (!MESSENGER_PAGE_TOKEN) {
+  throw new Error('Falta MESSENGER_PAGE_TOKEN en .env');
+}
+const META_AUTH_PLACEHOLDER = 'Bearer __SET_MESSENGER_PAGE_TOKEN__';
 
 const PROP_MEDIA = JSON.parse(fs.readFileSync(MEDIA_PATH, 'utf8'));
 
@@ -85,11 +85,10 @@ function loadEnvValue(key, fallback) {
 }
 
 function citaWebhookBase() {
-  const webhook = loadEnvValue(
-    'WEBHOOK_URL',
-    'https://deranged-defile-comrade.ngrok-free.dev',
-  );
-  return webhook.replace(/\/$/, '');
+  const fromEnv = process.env.PUBLIC_BASE_URL || loadEnvValue('PUBLIC_BASE_URL', '');
+  const webhook = fromEnv || loadEnvValue('WEBHOOK_URL', '');
+  if (!webhook) throw new Error('Falta PUBLIC_BASE_URL (o WEBHOOK_URL) en .env');
+  return String(webhook).replace(/\/$/, '');
 }
 
 function msSnippetFromWa(waName) {
@@ -131,7 +130,7 @@ function ensureNode(wf, id, node) {
 function metaHeaders() {
   return {
     parameters: [
-      { name: 'Authorization', value: META_AUTH },
+      { name: 'Authorization', value: META_AUTH_PLACEHOLDER },
       { name: 'Content-Type', value: 'application/json' },
     ],
   };
@@ -669,7 +668,13 @@ async function deployToN8n(wf) {
   try {
     let remote = await request('GET', `/api/v1/workflows/${WF_ID}`, null, apiKey);
     const patched = patchWorkflow(remote);
-    await request('PUT', `/api/v1/workflows/${WF_ID}`, putSettings(patched), apiKey);
+    const live = JSON.parse(
+      JSON.stringify(patched).replaceAll(
+        META_AUTH_PLACEHOLDER,
+        'Bearer ' + MESSENGER_PAGE_TOKEN,
+      ),
+    );
+    await request('PUT', `/api/v1/workflows/${WF_ID}`, putSettings(live), apiKey);
     await request('POST', `/api/v1/workflows/${WF_ID}/deactivate`, null, apiKey);
     await request('POST', `/api/v1/workflows/${WF_ID}/activate`, null, apiKey);
     return true;
