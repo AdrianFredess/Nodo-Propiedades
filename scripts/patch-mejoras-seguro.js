@@ -407,7 +407,7 @@ const promptData = $('Construir Prompt').first().json;
 
 const choices = Array.isArray(groqData.choices) ? groqData.choices : [];
 const msgGroq = (choices[0] && choices[0].message) || {};
-let respuestaCompleta = (msgGroq.content && String(msgGroq.content).trim()) || String(msgGroq.reasoning || msgGroq.reasoning_content || '').trim();
+let respuestaCompleta = (msgGroq.content && String(msgGroq.content).trim()) || '';
 const groq_fallback = !respuestaCompleta;
 if (groq_fallback) {
   respuestaCompleta = 'Disculpá, tuve un problema técnico momentáneo. ¿Me repetís tu consulta sobre propiedades en Mendoza (zona y si buscás alquilar o comprar)?';

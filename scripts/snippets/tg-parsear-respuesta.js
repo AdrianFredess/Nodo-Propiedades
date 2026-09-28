@@ -32,9 +32,14 @@ const groqFailed = Boolean(
 );
 const choices = Array.isArray(groqData.choices) ? groqData.choices : [];
 const msgGroq = (choices[0] && choices[0].message) || {};
-let respuestaCompleta =
-  (msgGroq.content && String(msgGroq.content).trim()) ||
-  String(msgGroq.reasoning || msgGroq.reasoning_content || '').trim();
+function textoVisibleGroq(message) {
+  const msg = message || {};
+  let text = msg.content == null ? '' : String(msg.content);
+  text = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
+  text = text.replace(/<\|[^|]*\|>/g, '');
+  return text.trim();
+}
+let respuestaCompleta = textoVisibleGroq(msgGroq);
 if (groqFailed && !respuestaCompleta) respuestaCompleta = '';
 const FALLBACK_GROQ =
   'Perdon, se corto un toque. Me repetis que necesitas?';
