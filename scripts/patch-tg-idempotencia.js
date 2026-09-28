@@ -86,6 +86,8 @@ function request(method, urlPath, key, body) {
 (async () => {
   const raw = fs.readFileSync(FILE, 'utf8');
   const wf = JSON.parse(raw);
+  const prevNode = wf.nodes.find((n) => n.name === NODE);
+  const oldCode = prevNode && prevNode.parameters && prevNode.parameters.jsCode;
   const nextName =
     wf.connections['Telegram Trigger'] &&
     wf.connections['Telegram Trigger'].main[0][0].node;
@@ -93,9 +95,11 @@ function request(method, urlPath, key, body) {
   let out = raw;
   if (!raw.includes(NODE)) {
     out = JSON.stringify(wf, null, 2);
-  } else {
-    const node = wf.nodes.find((n) => n.name === NODE);
-    out = raw.replace(JSON.stringify(node.parameters.jsCode), JSON.stringify(CODE));
+  } else if (oldCode && oldCode !== CODE) {
+    const from = JSON.stringify(oldCode);
+    const to = JSON.stringify(CODE);
+    if (!raw.includes(from)) throw new Error('no encontre el codigo de idempotencia');
+    out = raw.replace(from, to);
   }
   fs.writeFileSync(FILE, out);
   console.log('json', nextName, '->', NODE);
@@ -109,6 +113,7 @@ function request(method, urlPath, key, body) {
     nodes: live.nodes,
     connections: live.connections,
     settings: { executionOrder: (live.settings && live.settings.executionOrder) || 'v1' },
+    staticData: live.staticData || undefined,
   });
   console.log('live', PROD);
 })().catch((e) => {

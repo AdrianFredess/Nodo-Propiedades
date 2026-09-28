@@ -12,7 +12,7 @@ const PATTERNS = [
   /\d{8,10}:AA[\w-]{30,}/,
   /gsk_[A-Za-z0-9]{20,}/,
   /AIza[\w-]{30,}/,
-  /ghp_/,
+  /ghp_[A-Za-z0-9]{30,}/,
 ];
 
 function trackedFiles() {

@@ -1715,7 +1715,7 @@
         480
       ],
       "parameters": {
-        "jsCode": "const item = $input.first().json || {};\r\nconst updateId = Number(item.update_id || 0);\r\nconst sd = $getWorkflowStaticData('global');\r\nconst last = Number(sd.lastUpdateId || 0);\r\nif (updateId && last && updateId <= last) return [];\r\nif (updateId) sd.lastUpdateId = updateId;\r\nreturn [{ json: item }];\r\n"
+        "jsCode": "const item = $input.first().json || {};\r\nconst updateId = Number(item.update_id || 0);\r\nconst sd = $getWorkflowStaticData('global');\r\nif (!Array.isArray(sd.seenUpdateIds)) sd.seenUpdateIds = [];\r\nif (updateId && sd.seenUpdateIds.indexOf(updateId) >= 0) return [];\r\nif (updateId) {\r\n  sd.seenUpdateIds.push(updateId);\r\n  if (sd.seenUpdateIds.length > 200) sd.seenUpdateIds = sd.seenUpdateIds.slice(-200);\r\n}\r\nreturn [{ json: item }];\r\n"
       }
     }
   ],
