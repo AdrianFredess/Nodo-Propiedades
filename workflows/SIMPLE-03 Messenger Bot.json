@@ -13,8 +13,10 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "meta-messenger",
-        "responseMode": "lastNode",
-        "options": {}
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
       },
       "webhookId": "s03-messenger-webhook"
     },
@@ -1175,6 +1177,83 @@
         "height": 840,
         "color": 4
       }
+    },
+    {
+      "id": "firma-Webhook-Messenger",
+      "name": "Validar Firma Meta Webhook-Messenger",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\r\n\r\nfunction rawBody() {\r\n  const item = $input.first();\r\n  const bin = item.binary && (item.binary.data || item.binary.body);\r\n  if (bin && bin.data) return Buffer.from(bin.data, 'base64');\r\n  const body = item.json && item.json.body;\r\n  if (typeof body === 'string') return Buffer.from(body);\r\n  if (body && typeof body === 'object') return Buffer.from(JSON.stringify(body));\r\n  return Buffer.from('');\r\n}\r\n\r\nconst item = $input.first().json || {};\r\nconst headers = item.headers || {};\r\nconst header = String(headers['x-hub-signature-256'] || headers['X-Hub-Signature-256'] || '');\r\nconst secret = String(($env && $env.META_APP_SECRET) || '');\r\nconst raw = rawBody();\r\nlet firma_ok = false;\r\nif (secret && header.startsWith('sha256=')) {\r\n  const expected = Buffer.from('sha256=' + crypto.createHmac('sha256', secret).update(raw).digest('hex'));\r\n  const got = Buffer.from(header);\r\n  firma_ok = expected.length === got.length && crypto.timingSafeEqual(expected, got);\r\n}\r\n\r\nreturn [{ json: { ...item, firma_ok }, binary: $input.first().binary }];\r\n"
+      }
+    },
+    {
+      "id": "if-firma-Webhook-Messenger",
+      "name": "IF Firma Meta Webhook-Messenger",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "firma",
+              "leftValue": "={{ Boolean($json.firma_ok) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "options": {
+            "version": 2,
+            "typeValidation": "loose"
+          }
+        }
+      }
+    },
+    {
+      "id": "ok-Webhook-Messenger",
+      "name": "Respond 200 Webhook-Messenger",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        280
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true } }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "bad-Webhook-Messenger",
+      "name": "Respond 401 Webhook-Messenger",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        80
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false } }}",
+        "options": {
+          "responseCode": 401
+        }
+      }
     }
   ],
   "connections": {
@@ -1182,7 +1261,7 @@
       "main": [
         [
           {
-            "node": "Code - Normalizar Messenger",
+            "node": "Validar Firma Meta Webhook-Messenger",
             "type": "main",
             "index": 0
           }
@@ -1534,6 +1613,46 @@
     "Emit Lead Updated": {
       "main": [
         []
+      ]
+    },
+    "Validar Firma Meta Webhook-Messenger": {
+      "main": [
+        [
+          {
+            "node": "IF Firma Meta Webhook-Messenger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond 200 Webhook-Messenger": {
+      "main": [
+        [
+          {
+            "node": "Code - Normalizar Messenger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Firma Meta Webhook-Messenger": {
+      "main": [
+        [
+          {
+            "node": "Respond 200 Webhook-Messenger",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 401 Webhook-Messenger",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },

@@ -32,13 +32,17 @@ services:
       - SEGUIMIENTO_MODE=${SEGUIMIENTO_MODE:-demo}
       # 1 = permite STOCK_FALLBACK embebido. Vacío en producción.
       - DEMO_MODE=${DEMO_MODE:-}
-      # Permite leer PANEL_API_TOKEN / SEGUIMIENTO_MODE desde nodos Code ($env.*)
+      # App Secret de Meta. Lo usa Validar Firma Meta. No va en los JSON.
+      - META_APP_SECRET=${META_APP_SECRET:-}
+      # El nodo de firma usa crypto.timingSafeEqual.
+      - NODE_FUNCTION_ALLOW_BUILTIN=crypto
+      # Permite leer PANEL_API_TOKEN / SEGUIMIENTO_MODE / META_APP_SECRET desde nodos Code ($env.*)
       - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
     volumes:
       # Carpeta del HOST con database.sqlite y config (no uses N8N_USER_FOLDER aquí: en CLI es el *padre* de .n8n)
       - ${N8N_HOST_DATA_DIR:?Definir N8N_HOST_DATA_DIR en .env}:/home/node/.n8n
       - ./workflows:/workflows:ro
-      - ./ai:/ai:ro
+      - ./docs/_legacy/ai:/ai:ro
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
       interval: 30s
