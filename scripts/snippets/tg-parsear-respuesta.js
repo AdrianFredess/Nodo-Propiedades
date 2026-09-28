@@ -1267,8 +1267,9 @@ if (promptData.sheets_error) {
   const pedidoPrecio = precioPedidoDesdeStock(textoUsuario, stockRowsPrecio);
   if (pedidoPrecio && pedidoPrecio.texto) {
     respuestaBot = pedidoPrecio.texto;
-    if (pedidoPrecio.id && propiedadesMostrar.indexOf(pedidoPrecio.id) < 0) {
-      propiedadesMostrar.unshift(pedidoPrecio.id);
+    const idsPrecio = pedidoPrecio.mostrar === false ? pedidoPrecio.similares || [] : [pedidoPrecio.id];
+    for (const idPrecio of idsPrecio) {
+      if (idPrecio && propiedadesMostrar.indexOf(idPrecio) < 0) propiedadesMostrar.unshift(idPrecio);
     }
   }
 }

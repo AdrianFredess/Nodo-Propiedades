@@ -66,24 +66,52 @@ const WA_NEW = WA_OLD.replace(
 }`,
 );
 
+const MAP_OLD = `id: r.id || r.ID || r.codigo || '',
+          precio: r.precio || r.Precio || '',
+          direccion: r.direccion || r.Direccion || r.titulo || '',`;
+
+const MAP_NEW = `id: r.id || r.ID || r.codigo || '',
+          precio: r.precio || r.Precio || r.precio_usd || r.price || '',
+          direccion: r.direccion || r.Direccion || r.titulo || '',
+          moneda: r.moneda || r.Moneda || r.currency || r.Currency || '',
+          estado: r.estado || r.Estado || r.status || '',
+          operacion: r.operacion || r.Operacion || r.tipo_operacion || '',
+          periodo: r.periodo || r.unidad || r.frecuencia || '',`;
+
 function stockField(varName) {
   return `sheets_recuperacion: sheetsRecuperacion,
       stock_rows_json: JSON.stringify(
         (${varName} || []).map((r) => ({
-          id: r.id || r.ID || r.codigo || '',
-          precio: r.precio || r.Precio || '',
-          direccion: r.direccion || r.Direccion || r.titulo || '',
+          ${MAP_NEW}
         })),
       ),`;
 }
 
+const IDS_OLD_TG = `if (pedidoPrecio.id && propiedadesMostrar.indexOf(pedidoPrecio.id) < 0) {
+      propiedadesMostrar.unshift(pedidoPrecio.id);
+    }`;
+
+const IDS_NEW = `const idsPrecio = pedidoPrecio.mostrar === false ? pedidoPrecio.similares || [] : [pedidoPrecio.id];
+    for (const idPrecio of idsPrecio) {
+      if (idPrecio && propiedadesMostrar.indexOf(idPrecio) < 0) propiedadesMostrar.unshift(idPrecio);
+    }`;
+
+function refrescarHelper(out) {
+  const block = /\/\*\*\n \* Si preguntan el precio[\s\S]*?module\.exports = \{ precioPedidoDesdeStock \};\n\}(?:\n\})*\n*/;
+  if (block.test(out)) return out.replace(block, HELPER + '\n');
+  if (!out.includes('function precioPedidoDesdeStock')) return HELPER + '\n' + out;
+  return out;
+}
+
 function patchCode(code, kind) {
   let out = code.replace(/\r\n/g, '\n');
-  if ((kind === 'tg-parse' || kind === 'wa-parse') && !out.includes('function precioPedidoDesdeStock')) {
-    out = HELPER + '\n' + out;
-  }
+  if (kind === 'tg-parse' || kind === 'wa-parse') out = refrescarHelper(out);
   if (kind === 'tg-parse' && out.includes(TG_OLD) && !out.includes('pedidoPrecio')) out = out.replace(TG_OLD, TG_NEW);
   if (kind === 'wa-parse' && out.includes(WA_OLD) && !out.includes('pedidoPrecio')) out = out.replace(WA_OLD, WA_NEW);
+  if ((kind === 'tg-parse' || kind === 'wa-parse') && out.includes(IDS_OLD_TG)) {
+    out = out.replace(IDS_OLD_TG, IDS_NEW);
+  }
+  if (out.includes(MAP_OLD)) out = out.replace(MAP_OLD, MAP_NEW);
   if (kind === 'tg-prompt' && !out.includes('stock_rows_json')) {
     out = out.replace('sheets_recuperacion: sheetsRecuperacion,', stockField('stockItems'));
   }

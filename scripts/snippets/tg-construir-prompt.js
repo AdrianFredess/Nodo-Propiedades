@@ -1070,8 +1070,12 @@ return [
       stock_rows_json: JSON.stringify(
         (stockItems || []).map((r) => ({
           id: r.id || r.ID || r.codigo || '',
-          precio: r.precio || r.Precio || '',
+          precio: r.precio || r.Precio || r.precio_usd || r.price || '',
           direccion: r.direccion || r.Direccion || r.titulo || '',
+          moneda: r.moneda || r.Moneda || r.currency || r.Currency || '',
+          estado: r.estado || r.Estado || r.status || '',
+          operacion: r.operacion || r.Operacion || r.tipo_operacion || '',
+          periodo: r.periodo || r.unidad || r.frecuencia || '',
         })),
       ),
       respuesta_fija: sheetsError ? RESPUESTA_SHEETS_CAIDO : '',
