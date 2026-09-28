@@ -1,0 +1,15 @@
+id,familia,pass,regla_fallida,respuesta
+A1,A,true,,Mira estas para que veas mas o menos
+A2,A,true,,"La comision del inmobiliario suele ser un porcentaje del precio de venta y se paga al cierre, mas los gastos de escritura y sellos que corren por cuenta del comprador. Te sirve saber algo mas sobre el proceso?"
+A3,A,true,,que tipo de inmueble te interesa y con que presupuesto tenes pensado?
+A4,A,true,,"Mira, estas te pueden cerrar"
+B1,B,false,precio_exacto,Mira estas para que veas mas o menos
+C1,C,true,,"Hola, soy Matias de Nodo Propiedades. En que te puedo ayudar?"
+C2,C,true,,"La seña es un pago anticipado que asegura la reserva del inmueble; se suele abonar via transferencia bancaria y queda como parte del precio total, descontandose al cerrar la operacion. Despues de la transferencia, el vendedor te enviara la documentacion y el comprobante para formalizar la reserva. Te gustaria que te pase los datos de la cuenta o tenes alguna otra duda?"
+C3,C,true,,"De nada, tenes alguna zona o tipo de inmueble en mente?"
+D1,D,true,,Capital Mendoza - Departamento 2 amb en Capital Mendoza
+D2,D,true,,"Mira, estas te pueden cerrar"
+S1,S,false,categoria:C|texto_fijo_c,"Buenas, soy Matias de Nodo Propiedades. En que te puedo ayudar con la compra o venta de inmuebles en Mendoza?"
+S2,S,true,,"Dame un segundo que se me trabo, ya te contesto"
+T1,T,true,,En godoy cruz mira estas
+T2,T,true,,Capital Mendoza - Departamento 2 amb en Capital Mendoza
