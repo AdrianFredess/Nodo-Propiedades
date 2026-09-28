@@ -1067,6 +1067,13 @@ return [
       alertar_sheets: alertarSheets,
       sheets_alerta_texto: sheetsAlertaTexto,
       sheets_recuperacion: sheetsRecuperacion,
+      stock_rows_json: JSON.stringify(
+        (stockItems || []).map((r) => ({
+          id: r.id || r.ID || r.codigo || '',
+          precio: r.precio || r.Precio || '',
+          direccion: r.direccion || r.Direccion || r.titulo || '',
+        })),
+      ),
       respuesta_fija: sheetsError ? RESPUESTA_SHEETS_CAIDO : '',
       debe_mostrar_propiedades: sheetsError
         ? false

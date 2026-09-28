@@ -1257,6 +1257,20 @@ if (promptData.sheets_error) {
   propiedadesMostrar = [];
   mensajesExtra = [];
   mensajeCierre = '';
+} else if (typeof precioPedidoDesdeStock === 'function') {
+  let stockRowsPrecio = [];
+  try {
+    stockRowsPrecio = JSON.parse(promptData.stock_rows_json || '[]');
+  } catch (ePrecio) {
+    stockRowsPrecio = [];
+  }
+  const pedidoPrecio = precioPedidoDesdeStock(textoUsuario, stockRowsPrecio);
+  if (pedidoPrecio && pedidoPrecio.texto) {
+    respuestaBot = pedidoPrecio.texto;
+    if (pedidoPrecio.id && propiedadesMostrar.indexOf(pedidoPrecio.id) < 0) {
+      propiedadesMostrar.unshift(pedidoPrecio.id);
+    }
+  }
 }
 
 return [
