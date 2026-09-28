@@ -1692,6 +1692,19 @@
         "amount": "={{ Math.max(1, Number($json.wait_cola_sec) || 1) }}",
         "unit": "seconds"
       }
+    },
+    {
+      "id": "tg-idempotencia-update",
+      "name": "Idempotencia update_id",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        480
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first().json || {};\r\nconst updateId = Number(item.update_id || 0);\r\nconst sd = $getWorkflowStaticData('global');\r\nconst last = Number(sd.lastUpdateId || 0);\r\nif (updateId && last && updateId <= last) return [];\r\nif (updateId) sd.lastUpdateId = updateId;\r\nreturn [{ json: item }];\r\n"
+      }
     }
   ],
   "connections": {
@@ -1699,7 +1712,7 @@
       "main": [
         [
           {
-            "node": "Set Variables",
+            "node": "Idempotencia update_id",
             "type": "main",
             "index": 0
           }
@@ -2259,6 +2272,17 @@
         [
           {
             "node": "HTTP Groq",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Idempotencia update_id": {
+      "main": [
+        [
+          {
+            "node": "Set Variables",
             "type": "main",
             "index": 0
           }

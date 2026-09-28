@@ -37,6 +37,7 @@ front/.env
 
 # Export Instagram / datos personales (no versionar)
 data/instagram-export/
+data/bot-config-history/
 instagram-*.zip
 
 # Editor / IDE

@@ -62,7 +62,18 @@ export function ConfigBotPage() {
   const [cfg, setCfg] = useState<BotConfig>(DEFAULTS);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
+  const [history, setHistory] = useState<{ id: string }[]>([]);
   const preview = useMemo(() => previewText(cfg), [cfg]);
+
+  async function loadHistory() {
+    try {
+      const r = await fetch(`${bridgeBase()}/bot-config/history`);
+      const j = (await r.json()) as { items?: { id: string }[] };
+      setHistory(j.items || []);
+    } catch {
+      setHistory([]);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +94,7 @@ export function ConfigBotPage() {
       } finally {
         if (!cancelled) setLoading(false);
       }
+      if (!cancelled) void loadHistory();
     })();
     return () => {
       cancelled = true;
@@ -107,8 +119,31 @@ export function ConfigBotPage() {
         (j.note || 'Guardado.') +
           ' Para n8n vivo: node scripts/patch-advisor-learning.js --deploy',
       );
+      void loadHistory();
     } catch {
       setStatus('Guardado local. Bridge offline — revisá ws-bridge :3099');
+    }
+  }
+
+  async function restore(id: string) {
+    setStatus('Restaurando…');
+    try {
+      const r = await fetch(`${bridgeBase()}/bot-config/restore`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const j = (await r.json()) as { ok?: boolean; config?: BotConfig; error?: string };
+      if (!r.ok || !j.ok || !j.config) {
+        setStatus(j.error || 'No se pudo restaurar');
+        return;
+      }
+      setCfg({ ...DEFAULTS, ...j.config });
+      localStorage.setItem('nodo_bot_config', JSON.stringify(j.config));
+      setStatus('Restaurado. Para n8n vivo: node scripts/patch-advisor-learning.js --deploy');
+      void loadHistory();
+    } catch {
+      setStatus('Bridge offline — revisá ws-bridge :3099');
     }
   }
 
@@ -240,6 +275,24 @@ export function ConfigBotPage() {
           <button type="button" className="btn" onClick={() => void save()}>
             Guardar
           </button>
+          {history.length > 0 ? (
+            <div>
+              <h2>Versiones anteriores</h2>
+              <ul>
+                {history.slice(0, 8).map((item) => (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--sm"
+                      onClick={() => void restore(item.id)}
+                    >
+                      Restaurar {item.id.replace('.json', '')}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {status ? <p className="config-bot__status">{status}</p> : null}
         </section>
 

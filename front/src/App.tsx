@@ -14,6 +14,7 @@ import { PublicPropiedadPage } from './features/catalogo/PublicPropiedadPage';
 import { LeadDetailPage } from './features/lead-detail/LeadDetailPage';
 import { AdvisorActionBanner } from './features/notifications/AdvisorActionBanner';
 import { PipelinePage } from './features/pipeline/PipelinePage';
+import { HoyPage } from './features/hoy/HoyPage';
 import { ResumenPage } from './features/resumen/ResumenPage';
 import { useAdvisorActions } from './shared/hooks/useAdvisorActions';
 import { useChatUnread } from './shared/hooks/useChatUnread';
@@ -167,13 +168,7 @@ export default function App() {
                 {loading && !payload ? (
                   <div className="empty-state">Cargando panel…</div>
                 ) : (
-                  <ResumenPage
-                    leads={leads}
-                    sourceLabel={payload?.source ?? 'live'}
-                    lastUpdatedLabel={
-                      lastUpdated ? formatDateTime(lastUpdated) : '—'
-                    }
-                  />
+                  <HoyPage leads={leads} />
                 )}
               </>
             }
@@ -200,6 +195,16 @@ export default function App() {
             }
           />
           <Route path="config" element={<ConfigBotPage />} />
+          <Route
+            path="resumen"
+            element={
+              <ResumenPage
+                leads={leads}
+                sourceLabel={payload?.source ?? 'live'}
+                lastUpdatedLabel={lastUpdated ? formatDateTime(lastUpdated) : '—'}
+              />
+            }
+          />
           <Route
             path="catalogo/:propiedadId"
             element={

@@ -17,7 +17,8 @@ interface AppShellProps {
 }
 
 const links = [
-  { to: '/', label: 'Resumen', end: true },
+  { to: '/', label: 'Hoy', end: true },
+  { to: '/resumen', label: 'Resumen', end: false },
   { to: '/pipeline', label: 'Pipeline', end: false },
   { to: '/catalogo', label: 'Catálogo', end: false },
   { to: '/config', label: 'Config bot', end: false },

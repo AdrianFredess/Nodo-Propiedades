@@ -12,6 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { synthesizeArgentine, ttsInfo } from './tts.js';
+import { guardarSnapshot, leerSnapshot, listarSnapshots } from './bot-config-history.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BOT_CONFIG_PATH = path.resolve(__dirname, '..', '..', 'data', 'bot-config.json');
@@ -138,6 +139,35 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'GET' && url.pathname === '/bot-config/history') {
+    json(res, 200, { ok: true, items: listarSnapshots(BOT_CONFIG_PATH) });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/bot-config/restore') {
+    let body;
+    try {
+      body = await readBody(req);
+    } catch {
+      json(res, 400, { ok: false, error: 'json_invalido' });
+      return;
+    }
+    const cfg = leerSnapshot(BOT_CONFIG_PATH, body.id);
+    if (!cfg) {
+      json(res, 404, { ok: false, error: 'snapshot_no_encontrado' });
+      return;
+    }
+    try {
+      guardarSnapshot(BOT_CONFIG_PATH);
+      fs.mkdirSync(path.dirname(BOT_CONFIG_PATH), { recursive: true });
+      fs.writeFileSync(BOT_CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
+      json(res, 200, { ok: true, config: cfg });
+    } catch (err) {
+      json(res, 500, { ok: false, error: err instanceof Error ? err.message : 'write_fail' });
+    }
+    return;
+  }
+
   if (req.method === 'POST' && url.pathname === '/bot-config') {
     let body;
     try {
@@ -157,6 +187,7 @@ const server = http.createServer(async (req, res) => {
     };
     try {
       fs.mkdirSync(path.dirname(BOT_CONFIG_PATH), { recursive: true });
+      guardarSnapshot(BOT_CONFIG_PATH);
       fs.writeFileSync(BOT_CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
       json(res, 200, { ok: true, config: cfg, note: 'Guardado. Redeploy patch para inyectar en n8n.' });
     } catch (err) {
