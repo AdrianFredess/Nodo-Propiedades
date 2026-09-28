@@ -68,18 +68,10 @@ function debeAlertarSheets(staticData, nowMs) {
   return true;
 }
 
-const SHEETS_RAFAGA_MS = 20000;
-
 function debeAlertarRafagaSheets(staticData, nowMs) {
-  const sd = staticData && typeof staticData === 'object' ? staticData : {};
-  const now = Number(nowMs) || Date.now();
-  const prev = Number(sd.sheetsAlertAt || 0);
-  if (prev && now - prev < SHEETS_ALERT_MS) return false;
-  if (!sd.sheetsFirstAt) sd.sheetsFirstAt = now;
-  if (now - Number(sd.sheetsFirstAt) < SHEETS_RAFAGA_MS) return false;
-  sd.sheetsAlertAt = now;
-  sd.sheetsFirstAt = 0;
-  return true;
+  // Una vez por hora. No vacía sheetsChats: cada aviso nombra a todos
+  // los que siguen esperando desde el anterior. La lista se borra al volver Sheets.
+  return debeAlertarSheets(staticData, nowMs);
 }
 
 function registrarClienteSheets(staticData, chat) {

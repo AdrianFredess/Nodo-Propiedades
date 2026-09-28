@@ -191,8 +191,14 @@ function stockOk() {
 
   const ids = [];
   for (const chat of CHATS) ids.push(await postChat(chat, chat.texto));
-  await sleep(21000);
-  ids.push(await postChat(CHATS[0], 'sigo esperando'));
+
+  const hora = (await request('GET', '/api/v1/workflows/' + id, key)).json;
+  hora.staticData = hora.staticData || { global: {} };
+  hora.staticData.global = hora.staticData.global || {};
+  hora.staticData.global.sheetsAlertAt = Date.now() - 61 * 60 * 1000;
+  await request('PUT', '/api/v1/workflows/' + id, key, putBody(hora));
+  await request('POST', '/api/v1/workflows/' + id + '/activate', key);
+  ids.push(await postChat(CHATS[2], 'sigo sin stock'));
 
   const live = (await request('GET', '/api/v1/workflows/' + id, key)).json;
   const stockNode = live.nodes.find((n) => n.name === 'Leer Stock Propiedades');
@@ -234,8 +240,8 @@ function stockOk() {
     '# V1 — Sheets no deja el chat pausado',
     '',
     '- Copia: `' + id + '`. Producción `' + PROD + '` no recibió estos mensajes.',
-    '- 3 chats con la lectura rota, espera de 21s y un mensaje de cierre para disparar la alerta de la ráfaga (20s).',
-    '- Alertas cuyo texto lista los 3 chats: **' + alertaRota.length + '**.',
+    '- 3 chats con la lectura rota: la primera alerta sale en el acto. Una hora después (reloj de la copia atrasado) otra alerta lista a los 3, sin esperar a que Sheets vuelva.',
+    '- Alertas de caída cuyo texto lista los 3 chats: **' + alertaRota.length + '**.',
     '- Aviso de recuperación con los 3 chats: **' + alertaOk.length + '**.',
     '- El mensaje siguiente, con Sheets bien, no queda pausado ni usa el texto de Sheets caído: **' + (normal ? 'sí' : 'no') + '**.',
     '',
