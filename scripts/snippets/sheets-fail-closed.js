@@ -68,11 +68,91 @@ function debeAlertarSheets(staticData, nowMs) {
   return true;
 }
 
+const SHEETS_RAFAGA_MS = 20000;
+
+function debeAlertarRafagaSheets(staticData, nowMs) {
+  const sd = staticData && typeof staticData === 'object' ? staticData : {};
+  const now = Number(nowMs) || Date.now();
+  const prev = Number(sd.sheetsAlertAt || 0);
+  if (prev && now - prev < SHEETS_ALERT_MS) return false;
+  if (!sd.sheetsFirstAt) sd.sheetsFirstAt = now;
+  if (now - Number(sd.sheetsFirstAt) < SHEETS_RAFAGA_MS) return false;
+  sd.sheetsAlertAt = now;
+  sd.sheetsFirstAt = 0;
+  return true;
+}
+
+function registrarClienteSheets(staticData, chat) {
+  const sd = staticData && typeof staticData === 'object' ? staticData : {};
+  if (!Array.isArray(sd.sheetsChats)) sd.sheetsChats = [];
+  const id = String((chat && chat.chat_id) || '');
+  const canal = String((chat && chat.canal) || '');
+  if (!id) return sd.sheetsChats;
+  const previo = sd.sheetsChats.find((c) => c && c.chat_id === id && c.canal === canal);
+  const row = {
+    chat_id: id,
+    nombre: String((chat && chat.nombre) || 'sin nombre').slice(0, 80),
+    canal: canal,
+    mensaje: String((chat && chat.mensaje) || '').slice(0, 160),
+  };
+  if (previo) {
+    previo.nombre = row.nombre || previo.nombre;
+    previo.mensaje = row.mensaje || previo.mensaje;
+  } else {
+    sd.sheetsChats.push(row);
+  }
+  return sd.sheetsChats;
+}
+
+function textoListaSheets(chats) {
+  return (Array.isArray(chats) ? chats : [])
+    .map(
+      (c) =>
+        '- ' +
+        (c.nombre || 'sin nombre') +
+        ' | ' +
+        (c.canal || '') +
+        ' | ' +
+        c.chat_id +
+        ' | ' +
+        (c.mensaje || ''),
+    )
+    .join('\n');
+}
+
+function textoAlertaSheets(nodo, error, chats) {
+  return (
+    'Sheets caído: ' +
+    String(nodo || 'Sheets') +
+    ' ' +
+    String(error || '').slice(0, 160) +
+    '\n' +
+    textoListaSheets(chats)
+  );
+}
+
+function tomarRecuperacionSheets(staticData) {
+  const sd = staticData && typeof staticData === 'object' ? staticData : {};
+  const chats = Array.isArray(sd.sheetsChats) ? sd.sheetsChats.slice() : [];
+  if (!chats.length) return '';
+  sd.sheetsChats = [];
+  return (
+    'Sheets volvió, quedaron ' +
+    chats.length +
+    ' clientes esperando respuesta:\n' +
+    textoListaSheets(chats)
+  );
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     RESPUESTA_SHEETS_CAIDO,
     clasificarLecturaSheets,
     debeAlertarSheets,
+    debeAlertarRafagaSheets,
     demoModeActivo,
+    registrarClienteSheets,
+    textoAlertaSheets,
+    tomarRecuperacionSheets,
   };
 }

@@ -470,7 +470,7 @@ if (prep.sheets_error) {
     categoria: 'C',
     motivo: 'sheets_error',
     alertar: Boolean(prep.alertar_sheets),
-    pausar: true,
+    pausar: false,
   };
   respuesta = 'Dame un rato que chequeo disponibilidad y te confirmo';
   propiedadesMostrar = [];
@@ -499,13 +499,17 @@ const avisoWa =
       })
     : '';
 let avisoSheets = avisoWa;
-if (prep.sheets_error) {
+if (prep.sheets_error && prep.alertar_sheets) {
   avisoSheets =
+    String(prep.sheets_alerta_texto || '').trim() ||
     'Sheets caído: ' +
-    String(prep.sheets_error_nodo || 'Leer Stock') +
-    ' ' +
-    String(prep.sheets_error_msg || '').slice(0, 160) +
-    (avisoWa ? '\n' + avisoWa : '');
+      String(prep.sheets_error_nodo || 'Leer Stock') +
+      ' ' +
+      String(prep.sheets_error_msg || '').slice(0, 160);
+}
+if (prep.sheets_recuperacion) {
+  avisoSheets = String(prep.sheets_recuperacion) + (avisoSheets ? '\n' + avisoSheets : '');
+  derivacionWa.alertar = true;
 }
 if (derivacionWa.categoria === 'C' && derivacionWa.motivo !== 'sheets_error') {
   respuesta =

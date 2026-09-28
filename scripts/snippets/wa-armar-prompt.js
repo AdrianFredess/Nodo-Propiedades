@@ -62,8 +62,28 @@ if (
   stockItemsEarly = STOCK_FALLBACK;
 }
 let alertarSheets = false;
-if (sheetsError && typeof $getWorkflowStaticData === 'function') {
-  alertarSheets = debeAlertarSheets($getWorkflowStaticData('global'), Date.now());
+let sheetsAlertaTexto = '';
+let sheetsRecuperacion = '';
+if (typeof $getWorkflowStaticData === 'function') {
+  if (sheetsError) {
+    if (typeof registrarClienteSheets === 'function') {
+      registrarClienteSheets(sd, {
+        chat_id: chatKey,
+        nombre: prep.lead_name || prep.phone || 'Cliente',
+        canal: 'whatsapp',
+        mensaje: msg,
+      });
+    }
+    alertarSheets =
+      typeof debeAlertarRafagaSheets === 'function'
+        ? debeAlertarRafagaSheets(sd, Date.now())
+        : debeAlertarSheets(sd, Date.now());
+    if (alertarSheets && typeof textoAlertaSheets === 'function') {
+      sheetsAlertaTexto = textoAlertaSheets(sheetsErrorNodo, sheetsErrorMsg, sd.sheetsChats);
+    }
+  } else if (typeof tomarRecuperacionSheets === 'function') {
+    sheetsRecuperacion = tomarRecuperacionSheets(sd);
+  }
 }
 
 const botConfigWa =
@@ -613,6 +633,8 @@ return [
       sheets_error_nodo: sheetsErrorNodo,
       sheets_error_msg: sheetsErrorMsg,
       alertar_sheets: alertarSheets,
+      sheets_alerta_texto: sheetsAlertaTexto,
+      sheets_recuperacion: sheetsRecuperacion,
       respuesta_fija: sheetsError ? RESPUESTA_SHEETS_CAIDO : '',
       debe_mostrar_propiedades: sheetsError ? false : debeMostrarPropiedades && !respuesta_forzada,
       sugerencias_ids: sheetsError ? '[]' : JSON.stringify(sugerenciasIds),

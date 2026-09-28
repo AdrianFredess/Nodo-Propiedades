@@ -890,7 +890,7 @@ if (promptData.sheets_error) {
     categoria: 'C',
     motivo: 'sheets_error',
     alertar: Boolean(promptData.alertar_sheets),
-    pausar: true,
+    pausar: false,
   };
 }
 
@@ -920,11 +920,13 @@ if (derivacion.categoria === 'C' && !skipReply) {
   mensajesExtra = [];
   mensajeCierre = '';
   propiedadesMostrar = [];
-  scoreTemp.bot_paused = true;
-  scoreTemp.handoff = true;
-  scoreTemp.estado_seguimiento = 'respondido';
-  if (scoreTemp.temperatura === 'frio') scoreTemp.temperatura = 'tibio';
-  temperatura = scoreTemp.temperatura;
+  if (derivacion.pausar) {
+    scoreTemp.bot_paused = true;
+    scoreTemp.handoff = true;
+    scoreTemp.estado_seguimiento = 'respondido';
+    if (scoreTemp.temperatura === 'frio') scoreTemp.temperatura = 'tibio';
+    temperatura = scoreTemp.temperatura;
+  }
 } else if (derivacion.categoria === 'B') {
   scoreTemp.handoff = true;
   // B: no pausar el bot (sigue la charla)
@@ -956,13 +958,19 @@ let avisoVendedorTexto =
         panelBase: botConfigParse.panel_base_url,
       })
     : String(scoreTemp.notif_resumen || '');
-if (promptData.sheets_error) {
+if (promptData.sheets_error && promptData.alertar_sheets) {
   avisoVendedorTexto =
+    String(promptData.sheets_alerta_texto || '').trim() ||
     'Sheets caído: ' +
-    String(promptData.sheets_error_nodo || 'Leer Stock') +
-    ' ' +
-    String(promptData.sheets_error_msg || '').slice(0, 160) +
+      String(promptData.sheets_error_nodo || 'Leer Stock') +
+      ' ' +
+      String(promptData.sheets_error_msg || '').slice(0, 160);
+}
+if (promptData.sheets_recuperacion) {
+  avisoVendedorTexto =
+    String(promptData.sheets_recuperacion) +
     (avisoVendedorTexto ? '\n' + avisoVendedorTexto : '');
+  derivacion.alertar = true;
 }
 
 if (derivacion.alertar && avisoVendedorTexto) {

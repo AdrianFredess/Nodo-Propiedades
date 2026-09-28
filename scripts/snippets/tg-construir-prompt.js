@@ -208,8 +208,33 @@ if (
   stockItems = STOCK_FALLBACK;
 }
 let alertarSheets = false;
-if (sheetsError && typeof $getWorkflowStaticData === 'function') {
-  alertarSheets = debeAlertarSheets($getWorkflowStaticData('global'), Date.now());
+let sheetsAlertaTexto = '';
+let sheetsRecuperacion = '';
+if (typeof $getWorkflowStaticData === 'function') {
+  const sdSheets = $getWorkflowStaticData('global');
+  if (sheetsError) {
+    if (typeof registrarClienteSheets === 'function') {
+      registrarClienteSheets(sdSheets, {
+        chat_id: chatId,
+        nombre: nombreUsuario,
+        canal: 'telegram',
+        mensaje: textoUsuario,
+      });
+    }
+    alertarSheets =
+      typeof debeAlertarRafagaSheets === 'function'
+        ? debeAlertarRafagaSheets(sdSheets, Date.now())
+        : debeAlertarSheets(sdSheets, Date.now());
+    if (alertarSheets && typeof textoAlertaSheets === 'function') {
+      sheetsAlertaTexto = textoAlertaSheets(
+        sheetsErrorNodo,
+        sheetsErrorMsg,
+        sdSheets.sheetsChats,
+      );
+    }
+  } else if (typeof tomarRecuperacionSheets === 'function') {
+    sheetsRecuperacion = tomarRecuperacionSheets(sdSheets);
+  }
 }
 
 let politicasRows = [];
@@ -1040,6 +1065,8 @@ return [
       sheets_error_nodo: sheetsErrorNodo,
       sheets_error_msg: sheetsErrorMsg,
       alertar_sheets: alertarSheets,
+      sheets_alerta_texto: sheetsAlertaTexto,
+      sheets_recuperacion: sheetsRecuperacion,
       respuesta_fija: sheetsError ? RESPUESTA_SHEETS_CAIDO : '',
       debe_mostrar_propiedades: sheetsError
         ? false
