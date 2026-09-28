@@ -465,6 +465,16 @@ let derivacionWa =
         solicitudVisita: Boolean(solicitudVisita),
       })
     : { categoria: 'A', motivo: 'auto', alertar: false, pausar: false };
+if (prep.sheets_error) {
+  derivacionWa = {
+    categoria: 'C',
+    motivo: 'sheets_error',
+    alertar: Boolean(prep.alertar_sheets),
+    pausar: true,
+  };
+  respuesta = 'Dame un rato que chequeo disponibilidad y te confirmo';
+  propiedadesMostrar = [];
+}
 if (lead_completo && derivacionWa.categoria === 'A') {
   derivacionWa = { categoria: 'B', motivo: 'lead_completo', alertar: true, pausar: false };
 }
@@ -488,7 +498,16 @@ const avisoWa =
         panelBase: botConfigWaParse.panel_base_url,
       })
     : '';
-if (derivacionWa.categoria === 'C') {
+let avisoSheets = avisoWa;
+if (prep.sheets_error) {
+  avisoSheets =
+    'Sheets caído: ' +
+    String(prep.sheets_error_nodo || 'Leer Stock') +
+    ' ' +
+    String(prep.sheets_error_msg || '').slice(0, 160) +
+    (avisoWa ? '\n' + avisoWa : '');
+}
+if (derivacionWa.categoria === 'C' && derivacionWa.motivo !== 'sheets_error') {
   respuesta =
     typeof mensajeDerivacionCliente === 'function'
       ? mensajeDerivacionCliente(botConfigWaParse)
@@ -498,7 +517,7 @@ if (derivacionWa.categoria === 'C') {
 } else if (derivacionWa.categoria === 'B') {
   scoreTemp.handoff = true;
 }
-if (derivacionWa.alertar && avisoWa) scoreTemp.notif_resumen = avisoWa;
+if (derivacionWa.alertar && avisoSheets) scoreTemp.notif_resumen = avisoSheets;
 
 if (temperatura === 'caliente') {
   respuesta =
@@ -637,6 +656,13 @@ const aprendizajeOpts = {
 };
 const regAprendizaje = prepararRegistroAprendizaje(aprendizajeOpts);
 
+if (prep.sheets_error) {
+  respuesta = 'Dame un rato que chequeo disponibilidad y te confirmo';
+  propiedadesMostrar = [];
+  mensajesExtra = [];
+  mensajeCierre = '';
+}
+
 return [
   {
     json: {
@@ -683,9 +709,10 @@ return [
       intent_detected: intencionClasificador || intencion,
       objeciones: JSON.stringify(analisisPost.objeciones || []),
       aviso_vendedor: Boolean(derivacionWa.alertar),
-      aviso_vendedor_texto: avisoWa || '',
+      aviso_vendedor_texto: avisoSheets || '',
       derivacion_categoria: derivacionWa.categoria || 'A',
       derivacion_motivo: derivacionWa.motivo || 'auto',
+      sheets_error: Boolean(prep.sheets_error),
       needs_advisor_action: Boolean(
         scoreTemp.bot_paused || derivacionWa.alertar || solicitudVisita,
       ),

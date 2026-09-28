@@ -31,7 +31,8 @@ const turnos = Number($json.turno || $json.consultas_count || 0) || 0;
 const sinClasificar = !leadCompleto && turnos >= UMBRAL_TURNOS_SIN_CLASIFICAR;
 
 let motivo = '';
-if (rateLimit) motivo = 'rate_limit';
+if ($json.sheets_error) motivo = 'sheets_error';
+else if (rateLimit) motivo = 'rate_limit';
 else if (repeticionDetectada) motivo = 'REPETICION';
 else if (sinClasificar) motivo = 'SIN_CLASIFICAR';
 

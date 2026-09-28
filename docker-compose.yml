@@ -30,6 +30,8 @@ services:
       - PANEL_API_TOKEN=${PANEL_API_TOKEN:-}
       # demo = tiempos cortos (tesis); prod = ~5 días + ~10 días
       - SEGUIMIENTO_MODE=${SEGUIMIENTO_MODE:-demo}
+      # 1 = permite STOCK_FALLBACK embebido. Vacío en producción.
+      - DEMO_MODE=${DEMO_MODE:-}
       # Permite leer PANEL_API_TOKEN / SEGUIMIENTO_MODE desde nodos Code ($env.*)
       - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
     volumes:

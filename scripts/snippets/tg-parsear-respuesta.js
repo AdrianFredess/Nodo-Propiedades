@@ -885,6 +885,15 @@ let derivacion =
         pausar: Boolean(promptData.derivacion_pausar),
       };
 
+if (promptData.sheets_error) {
+  derivacion = {
+    categoria: 'C',
+    motivo: 'sheets_error',
+    alertar: Boolean(promptData.alertar_sheets),
+    pausar: true,
+  };
+}
+
 if (forzarHandoffVisita && derivacion.categoria === 'A') {
   derivacion = { categoria: 'B', motivo: 'visita', alertar: true, pausar: false };
 }
@@ -904,7 +913,10 @@ const mensajeDerivacionTxt =
     : 'Te paso con el vendedor, en un momento te escribe.');
 
 if (derivacion.categoria === 'C' && !skipReply) {
-  respuestaBot = mensajeDerivacionTxt;
+  respuestaBot =
+    derivacion.motivo === 'sheets_error'
+      ? 'Dame un rato que chequeo disponibilidad y te confirmo'
+      : mensajeDerivacionTxt;
   mensajesExtra = [];
   mensajeCierre = '';
   propiedadesMostrar = [];
@@ -921,7 +933,7 @@ if (derivacion.categoria === 'C' && !skipReply) {
   }
 }
 
-const avisoVendedorTexto =
+let avisoVendedorTexto =
   typeof armarAvisoVendedorContexto === 'function'
     ? armarAvisoVendedorContexto({
         titulo:
@@ -944,6 +956,14 @@ const avisoVendedorTexto =
         panelBase: botConfigParse.panel_base_url,
       })
     : String(scoreTemp.notif_resumen || '');
+if (promptData.sheets_error) {
+  avisoVendedorTexto =
+    'Sheets caído: ' +
+    String(promptData.sheets_error_nodo || 'Leer Stock') +
+    ' ' +
+    String(promptData.sheets_error_msg || '').slice(0, 160) +
+    (avisoVendedorTexto ? '\n' + avisoVendedorTexto : '');
+}
 
 if (derivacion.alertar && avisoVendedorTexto) {
   scoreTemp.notif_resumen = avisoVendedorTexto;
@@ -1224,6 +1244,13 @@ try {
   regAprendizaje = {};
 }
 
+if (promptData.sheets_error) {
+  respuestaBot = 'Dame un rato que chequeo disponibilidad y te confirmo';
+  propiedadesMostrar = [];
+  mensajesExtra = [];
+  mensajeCierre = '';
+}
+
 return [
   {
     json: {
@@ -1279,6 +1306,7 @@ return [
       aviso_vendedor_texto: avisoVendedorTexto || '',
       derivacion_categoria: derivacion.categoria || 'A',
       derivacion_motivo: derivacion.motivo || 'auto',
+      sheets_error: Boolean(promptData.sheets_error),
       cita_link: citaLinkParse,
       ...regAprendizaje,
     },

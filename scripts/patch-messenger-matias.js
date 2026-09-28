@@ -65,6 +65,8 @@ function postProcessSnippet(name) {
     'utf8',
   );
   return (
+    fs.readFileSync(path.join(__dirname, 'snippets', 'sheets-fail-closed.js'), 'utf8') +
+    '\n' +
     shared +
     '\n' +
     intentClassifierSnippet() +
@@ -96,10 +98,16 @@ function msSnippetFromWa(waName) {
     path.join(__dirname, 'snippets', 'humanize-voz.js'),
     'utf8',
   );
+  const sheets = fs.readFileSync(
+    path.join(__dirname, 'snippets', 'sheets-fail-closed.js'),
+    'utf8',
+  );
   let code =
     waName === 'wa-procesar-ia.js'
       ? postProcessSnippet(waName)
-      : shared +
+      : sheets +
+        '\n' +
+        shared +
         '\n' +
         intentClassifierSnippet() +
         '\n' +

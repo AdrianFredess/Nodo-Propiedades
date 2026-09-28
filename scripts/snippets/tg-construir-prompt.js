@@ -193,31 +193,23 @@ try {
   historialItems = [];
 }
 
-let stockItems = [];
-try {
-  stockItems = $('Leer Stock Propiedades')
-    .all()
-    .map((item) => item.json)
-    .filter(
-      (row) =>
-        row &&
-        typeof row === 'object' &&
-        !(
-          typeof row.error === 'string' &&
-          /authorization grant|invalid_grant|token is invalid|OAuth2/i.test(
-            row.error,
-          )
-        ) &&
-        !(
-          Object.keys(row).length === 1 &&
-          Object.prototype.hasOwnProperty.call(row, 'error')
-        ),
-    );
-} catch (e) {
-  stockItems = [];
-}
-if (!stockItems.length && Array.isArray(STOCK_FALLBACK) && STOCK_FALLBACK.length) {
+const lecturaStock = leerFilasSheets('Leer Stock Propiedades');
+const sheetsError = !lecturaStock.ok;
+const sheetsErrorNodo = sheetsError ? 'Leer Stock Propiedades' : '';
+const sheetsErrorMsg = sheetsError ? lecturaStock.error : '';
+let stockItems = lecturaStock.rows;
+if (
+  !sheetsError &&
+  !stockItems.length &&
+  demoModeActivo() &&
+  Array.isArray(STOCK_FALLBACK) &&
+  STOCK_FALLBACK.length
+) {
   stockItems = STOCK_FALLBACK;
+}
+let alertarSheets = false;
+if (sheetsError && typeof $getWorkflowStaticData === 'function') {
+  alertarSheets = debeAlertarSheets($getWorkflowStaticData('global'), Date.now());
 }
 
 let politicasRows = [];
@@ -1013,11 +1005,6 @@ return [
       propiedad_seguimiento_actual: propiedadSeguimientoPrev,
       dias_sin_contacto: diasSinContacto,
       politicas_source: politicasRows.length ? 'sheets' : 'fallback',
-      sugerencias_ids: JSON.stringify(sugerenciasIds),
-      debe_mostrar_propiedades:
-        debeMostrarPropiedades &&
-        !esOffTopic &&
-        (!esAlquilerPresupuestoAlto || pideOpciones),
       presupuesto_detectado: presupuestoUsd ? String(presupuestoUsd) : '',
       pide_opciones: pideOpciones,
       repeticion_detectada: Boolean(consultaRepetida),
@@ -1049,6 +1036,17 @@ return [
       derivacion_motivo: clasif.derivacion_motivo || 'auto',
       derivacion_alertar: Boolean(clasif.derivacion_alertar),
       derivacion_pausar: Boolean(clasif.derivacion_pausar),
+      sheets_error: sheetsError,
+      sheets_error_nodo: sheetsErrorNodo,
+      sheets_error_msg: sheetsErrorMsg,
+      alertar_sheets: alertarSheets,
+      respuesta_fija: sheetsError ? RESPUESTA_SHEETS_CAIDO : '',
+      debe_mostrar_propiedades: sheetsError
+        ? false
+        : debeMostrarPropiedades &&
+          !esOffTopic &&
+          (!esAlquilerPresupuestoAlto || pideOpciones),
+      sugerencias_ids: sheetsError ? '[]' : JSON.stringify(sugerenciasIds),
       bot_config_json: JSON.stringify(botConfig),
       mensaje_derivacion_cliente:
         typeof mensajeDerivacionCliente === 'function'

@@ -28,6 +28,7 @@ const BOT_APRENDIZAJE = JSON.parse(fs.readFileSync(LEARNING_PATH, 'utf8'));
 const STOCK_CSV_PATH = path.join(ROOT, 'csv', 'Simulacion_30_Propiedades_Mendoza.csv');
 
 function stockFallbackJson() {
+  if (String(process.env.DEMO_MODE || '') !== '1') return '[]';
   try {
     const raw = fs.readFileSync(STOCK_CSV_PATH, 'utf8');
     const lines = raw.split(/\r?\n/).filter(Boolean);
@@ -117,6 +118,8 @@ function citaWebhookBase() {
 
 function waSnippet(name) {
   let code =
+    fs.readFileSync(path.join(__dirname, 'snippets', 'sheets-fail-closed.js'), 'utf8') +
+    '\n' +
     fs.readFileSync(path.join(__dirname, 'snippets', 'humanize-voz.js'), 'utf8') +
     '\n' +
     intentClassifierSnippet() +

@@ -47,26 +47,23 @@ if (!sd.offTopicCount) sd.offTopicCount = {};
 const esAudioSinTexto =
   Boolean(prep.es_audio_sin_transcripcion) && !msg;
 
-let stockItemsEarly = [];
-try {
-  stockItemsEarly = $('Leer Stock Propiedades WA')
-    .all()
-    .map((item) => item.json)
-    .filter(
-      (r) =>
-        r &&
-        typeof r === 'object' &&
-        !(
-          typeof r.error === 'string' &&
-          /authorization grant|invalid_grant|token is invalid|OAuth2/i.test(r.error)
-        ) &&
-        !(Object.keys(r).length === 1 && Object.prototype.hasOwnProperty.call(r, 'error')),
-    );
-} catch (e) {
-  stockItemsEarly = [];
-}
-if (!stockItemsEarly.length && Array.isArray(STOCK_FALLBACK) && STOCK_FALLBACK.length) {
+const lecturaStock = leerFilasSheets('Leer Stock Propiedades WA');
+const sheetsError = !lecturaStock.ok;
+const sheetsErrorNodo = sheetsError ? 'Leer Stock Propiedades WA' : '';
+const sheetsErrorMsg = sheetsError ? lecturaStock.error : '';
+let stockItemsEarly = lecturaStock.rows;
+if (
+  !sheetsError &&
+  !stockItemsEarly.length &&
+  demoModeActivo() &&
+  Array.isArray(STOCK_FALLBACK) &&
+  STOCK_FALLBACK.length
+) {
   stockItemsEarly = STOCK_FALLBACK;
+}
+let alertarSheets = false;
+if (sheetsError && typeof $getWorkflowStaticData === 'function') {
+  alertarSheets = debeAlertarSheets($getWorkflowStaticData('global'), Date.now());
 }
 
 const botConfigWa =
@@ -593,8 +590,6 @@ return [
       presupuesto_prev: datosPrev.presupuesto,
       dormitorios_prev: datosPrev.dormitorios,
       prompt_groq: prompt,
-      sugerencias_ids: JSON.stringify(sugerenciasIds),
-      debe_mostrar_propiedades: debeMostrarPropiedades && !respuesta_forzada,
       presupuesto_detectado: presupuestoUsd ? String(presupuestoUsd) : '',
       pide_opciones: pideOpciones,
       repeticion_detectada: Boolean(consultaRepetida),
@@ -614,6 +609,13 @@ return [
       requiere_calificar: clasif.requiere_calificar,
       bot_repite_sin_fichas: Boolean(clasif.bot_repite_sin_fichas),
       ya_aclaro_compra_alquiler: Boolean(clasif.ya_aclaro_compra_alquiler),
+      sheets_error: sheetsError,
+      sheets_error_nodo: sheetsErrorNodo,
+      sheets_error_msg: sheetsErrorMsg,
+      alertar_sheets: alertarSheets,
+      respuesta_fija: sheetsError ? RESPUESTA_SHEETS_CAIDO : '',
+      debe_mostrar_propiedades: sheetsError ? false : debeMostrarPropiedades && !respuesta_forzada,
+      sugerencias_ids: sheetsError ? '[]' : JSON.stringify(sugerenciasIds),
     },
   },
 ];
