@@ -12,7 +12,7 @@
     "test:watch": "vitest"
   },
   "pnpm": {
-    "neverBuiltDependencies": []
+    "onlyBuiltDependencies": ["esbuild"]
   },
   "dependencies": {
     "framer-motion": "^13.1.1",

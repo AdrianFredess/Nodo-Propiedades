@@ -193,6 +193,7 @@ export function LeadDetailPage({
   }
 
   function handleReactivarBot() {
+    if (!lead) return;
     onLeadPatch?.(lead.id, { botPaused: false, handoff: false });
     setOkMsg('Bot reactivado en panel (marcá bot_paused=no en Sheets si hace falta)');
     window.setTimeout(() => setOkMsg(null), 2800);
