@@ -28,6 +28,7 @@ services:
       - TZ=America/Argentina/Buenos_Aires
       # Token opcional para webhooks del panel (X-Panel-Token). Vacío = auth off (dev).
       - PANEL_API_TOKEN=${PANEL_API_TOKEN:-}
+      - PANEL_ORIGIN=${PANEL_ORIGIN:-http://localhost:5173}
       # demo = tiempos cortos (tesis); prod = ~5 días + ~10 días
       - SEGUIMIENTO_MODE=${SEGUIMIENTO_MODE:-demo}
       # 1 = permite STOCK_FALLBACK embebido. Vacío en producción.

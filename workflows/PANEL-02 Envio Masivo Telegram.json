@@ -6,7 +6,7 @@
       "name": "Webhook Envio Masivo",
       "parameters": {
         "httpMethod": "POST",
-        "options": {},
+        "options": { "allowedOrigins": "http://localhost:5173" },
         "path": "envio-masivo",
         "responseMode": "responseNode"
       },
@@ -140,7 +140,7 @@
             "entries": [
               {
                 "name": "Access-Control-Allow-Origin",
-                "value": "*"
+                "value": "={{ $env.PANEL_ORIGIN || 'http://localhost:5173' }}"
               }
             ]
           }
@@ -164,7 +164,7 @@
             "entries": [
               {
                 "name": "Access-Control-Allow-Origin",
-                "value": "*"
+                "value": "={{ $env.PANEL_ORIGIN || 'http://localhost:5173' }}"
               }
             ]
           }

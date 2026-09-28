@@ -15,7 +15,7 @@
         "httpMethod": "POST",
         "path": "panel-realtime-emit",
         "responseMode": "responseNode",
-        "options": {}
+        "options": { "allowedOrigins": "http://localhost:5173" }
       }
     },
     {
@@ -74,7 +74,7 @@
             "entries": [
               {
                 "name": "Access-Control-Allow-Origin",
-                "value": "*"
+                "value": "={{ $env.PANEL_ORIGIN || 'http://localhost:5173' }}"
               }
             ]
           }

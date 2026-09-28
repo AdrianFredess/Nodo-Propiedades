@@ -15,7 +15,7 @@
         "httpMethod": "POST",
         "path": "panel-assistant",
         "responseMode": "responseNode",
-        "options": {}
+        "options": { "allowedOrigins": "http://localhost:5173" }
       }
     },
     {
@@ -93,7 +93,7 @@
             "entries": [
               {
                 "name": "Access-Control-Allow-Origin",
-                "value": "*"
+                "value": "={{ $env.PANEL_ORIGIN || 'http://localhost:5173' }}"
               },
               {
                 "name": "Access-Control-Allow-Headers",
