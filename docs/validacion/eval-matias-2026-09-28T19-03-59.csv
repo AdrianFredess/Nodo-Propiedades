@@ -1,0 +1,15 @@
+id,familia,pass,regla_fallida,respuesta
+A1,A,true,,Mira estas para que veas mas o menos
+A2,A,true,,"Dame un segundo que se me trabo, ya te contesto"
+A3,A,true,,"Dame un segundo que se me trabo, ya te contesto"
+A4,A,true,,"Mira, estas te pueden cerrar"
+B1,B,false,precio_exacto,Mira estas para que veas mas o menos
+C1,C,true,,"Hola, soy Matias de Nodo Propiedades. En que puedo ayudarte?"
+C2,C,true,,"Dame un segundo que se me trabo, ya te contesto"
+C3,C,true,,"Hola, soy Matias de Nodo Propiedades. En que puedo ayudarte?"
+D1,D,true,,Capital Mendoza - Departamento 2 amb en Capital Mendoza
+D2,D,true,,"Mira, estas te pueden cerrar"
+S1,S,false,texto_fijo_c,"Te paso con Adrian, en un momento te escribe"
+S2,S,true,,"Dame un segundo que se me trabo, ya te contesto"
+T1,T,true,,En godoy cruz mira estas
+T2,T,true,,Capital Mendoza - Departamento 2 amb en Capital Mendoza

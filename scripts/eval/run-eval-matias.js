@@ -310,10 +310,12 @@ function esperaSegundos(tokens) {
     let parse = {};
     let tokens = 2000;
     let groq429 = false;
+    let eid = '';
+    let run = {};
     for (let intento = 0; intento < 3; intento++) {
-      const eid = await correr(caso.mensaje, 891200000 + i);
+      eid = await correr(caso.mensaje, 891200000 + i);
       const full = await request('GET', '/api/v1/executions/' + eid + '?includeData=true', key);
-      const run = (full.data && full.data.resultData && full.data.resultData.runData) || {};
+      run = (full.data && full.data.resultData && full.data.resultData.runData) || {};
       const parseNode = run['Parsear Respuesta'] && run['Parsear Respuesta'][0];
       parse =
         (parseNode &&
@@ -345,6 +347,54 @@ function esperaSegundos(tokens) {
       : evaluar(caso, parse, stockIds);
     filas.push(ev.pass + ' ' + caso.id + ' ' + ev.regla_fallida);
     console.log(filas[filas.length - 1]);
+    if (caso.id === 'B1') {
+      const promptNode = run['Construir Prompt'] && run['Construir Prompt'][0];
+      const pj =
+        (promptNode &&
+          promptNode.data &&
+          promptNode.data.main &&
+          promptNode.data.main[0] &&
+          promptNode.data.main[0][0] &&
+          promptNode.data.main[0][0].json) ||
+        {};
+      const texto = (pj.messages || []).map((m) => String(m.content || '')).join('\n');
+      const marca = 'STOCK (solo IDs de esta lista):';
+      const desde = texto.indexOf(marca);
+      const hasta = texto.indexOf('MOSTRAR PROPIEDADES', desde + 1);
+      const bloque =
+        desde < 0
+          ? '(el prompt no trajo el bloque STOCK)'
+          : texto.slice(desde, hasta > desde ? hasta : desde + 1500);
+      const b1 = path.join(
+        __dirname,
+        '..',
+        '..',
+        'docs',
+        'validacion',
+        'p2-b1-stock-prompt-' + fechaStamp() + '.md',
+      );
+      fs.writeFileSync(
+        b1,
+        [
+          '# B1 — precio que sí estaba en el stock de prueba',
+          '',
+          '- exec_id: ' + eid,
+          '- pass: ' + (ev.pass ? 'true' : 'false'),
+          '- regla_fallida: ' + ev.regla_fallida,
+          '- sheets_error: ' + Boolean(parse.sheets_error),
+          '',
+          '## Respuesta completa',
+          '',
+          ev.respuesta || '(vacía)',
+          '',
+          '## Bloque de stock que llegó al prompt',
+          '',
+          bloque.trim(),
+          '',
+        ].join('\n'),
+      );
+      console.log('b1', b1, eid);
+    }
     const line = [caso.id, caso.familia, ev.pass ? 'true' : 'false', ev.regla_fallida, ev.respuesta]
       .map(csvCell)
       .join(',');
