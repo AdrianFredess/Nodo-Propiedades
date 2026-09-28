@@ -34,6 +34,7 @@ services:
       - DEMO_MODE=${DEMO_MODE:-}
       # App Secret de Meta. Lo usa Validar Firma Meta. No va en los JSON.
       - META_APP_SECRET=${META_APP_SECRET:-}
+      - OWNER_TELEGRAM_CHAT_ID=${OWNER_TELEGRAM_CHAT_ID:-}
       # El nodo de firma usa crypto.timingSafeEqual.
       - NODE_FUNCTION_ALLOW_BUILTIN=crypto
       # Permite leer PANEL_API_TOKEN / SEGUIMIENTO_MODE / META_APP_SECRET desde nodos Code ($env.*)

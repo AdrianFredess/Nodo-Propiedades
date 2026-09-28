@@ -77,7 +77,7 @@
         480
       ],
       "parameters": {
-        "jsCode": "const rows = $input.all().map((i) => i.json);\nconst now = Date.now();\n\n// DEMO (tesis): tiempos comprimidos para poder mostrar el flujo.\n// PROD (real): 1.er follow ~5 días; 2.º ~10 días después del primero.\n// Setear SEGUIMIENTO_MODE=prod en el contenedor n8n en operación real.\nlet mode = 'demo';\ntry {\n  mode = String(($env && $env.SEGUIMIENTO_MODE) || 'demo').toLowerCase();\n} catch (e) {\n  mode = 'demo';\n}\nconst MS_DAY = 24 * 60 * 60 * 1000;\nconst MS_FIRST = mode === 'prod' ? 5 * MS_DAY : 20 * 60 * 1000;\nconst MS_SECOND = mode === 'prod' ? 10 * MS_DAY : 20 * 60 * 1000;\nconst blocked = new Set(['cerrado', 'respondido', 'cerrado_sin_respuesta']);\n\nfunction diaClaveAR(ms) {\n  try {\n    return new Intl.DateTimeFormat('en-CA', {\n      timeZone: 'America/Argentina/Buenos_Aires',\n      year: 'numeric',\n      month: '2-digit',\n      day: '2-digit',\n    }).format(new Date(ms));\n  } catch (e) {\n    const d = new Date(ms - 3 * 60 * 60 * 1000);\n    return (\n      d.getUTCFullYear() +\n      '-' +\n      String(d.getUTCMonth() + 1).padStart(2, '0') +\n      '-' +\n      String(d.getUTCDate()).padStart(2, '0')\n    );\n  }\n}\n\nfunction lastMessageTs(row) {\n  const candidates = [];\n  for (const key of ['ultima_actualizacion', 'last_interaction_at', 'updated_at', 'fecha']) {\n    const raw = row[key];\n    if (raw == null || raw === '') continue;\n    const t = new Date(raw).getTime();\n    if (!Number.isNaN(t)) candidates.push(t);\n  }\n  const histRaw = row.historial_json || row.historial || '';\n  if (histRaw) {\n    try {\n      const parsed = typeof histRaw === 'string' ? JSON.parse(histRaw) : histRaw;\n      if (Array.isArray(parsed)) {\n        for (const m of parsed) {\n          if (!m || typeof m !== 'object') continue;\n          const raw = m.ts || m.timestamp || m.fecha || m.date || m.created_at;\n          if (raw == null || raw === '') continue;\n          const t = new Date(raw).getTime();\n          if (!Number.isNaN(t)) candidates.push(t);\n        }\n      }\n    } catch (_) {\n      const matches = String(histRaw).match(/\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z?/g) || [];\n      for (const m of matches) {\n        const t = new Date(m).getTime();\n        if (!Number.isNaN(t)) candidates.push(t);\n      }\n    }\n  }\n  if (!candidates.length) return { t: NaN, raw: '' };\n  const t = Math.max(...candidates);\n  return { t, raw: new Date(t).toISOString() };\n}\n\nconst out = [];\nconst hoyAR = diaClaveAR(now);\nfor (const row of rows) {\n  if (!row || row.error) continue;\n  let estado = String(row.estado_seguimiento ?? 'ninguno').trim().toLowerCase();\n  if (!estado) estado = 'ninguno';\n  if (blocked.has(estado)) continue;\n  if (estado !== 'ninguno' && estado !== 'enviado_1') continue;\n\n  const { t, raw: rawDate } = lastMessageTs(row);\n  if (!rawDate || Number.isNaN(t)) continue;\n  // No pisar conversación activa: si el lead escribió HOY (AR), no mandar seguimiento.\n  if (diaClaveAR(t) === hoyAR) continue;\n  const need = estado === 'enviado_1' ? MS_SECOND : MS_FIRST;\n  if (now - t < need) continue;\n\n  const chat_id = String(row.chat_id || row.phone || '').trim();\n  if (!chat_id) continue;\n\n  const nombre = String(row.nombre || row.lead_name || 'Cliente').trim() || 'Cliente';\n  const zona = String(row.zona || '').trim() || 'tu zona';\n  const canal_origen = String(row.canal_origen || row.source || 'telegram').trim().toLowerCase();\n  const interes = String(row.temperature || row.temperatura || row.interes || '').trim();\n  const telefono = String(row.phone || row.telefono || '').trim();\n  const last_message = String(row.last_message || row.ultimo_mensaje || '').trim();\n\n  // Corto, humano, sin presión ni \"presupuesto a medida\".\n  let mensaje;\n  if (estado === 'enviado_1') {\n    mensaje =\n      'Hola ' + nombre + ', te dejo por acá. Si retomás la búsqueda avisame y lo vemos';\n  } else {\n    mensaje =\n      'Hola ' + nombre + ', seguís buscando por ' + zona + '? Si querés te paso un par de opciones';\n  }\n\n  out.push({\n    json: {\n      chat_id,\n      nombre,\n      zona,\n      canal_origen,\n      estado_seguimiento: estado,\n      ultima_actualizacion: rawDate,\n      interes,\n      telefono,\n      last_message,\n      mensaje,\n      es_ultimo_seguimiento: estado === 'enviado_1',\n      seguimiento_mode: mode,\n    },\n  });\n}\nreturn out;\n"
+        "jsCode": "const rows = $input.all().map((i) => i.json);\nconst now = Date.now();\n\nlet mode = 'demo';\ntry {\n  mode = String(($env && $env.SEGUIMIENTO_MODE) || 'demo').toLowerCase();\n} catch (e) {\n  mode = 'demo';\n}\n\nreturn filtrarCandidatos(rows, now, mode);\n\nfunction diaClaveAR(ms) {\n  try {\n    return new Intl.DateTimeFormat('en-CA', {\n      timeZone: 'America/Argentina/Buenos_Aires',\n      year: 'numeric',\n      month: '2-digit',\n      day: '2-digit',\n    }).format(new Date(ms));\n  } catch (e) {\n    const d = new Date(ms - 3 * 60 * 60 * 1000);\n    return (\n      d.getUTCFullYear() +\n      '-' +\n      String(d.getUTCMonth() + 1).padStart(2, '0') +\n      '-' +\n      String(d.getUTCDate()).padStart(2, '0')\n    );\n  }\n}\n\nfunction esMensajeCliente(m) {\n  const role = String(m.role || m.rol || '').toLowerCase();\n  if (!role) return true;\n  return role === 'user' || role === 'cliente' || role === 'human';\n}\n\nfunction tsDe(m) {\n  const raw = m.ts || m.timestamp || m.fecha || m.date || m.created_at;\n  if (raw == null || raw === '') return NaN;\n  const t = new Date(raw).getTime();\n  return Number.isNaN(t) ? NaN : t;\n}\n\nfunction ultimoClienteMs(row) {\n  const histRaw = row.historial_json || row.historial || '';\n  if (!histRaw) return NaN;\n  let parsed = histRaw;\n  if (typeof histRaw === 'string') {\n    try {\n      parsed = JSON.parse(histRaw);\n    } catch (_) {\n      return NaN;\n    }\n  }\n  if (!Array.isArray(parsed)) return NaN;\n  let best = NaN;\n  for (const m of parsed) {\n    if (!m || typeof m !== 'object' || !esMensajeCliente(m)) continue;\n    const t = tsDe(m);\n    if (!Number.isNaN(t) && (Number.isNaN(best) || t > best)) best = t;\n  }\n  return best;\n}\n\nfunction lastMessageTs(row) {\n  const candidates = [];\n  for (const key of ['ultima_actualizacion', 'last_interaction_at', 'updated_at', 'fecha']) {\n    const raw = row[key];\n    if (raw == null || raw === '') continue;\n    const t = new Date(raw).getTime();\n    if (!Number.isNaN(t)) candidates.push(t);\n  }\n  const histRaw = row.historial_json || row.historial || '';\n  if (histRaw) {\n    try {\n      const parsed = typeof histRaw === 'string' ? JSON.parse(histRaw) : histRaw;\n      if (Array.isArray(parsed)) {\n        for (const m of parsed) {\n          if (!m || typeof m !== 'object') continue;\n          const t = tsDe(m);\n          if (!Number.isNaN(t)) candidates.push(t);\n        }\n      }\n    } catch (_) {}\n  }\n  if (!candidates.length) return { t: NaN, raw: '' };\n  const t = Math.max(...candidates);\n  return { t, raw: new Date(t).toISOString() };\n}\n\nfunction filtrarCandidatos(rows, now, mode) {\n  const MS_DAY = 24 * 60 * 60 * 1000;\n  const MS_FIRST = mode === 'prod' ? 5 * MS_DAY : 20 * 60 * 1000;\n  const MS_SECOND = mode === 'prod' ? 10 * MS_DAY : 20 * 60 * 1000;\n  const blocked = new Set(['cerrado', 'respondido', 'cerrado_sin_respuesta', 'requiere_plantilla']);\n  const out = [];\n  const hoyAR = diaClaveAR(now);\n  for (const row of rows) {\n    if (!row || row.error) continue;\n    let estado = String(row.estado_seguimiento ?? 'ninguno').trim().toLowerCase();\n    if (!estado) estado = 'ninguno';\n    if (blocked.has(estado)) continue;\n    if (estado !== 'ninguno' && estado !== 'enviado_1') continue;\n\n    const { t, raw: rawDate } = lastMessageTs(row);\n    if (!rawDate || Number.isNaN(t)) continue;\n    if (diaClaveAR(t) === hoyAR) continue;\n    const need = estado === 'enviado_1' ? MS_SECOND : MS_FIRST;\n    if (now - t < need) continue;\n\n    const chat_id = String(row.chat_id || row.phone || '').trim();\n    if (!chat_id) continue;\n\n    const nombre = String(row.nombre || row.lead_name || 'Cliente').trim() || 'Cliente';\n    const zona = String(row.zona || '').trim() || 'tu zona';\n    const canal_origen = String(row.canal_origen || row.source || 'telegram').trim().toLowerCase();\n    const interes = String(row.temperature || row.temperatura || row.interes || '').trim();\n    const telefono = String(row.phone || row.telefono || '').trim();\n    const last_message = String(row.last_message || row.ultimo_mensaje || '').trim();\n\n    if (canal_origen === 'whatsapp') {\n      const clienteMs = ultimoClienteMs(row);\n      const fuera = Number.isNaN(clienteMs) || now - clienteMs > MS_DAY;\n      if (fuera) {\n        out.push({\n          json: {\n            chat_id,\n            nombre,\n            zona,\n            canal_origen,\n            estado_seguimiento: 'requiere_plantilla',\n            requiere_plantilla: true,\n            ultima_actualizacion: rawDate,\n            interes,\n            telefono,\n            last_message,\n            mensaje: '',\n            aviso_vendedor:\n              'Seguimiento WhatsApp fuera de 24h. ' +\n              nombre +\n              ' (' +\n              chat_id +\n              '). Zona: ' +\n              zona +\n              '. ' +\n              last_message.slice(0, 180),\n            seguimiento_mode: mode,\n          },\n        });\n        continue;\n      }\n    }\n\n    let mensaje;\n    if (estado === 'enviado_1') {\n      mensaje = 'Hola ' + nombre + ', te dejo por acá. Si retomás la búsqueda avisame y lo vemos';\n    } else {\n      mensaje =\n        'Hola ' + nombre + ', seguís buscando por ' + zona + '? Si querés te paso un par de opciones';\n    }\n\n    out.push({\n      json: {\n        chat_id,\n        nombre,\n        zona,\n        canal_origen,\n        estado_seguimiento: estado,\n        ultima_actualizacion: rawDate,\n        interes,\n        telefono,\n        last_message,\n        mensaje,\n        es_ultimo_seguimiento: estado === 'enviado_1',\n        seguimiento_mode: mode,\n        requiere_plantilla: false,\n      },\n    });\n  }\n  return out;\n}\n"
       }
     },
     {
@@ -469,6 +469,100 @@
         "height": 800,
         "color": 4
       }
+    },
+    {
+      "id": "s04-fuera-ventana",
+      "name": "IF Fuera Ventana",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        780,
+        480
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "version": 2,
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "fuera",
+              "leftValue": "={{ Boolean($json.requiere_plantilla) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "s04-aviso-vendedor",
+      "name": "Telegram Aviso Vendedor",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1040,
+        560
+      ],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $env.OWNER_TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.aviso_vendedor }}",
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "__SET_TELEGRAM_CREDENTIAL_ID__",
+          "name": "Telegram Bot Inmobiliaria"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "s04-marcar-plantilla",
+      "name": "Sheets Marcar Plantilla",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1300,
+        560
+      ],
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "__SET_GOOGLE_SHEET_ID__"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads_Bot"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "chat_id"
+          ],
+          "value": {
+            "chat_id": "={{ $json.chat_id }}",
+            "estado_seguimiento": "requiere_plantilla"
+          }
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Cuenta de Google Sheets"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -509,7 +603,7 @@
       "main": [
         [
           {
-            "node": "IF Hay Candidatos",
+            "node": "IF Fuera Ventana",
             "type": "main",
             "index": 0
           }
@@ -618,6 +712,35 @@
         [
           {
             "node": "Google Sheets - Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Fuera Ventana": {
+      "main": [
+        [
+          {
+            "node": "Telegram Aviso Vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF Hay Candidatos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Aviso Vendedor": {
+      "main": [
+        [
+          {
+            "node": "Sheets Marcar Plantilla",
             "type": "main",
             "index": 0
           }
