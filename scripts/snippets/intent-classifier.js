@@ -222,7 +222,11 @@ function icFiltrarStockParaPrompt(stock, opts) {
   const tipoHint = String(opts.tipo || '')
     .toLowerCase()
     .trim();
-  const hasFilter = Boolean(zonaHint || budgetUsd || tipoHint);
+  const opHint = String(opts.operacion || '')
+    .toLowerCase()
+    .trim();
+  const hasFilter = Boolean(zonaHint || budgetUsd || tipoHint || opHint);
+  const tope = hasFilter ? max : Math.min(max, 5);
 
   const scored = [];
   for (const r of stock) {
@@ -233,16 +237,21 @@ function icFiltrarStockParaPrompt(stock, opts) {
     );
     const zona = icPickCampo(r, ['zona', 'Zona', 'barrio', 'zone']).toLowerCase();
     const tipo = icPickCampo(r, ['tipo', 'Tipo', 'tipologia', 'property_type']).toLowerCase();
+    const op = icPickCampo(r, ['operacion', 'Operacion', 'tipo_operacion', 'operation_type']).toLowerCase();
     let score = 1;
     if (hasFilter) {
       score = 0;
       if (zonaHint && zona.includes(zonaHint)) score += 4;
       if (tipoHint && (tipo.includes(tipoHint) || tipoHint.includes(tipo))) score += 3;
+      if (opHint && op) {
+        const quiereAlq = /alquil|rent/.test(opHint);
+        const esAlq = /alquil|rent/.test(op);
+        if (quiereAlq === esAlq) score += 4;
+        else score -= 3;
+      }
       if (budgetUsd && precio) {
         if (precio <= budgetUsd * 1.2 && precio >= budgetUsd * 0.4) score += 3;
         else if (precio > budgetUsd * 1.35) score -= 2;
-      } else if (!budgetUsd) {
-        score += 1;
       }
     }
     scored.push({ row: r, score, id });
@@ -250,19 +259,19 @@ function icFiltrarStockParaPrompt(stock, opts) {
   scored.sort((a, b) => b.score - a.score);
   if (hasFilter) {
     const hit = scored.filter((x) => x.score > 0);
-    if (hit.length) return hit.slice(0, max).map((x) => x.row);
+    if (hit.length) return hit.slice(0, tope).map((x) => x.row);
   }
-  // Muestra acotada / fallback: mezcla por posición (variedad barata)
-  const step = Math.max(1, Math.floor(scored.length / max));
+  // Sin zona, presupuesto ni operacion: como mucho 5, variadas.
+  const step = Math.max(1, Math.floor(scored.length / tope));
   const picked = [];
   const seen = {};
-  for (let i = 0; i < scored.length && picked.length < max; i += step) {
+  for (let i = 0; i < scored.length && picked.length < tope; i += step) {
     const id = scored[i].id;
     if (seen[id]) continue;
     seen[id] = true;
     picked.push(scored[i].row);
   }
-  for (let i = 0; i < scored.length && picked.length < max; i++) {
+  for (let i = 0; i < scored.length && picked.length < tope; i++) {
     const id = scored[i].id;
     if (seen[id]) continue;
     seen[id] = true;
@@ -294,10 +303,104 @@ function icSanitizarHistorialPrompt(arr, maxMsgs) {
   return out.slice(-max);
 }
 
+function icPartirTurnos(arr) {
+  const msgs = icSanitizarHistorialPrompt(arr, 400);
+  const turnos = [];
+  let cur = null;
+  for (let i = 0; i < msgs.length; i++) {
+    const m = msgs[i];
+    if (m.role === 'user') {
+      if (cur) turnos.push(cur);
+      cur = [m];
+    } else if (cur) {
+      cur.push(m);
+    } else {
+      turnos.push([m]);
+    }
+  }
+  if (cur) turnos.push(cur);
+  return turnos;
+}
+
+function icHistorialParaPrompt(arr) {
+  const turnos = icPartirTurnos(arr);
+  const recientes = turnos.slice(-8);
+  const viejos = turnos.slice(0, Math.max(0, turnos.length - 8));
+  let resumen = '';
+  if (viejos.length) {
+    const bits = [];
+    for (let i = 0; i < viejos.length; i++) {
+      const u = viejos[i].filter((m) => m.role === 'user')[0];
+      if (u) bits.push(String(u.content || '').replace(/\s+/g, ' ').slice(0, 50));
+    }
+    resumen = ('Antes: ' + bits.join('; ')).slice(0, 180);
+  }
+  const mensajes = [];
+  for (let i = 0; i < recientes.length; i++) {
+    for (let j = 0; j < recientes[i].length; j++) mensajes.push(recientes[i][j]);
+  }
+  return { mensajes: mensajes, resumen: resumen };
+}
+
 function icHistorialBlock(arr) {
-  return icSanitizarHistorialPrompt(arr, IC_HISTORIAL_PROMPT_MAX)
+  const pack = icHistorialParaPrompt(arr);
+  const lineas = pack.mensajes
     .map((m) => (m.role === 'assistant' ? 'Bot: ' : 'Cliente: ') + m.content)
     .join('\n');
+  return [pack.resumen, lineas].filter(Boolean).join('\n');
+}
+
+function reglasBaseMatias() {
+  return [
+    'Sos Matias, asesor de Nodo Propiedades en Mendoza. Hablas por chat, corto, argentino, sin tildes de apuro (que, como, mas, tenes, dias). Vos sos el asesor: no derives a "un asesor".',
+    'Rubro: solo inmuebles en Mendoza. Off-topic: una frase y volve a propiedades.',
+    'Negocio: default venta en USD. Alquiler solo si el cliente lo pidio. Si dice alquiler con un monto alto en USD, no inventes alquileres: pregunta si busca comprar o alquilar. Sin stock: decilo y ofrece otra zona o tope. Nunca inventes precio, m2, direccion ni porcentajes. Lo general (seña, escritura, gastos) se explica sin cifras. El numero solo si esta en STOCK o POLITICAS.',
+    'Prohibido: "Entiendo tu consulta", "Con gusto", "Quedo atento", "Cuando quieras", "te llama", "Te dejo estas opciones", "Claro! Aca te muestro", "en unos dias te escribo", "matcheen", "un par", "digamos". Cierre: "Cual te cierra mas?" o "Si queres te armo una visita".',
+    'Fichas: si mostras, el mismo mensaje lleva ###MOSTRAR_PROPIEDADES### con 1 a 3 IDs del STOCK. Si no lleva el bloque, no digas que vas a mostrar. No listes propiedades en texto.',
+    'Flujo: saludo, despues una pregunta si tiene algo pensado. "busco depto" sin datos: pregunta, no fichas. "mandame lo que tengas" o criterios claros (zona o presupuesto): fichas ya, sin repetir lo que ya dijo.',
+    'Saludo: "Buenas, soy Matias de Nodo Propiedades. En que puedo ayudarte?" Nunca solo "Hola".',
+    'Dia nuevo: no retomes zona ni presupuesto viejos salvo que el cliente los mencione.',
+    'No repitas tu mensaje anterior. Si DATOS ya tiene zona, presupuesto u operacion, no los vuelvas a pedir.',
+    'Detalle de una propiedad: ###BURBUJAS### con ubicacion, detalle y precio copiados del STOCK.',
+    'Visita: manda el link y ###SOLICITUD_VISITA### {"propiedad_id":"","zona":"","presupuesto":"","nota":""} ###FIN_VISITA###. Despues el sistema pausa el bot.',
+    'Al final: ###ESTADO_ACTUAL:frio|tibio|caliente### y ###SENALES### {"financiacion":"","urgencia":"","zona_concreta":false,"tipo_concreto":false,"es_decisor":null} ###FIN_SENALES###.',
+    'Caliente = financiacion clara + urgencia menor a 3 meses + zona o tipo. No marques tibio ni caliente en un hola.',
+  ].join('\n');
+}
+
+function compactarPromptMatias(content) {
+  const s = String(content || '');
+  const marcas = ['DATOS_CONOCIDOS', 'DATOS YA CARGADOS', 'STOCK (solo'];
+  let desde = -1;
+  for (let i = 0; i < marcas.length; i++) {
+    const at = s.indexOf(marcas[i]);
+    if (at >= 0 && (desde < 0 || at < desde)) desde = at;
+  }
+  let tail = desde >= 0 ? s.slice(desde) : '';
+  function enLinea(texto, marca, desde) {
+    const needle = '\n' + marca;
+    const at = texto.indexOf(needle, desde || 0);
+    return at < 0 ? -1 : at + 1;
+  }
+  function cortar(inicio, fines) {
+    const a = enLinea(tail, inicio, 0);
+    if (a < 0) return;
+    let b = tail.length;
+    for (let i = 0; i < fines.length; i++) {
+      const at = enLinea(tail, fines[i], a + inicio.length);
+      if (at >= 0 && at < b) b = at;
+    }
+    const modos = tail
+      .slice(a, b)
+      .split('\n')
+      .filter((l) => /MODO |IDs sugeridos|HAY STOCK|REPETICION|OFF-TOPIC/.test(l))
+      .join('\n');
+    tail = tail.slice(0, a) + (modos ? modos + '\n' : '') + tail.slice(b);
+  }
+  cortar('MOSTRAR PROPIEDADES', ['DETALLE DE UNA PROPIEDAD', 'VISITAS', 'TEMPERATURA', 'POLITICAS_PAGO', 'DATOS YA CARGADOS', 'HISTORIAL', 'CLIENTE:']);
+  cortar('DETALLE DE UNA PROPIEDAD', ['VISITAS', 'TEMPERATURA', 'POLITICAS_PAGO', 'DATOS YA CARGADOS', 'HISTORIAL']);
+  cortar('TEMPERATURA', ['POLITICAS_PAGO', 'DATOS YA CARGADOS', 'HISTORIAL', 'Al final:', 'CLIENTE:']);
+  return (reglasBaseMatias() + '\n\n' + tail).trim();
 }
 
 function icTextoSoloUsuarios(historialArr, histTexto) {

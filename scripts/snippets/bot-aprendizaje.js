@@ -340,8 +340,8 @@ function armarBloqueAprendizajePrompt(historialArr, datosPrev, msgActual, canal,
   const contextoConv = construirContextoAprendizaje(historialArr, datosPrev, msgActual);
   const rows =
     canal === 'telegram' ? leerFilasAprendizajeTg() : leerFilasAprendizajeWa();
-  const bloqueSheets = formatearAprendizajeSheets(rows, 6);
-  const globales = seleccionarEjemplosGlobales(msgActual, analisis, 3, intencionClasificador);
+  const bloqueSheets = formatearAprendizajeSheets(rows, 2);
+  const globales = seleccionarEjemplosGlobales(msgActual, analisis, 1, intencionClasificador);
   const bloqueGlobales = formatearEjemplosGlobales(globales);
   const bloque = combinarBloquesAprendizaje(contextoConv, bloqueSheets, bloqueGlobales);
   return { bloque, analisis, contextoConv };

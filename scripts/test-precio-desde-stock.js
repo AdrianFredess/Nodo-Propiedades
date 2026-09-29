@@ -33,7 +33,17 @@ const sufijo = precioPedidoDesdeStock('cuanto sale MZA-007', stock);
 assert.strictEqual(sufijo.texto, 'Sale USD 87.000');
 
 const alquiler = precioPedidoDesdeStock('a cuanto esta el alquiler MZA-005', stock);
-assert.strictEqual(alquiler.texto, 'El alquiler es de ARS 250.000 por mes');
+assert.strictEqual(alquiler.texto, 'El alquiler es de ARS 250.000');
+
+const porMes = precioPedidoDesdeStock('precio del alquiler MZA-005', [
+  { id: 'MZA-005', precio: 'ARS 350000', operacion: 'alquiler', periodo: 'por mes', estado: 'disponible' },
+]);
+assert.strictEqual(porMes.texto, 'El alquiler es de ARS 350.000 por mes');
+
+const temporal = precioPedidoDesdeStock('cuanto sale el alquiler MZA-008', [
+  { id: 'MZA-008', precio: 'USD 80', operacion: 'alquiler temporario', estado: 'disponible' },
+]);
+assert.strictEqual(temporal.texto, 'El alquiler es de USD 80 por dia');
 
 const vendido = precioPedidoDesdeStock('cuanto sale MZA-006', stock);
 assert.ok(vendido);

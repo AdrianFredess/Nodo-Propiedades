@@ -259,7 +259,7 @@ function rowToStockLine(row) {
   const zona = pick(row, ['zona', 'Zona', 'barrio', 'zone']);
   const precio = pick(row, ['precio', 'Precio', 'precio_usd', 'price']);
   const operacion = pick(row, ['operacion', 'Operacion', 'tipo_operacion', 'operation_type']);
-  const desc = pick(row, ['descripcion', 'Descripcion', 'detalle']);
+  const desc = pick(row, ['descripcion', 'Descripcion', 'detalle']).slice(0, 80);
   const estado = pick(row, ['estado', 'Estado', 'stock']) || 'disponible';
   const m = mediaFor(id);
   const linkFicha = m?.linkFicha || pick(row, ['link_ficha', 'linkFicha']);
@@ -534,9 +534,9 @@ stockParaPrompt =
     ? icFiltrarStockParaPrompt(stockItems, {
         zona: zonaDetectada,
         budgetUsd: presupuestoUsd,
+        operacion: operacionDetectada,
         tipo: String(clasif.tipo || clasif.tipo_propiedad || '').trim(),
-        max:
-          typeof IC_STOCK_PROMPT_MAX === 'number' ? IC_STOCK_PROMPT_MAX : 8,
+        max: typeof IC_STOCK_PROMPT_MAX === 'number' ? IC_STOCK_PROMPT_MAX : 8,
       })
     : stockItems.slice(0, 8);
 if (stockParaPrompt.length) {
@@ -995,7 +995,19 @@ function sanitizarMensajeGroq(msg) {
 }
 
 const messages = [];
-const sysMsg = sanitizarMensajeGroq({ role: 'system', content: systemPrompt });
+const histPrompt =
+  typeof icHistorialParaPrompt === 'function'
+    ? icHistorialParaPrompt(historialJson)
+    : { mensajes: icSanitizarHistorialPrompt(historialJson, 8), resumen: '' };
+const sistemaBase =
+  systemPrompt + (histPrompt.resumen ? '\n' + histPrompt.resumen : '');
+const sysMsg = sanitizarMensajeGroq({
+  role: 'system',
+  content:
+    typeof compactarPromptMatias === 'function'
+      ? compactarPromptMatias(sistemaBase)
+      : sistemaBase,
+});
 if (sysMsg) messages.push(sysMsg);
 if (esSoloSaludo) {
   const u = sanitizarMensajeGroq({ role: 'user', content: 'hola' });
@@ -1006,11 +1018,7 @@ if (esSoloSaludo) {
   if (u) messages.push(u);
   if (a) messages.push(a);
 }
-const historialLimpio = icSanitizarHistorialPrompt(
-  historialJson,
-  typeof IC_HISTORIAL_PROMPT_MAX === 'number' ? IC_HISTORIAL_PROMPT_MAX : 8,
-);
-for (const msg of historialLimpio) {
+for (const msg of histPrompt.mensajes) {
   const clean = sanitizarMensajeGroq(msg);
   if (clean && clean.role !== 'system') messages.push(clean);
 }

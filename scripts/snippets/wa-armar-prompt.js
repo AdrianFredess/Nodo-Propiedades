@@ -240,7 +240,7 @@ function rowToStockLine(r) {
   const zona = pick(r, ['zona', 'Zona', 'barrio', 'zone']);
   const precio = pick(r, ['precio', 'Precio', 'precio_usd', 'price']);
   const operacion = pick(r, ['operacion', 'Operacion', 'tipo_operacion', 'operation_type']) || 'venta';
-  const desc = pick(r, ['descripcion', 'Descripcion', 'detalle']);
+  const desc = pick(r, ['descripcion', 'Descripcion', 'detalle']).slice(0, 80);
   const dorm = pick(r, ['dormitorios', 'Dormitorios', 'ambientes']);
   const m = mediaFor(id);
   const linkFicha = m?.linkFicha || pick(r, ['link_ficha', 'linkFicha']);
@@ -330,6 +330,7 @@ stockParaPrompt =
     ? icFiltrarStockParaPrompt(stockItems, {
         zona: zonaDetectada,
         budgetUsd: presupuestoUsd,
+        operacion: operacionDetectada,
         tipo: String((datosPrev && datosPrev.tipo_propiedad) || clasif.tipo || '').trim(),
         max: typeof IC_STOCK_PROMPT_MAX === 'number' ? IC_STOCK_PROMPT_MAX : 8,
       })
@@ -578,7 +579,7 @@ TEMPERATURA (recalculá en CADA mensaje; el sistema puede corregir el score):
 DATOS YA CARGADOS:
 ${JSON.stringify(datosPrev)}
 
-HISTORIAL COMPLETO (role+content, leé todo; no recortes mentalmente):
+HISTORIAL (ultimos 8 turnos; lo anterior va en una linea):
 ${historialBlock}
 ${formatearBloqueIntencionPrompt(clasif)}
 ${bloqueAprendizaje}
@@ -609,7 +610,8 @@ return [
       zona_prev: datosPrev.zona,
       presupuesto_prev: datosPrev.presupuesto,
       dormitorios_prev: datosPrev.dormitorios,
-      prompt_groq: prompt,
+      prompt_groq:
+        typeof compactarPromptMatias === 'function' ? compactarPromptMatias(prompt) : prompt,
       presupuesto_detectado: presupuestoUsd ? String(presupuestoUsd) : '',
       pide_opciones: pideOpciones,
       repeticion_detectada: Boolean(consultaRepetida),

@@ -36,11 +36,25 @@ function esAlquilerFila(row) {
 }
 
 function unidadAlquiler(row, raw) {
-  const blob = (campoStock(row, ['periodo', 'unidad', 'frecuencia', 'periodo_alquiler']) + ' ' + raw).toLowerCase();
+  const blob = (
+    campoStock(row, [
+      'periodo',
+      'unidad',
+      'frecuencia',
+      'periodo_alquiler',
+      'operacion',
+      'Operacion',
+      'tipo_operacion',
+    ]) +
+    ' ' +
+    raw
+  ).toLowerCase();
   if (/por\s+semana|semanal/.test(blob)) return 'por semana';
   if (/por\s+d[ií]a|diario/.test(blob)) return 'por dia';
   if (/por\s+a[nñ]o|anual/.test(blob)) return 'por ano';
-  return 'por mes';
+  if (/por\s+mes|mensual/.test(blob)) return 'por mes';
+  if (/temporario|temporal/.test(blob)) return 'por dia';
+  return '';
 }
 
 function formatearMonto(raw) {
@@ -104,7 +118,7 @@ function precioPedidoDesdeStock(texto, rows) {
     return {
       id: id,
       mostrar: true,
-      texto: 'El alquiler es de ' + moneda + ' ' + formatted + ' ' + unidadAlquiler(row, raw),
+      texto: 'El alquiler es de ' + moneda + ' ' + formatted + (unidadAlquiler(row, raw) ? ' ' + unidadAlquiler(row, raw) : ''),
     };
   }
   return { id: id, mostrar: true, texto: 'Sale ' + moneda + ' ' + formatted };
