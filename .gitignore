@@ -57,6 +57,7 @@ db_dump.txt
 waha-data/
 
 # Tesis / temporales locales
+docs/validacion/campana-flujo-3f132c3/dry-run-out/
 _tmp_*
 scripts/audit_output/
 scripts/_wf_import_payload_out.json
