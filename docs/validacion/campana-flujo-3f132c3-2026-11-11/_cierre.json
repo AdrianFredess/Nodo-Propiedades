@@ -1,0 +1,31 @@
+{
+  "prodHashBefore": "ced49e79e72e1ffdc4b6743ee45d3131b3596be13e5e4c339a25464bd16123eb",
+  "prodHashAfter": "ced49e79e72e1ffdc4b6743ee45d3131b3596be13e5e4c339a25464bd16123eb",
+  "prodHashSame": true,
+  "prodActiveAfter": true,
+  "exportRows": {
+    "historial": 32,
+    "sheet1": 3,
+    "leads_bot": 32,
+    "consultas": 32
+  },
+  "counts": {
+    "total": 50,
+    "stock_ok": 23,
+    "con_tag": 30,
+    "sin_tag": 0,
+    "lead_completo": 0,
+    "es_rescate": 0,
+    "historial_no": 0,
+    "leads_bot_no": 0,
+    "guardar_lead_no": 0,
+    "intentos_extra": 0,
+    "fallos_notas": 0
+  },
+  "byTemp": {
+    "caliente": 4,
+    "(vacio)": 20,
+    "tibio": 7,
+    "frio": 19
+  }
+}

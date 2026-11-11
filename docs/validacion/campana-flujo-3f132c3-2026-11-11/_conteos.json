@@ -1,0 +1,18 @@
+{
+  "total": 30,
+  "stock_ok": 30,
+  "sin_tag": 0,
+  "lead_completo": 2,
+  "es_rescate": 0,
+  "historial_no": 0,
+  "leads_bot_no": 0,
+  "guardar_lead_no": 0,
+  "intentos_extra": 0,
+  "fallos": 0,
+  "byTemp": {
+    "caliente": 4,
+    "tibio": 7,
+    "frio": 19
+  },
+  "dayTokens": 83007
+}
