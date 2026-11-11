@@ -1,0 +1,298 @@
+[
+  {
+    "id": "fix-lead-completo",
+    "status": "success",
+    "startedAt": "2026-09-28T20:00:00.000Z",
+    "stoppedAt": "2026-09-28T20:00:08.500Z",
+    "data": {
+      "resultData": {
+        "runData": {
+          "HTTP Groq": [
+            {
+              "executionTime": 4200,
+              "data": {
+                "main": [
+                  [
+                    {
+                      "json": {
+                        "choices": [
+                          {
+                            "message": {
+                              "content": "Hola Carla, tengo opciones en Godoy Cruz.\n###ESTADO_ACTUAL:caliente###\n###LEAD_COMPLETO###\n{\"nombre\":\"Carla\",\"zona\":\"Godoy Cruz\",\"presupuesto\":\"95000\",\"tipo_operacion\":\"compra\",\"temperatura\":\"caliente\",\"resumen\":\"Depto 2 amb urgente\"}\n###FIN_LEAD###"
+                            }
+                          }
+                        ],
+                        "usage": { "prompt_tokens": 4000, "completion_tokens": 1200, "total_tokens": 5200 }
+                      }
+                    }
+                  ]
+                ]
+              }
+            }
+          ],
+          "Parsear Respuesta": [
+            {
+              "executionTime": 12,
+              "data": {
+                "main": [
+                  [
+                    {
+                      "json": {
+                        "chat_id": "891000001",
+                        "texto_usuario": "x",
+                        "respuesta_bot": "Hola Carla, tengo opciones en Godoy Cruz.",
+                        "temperatura": "caliente",
+                        "lead_completo": true,
+                        "nombre": "Carla",
+                        "zona": "Godoy Cruz",
+                        "presupuesto": "95000",
+                        "tipo_operacion": "compra",
+                        "resumen": "Depto 2 amb urgente"
+                      }
+                    }
+                  ]
+                ]
+              }
+            }
+          ],
+          "Leer Stock Propiedades": [
+            {
+              "executionTime": 300,
+              "data": { "main": [[{ "json": { "codigo": "MZA-001" } }, { "json": { "codigo": "MZA-002" } }]] }
+            }
+          ],
+          "Leer Historial": [{ "executionTime": 110, "data": { "main": [[{ "json": { "chat_id": "891000001" } }]] } }],
+          "Leer Politicas Pago": [{ "executionTime": 90, "data": { "main": [[{ "json": { "politica": "contado" } }]] } }],
+          "Actualizar Historial": [{ "executionTime": 200, "data": { "main": [[{ "json": { "chat_id": "891000001" } }]] } }],
+          "Sync Leads_Bot": [{ "executionTime": 180, "data": { "main": [[{ "json": { "chat_id": "891000001" } }]] } }],
+          "Guardar Lead": [{ "executionTime": 160, "data": { "main": [[{ "json": { "chat_id": "891000001", "nombre": "Carla" } }]] } }]
+        }
+      }
+    }
+  },
+  {
+    "id": "fix-sin-lead",
+    "status": "success",
+    "startedAt": "2026-09-28T20:01:00.000Z",
+    "stoppedAt": "2026-09-28T20:01:05.000Z",
+    "data": {
+      "resultData": {
+        "runData": {
+          "HTTP Groq": [
+            {
+              "executionTime": 3000,
+              "data": {
+                "main": [
+                  [
+                    {
+                      "json": {
+                        "choices": [
+                          {
+                            "message": {
+                              "content": "Contame zona y presupuesto.\n###ESTADO_ACTUAL:frio###"
+                            }
+                          }
+                        ],
+                        "usage": { "total_tokens": 4800 }
+                      }
+                    }
+                  ]
+                ]
+              }
+            }
+          ],
+          "Parsear Respuesta": [
+            {
+              "executionTime": 10,
+              "data": {
+                "main": [
+                  [
+                    {
+                      "json": {
+                        "chat_id": "891000002",
+                        "respuesta_bot": "Contame zona y presupuesto.",
+                        "temperatura": "frio",
+                        "lead_completo": false
+                      }
+                    }
+                  ]
+                ]
+              }
+            }
+          ],
+          "Leer Stock Propiedades": [
+            { "executionTime": 250, "data": { "main": [[{ "json": { "codigo": "MZA-001" } }]] } }
+          ],
+          "Leer Historial": [{ "executionTime": 100, "data": { "main": [[]] } }],
+          "Leer Politicas Pago": [{ "executionTime": 80, "data": { "main": [[{ "json": { "politica": "contado" } }]] } }],
+          "Actualizar Historial": [{ "executionTime": 150, "data": { "main": [[{ "json": { "ok": true } }]] } }],
+          "Sync Leads_Bot": [{ "executionTime": 140, "data": { "main": [[{ "json": { "ok": true } }]] } }]
+        }
+      }
+    }
+  },
+  {
+    "id": "fix-sin-tag",
+    "status": "success",
+    "startedAt": "2026-09-28T20:02:00.000Z",
+    "stoppedAt": "2026-09-28T20:02:04.000Z",
+    "data": {
+      "resultData": {
+        "runData": {
+          "HTTP Groq": [
+            {
+              "executionTime": 2800,
+              "data": {
+                "main": [
+                  [
+                    {
+                      "json": {
+                        "choices": [{ "message": { "content": "Hola, ¿en qué zona buscás?" } }],
+                        "usage": { "total_tokens": 4500 }
+                      }
+                    }
+                  ]
+                ]
+              }
+            }
+          ],
+          "Parsear Respuesta": [
+            {
+              "executionTime": 8,
+              "data": {
+                "main": [
+                  [
+                    {
+                      "json": {
+                        "chat_id": "891000003",
+                        "respuesta_bot": "Hola, ¿en qué zona buscás?",
+                        "temperatura": "frio",
+                        "lead_completo": false
+                      }
+                    }
+                  ]
+                ]
+              }
+            }
+          ],
+          "Leer Stock Propiedades": [
+            { "executionTime": 200, "data": { "main": [[{ "json": { "codigo": "MZA-001" } }]] } }
+          ],
+          "Leer Historial": [{ "executionTime": 90, "data": { "main": [[]] } }],
+          "Leer Politicas Pago": [{ "executionTime": 70, "data": { "main": [[{ "json": {} }]] } }],
+          "Actualizar Historial": [{ "executionTime": 120, "data": { "main": [[{ "json": { "ok": true } }]] } }],
+          "Sync Leads_Bot": [{ "executionTime": 110, "data": { "main": [[{ "json": { "ok": true } }]] } }]
+        }
+      }
+    }
+  },
+  {
+    "id": "fix-rescate",
+    "status": "success",
+    "startedAt": "2026-09-28T20:03:00.000Z",
+    "stoppedAt": "2026-09-28T20:03:03.000Z",
+    "data": {
+      "resultData": {
+        "runData": {
+          "HTTP Groq": [
+            {
+              "executionTime": 100,
+              "data": { "main": [[{ "json": { "choices": [{ "message": { "content": "" } }], "usage": { "total_tokens": 100 } } }]] }
+            }
+          ],
+          "Parsear Respuesta": [
+            {
+              "executionTime": 5,
+              "data": {
+                "main": [
+                  [
+                    {
+                      "json": {
+                        "chat_id": "891000004",
+                        "respuesta_bot": "Perdón, no pude leer la respuesta del asistente. Dame un segundo.",
+                        "temperatura": "frio",
+                        "lead_completo": false
+                      }
+                    }
+                  ]
+                ]
+              }
+            }
+          ],
+          "Leer Stock Propiedades": [
+            { "executionTime": 180, "data": { "main": [[{ "json": { "codigo": "MZA-001" } }]] } }
+          ],
+          "Leer Historial": [{ "executionTime": 80, "data": { "main": [[]] } }],
+          "Leer Politicas Pago": [{ "executionTime": 60, "data": { "main": [[{ "json": {} }]] } }],
+          "Actualizar Historial": [{ "executionTime": 100, "data": { "main": [[{ "json": { "ok": true } }]] } }],
+          "Sync Leads_Bot": [{ "executionTime": 90, "data": { "main": [[{ "json": { "ok": true } }]] } }]
+        }
+      }
+    }
+  },
+  {
+    "id": "fix-sheets-error",
+    "status": "success",
+    "startedAt": "2026-09-28T20:04:00.000Z",
+    "stoppedAt": "2026-09-28T20:04:06.000Z",
+    "data": {
+      "resultData": {
+        "runData": {
+          "HTTP Groq": [
+            {
+              "executionTime": 3500,
+              "data": {
+                "main": [
+                  [
+                    {
+                      "json": {
+                        "choices": [
+                          {
+                            "message": {
+                              "content": "Ok.\n###ESTADO_ACTUAL:tibio###"
+                            }
+                          }
+                        ],
+                        "usage": { "total_tokens": 5000 }
+                      }
+                    }
+                  ]
+                ]
+              }
+            }
+          ],
+          "Parsear Respuesta": [
+            {
+              "executionTime": 9,
+              "data": {
+                "main": [
+                  [
+                    {
+                      "json": {
+                        "chat_id": "891000005",
+                        "respuesta_bot": "Ok.",
+                        "temperatura": "tibio",
+                        "lead_completo": false
+                      }
+                    }
+                  ]
+                ]
+              }
+            }
+          ],
+          "Leer Stock Propiedades": [
+            { "executionTime": 220, "data": { "main": [[{ "json": { "codigo": "MZA-001" } }]] } }
+          ],
+          "Leer Historial": [{ "executionTime": 95, "data": { "main": [[]] } }],
+          "Leer Politicas Pago": [{ "executionTime": 75, "data": { "main": [[{ "json": {} }]] } }],
+          "Actualizar Historial": [
+            { "executionTime": 100, "data": { "main": [[{ "json": { "error": "invalid_grant" } }]] } }
+          ],
+          "Sync Leads_Bot": [
+            { "executionTime": 100, "data": { "main": [[{ "json": { "error": "quota exceeded" } }]] } }
+          ]
+        }
+      }
+    }
+  }
+]

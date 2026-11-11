@@ -17,7 +17,10 @@
     "patch-advisor-learning": "node scripts/patch-advisor-learning.js",
     "aggregate-bot-learning": "node scripts/aggregate-bot-learning.js",
     "setup-aprendizaje-sheet": "node scripts/setup-aprendizaje-sheet.js",
-    "check:secrets": "node scripts/check-secrets.js"
+    "check:secrets": "node scripts/check-secrets.js",
+    "tesis:test-campana": "node scripts/tesis/test-campana-3f132c3.js",
+    "tesis:build-copia": "node scripts/tesis/build-copia-3f132c3.js",
+    "tesis:campana": "node scripts/tesis/run-campana-flujo-3f132c3.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.6.0",

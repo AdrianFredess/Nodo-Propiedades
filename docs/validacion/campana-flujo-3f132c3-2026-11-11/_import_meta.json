@@ -1,0 +1,13 @@
+{
+  "wfId": "bsDzbpEp0K1qY9Nd",
+  "copyHashes": {
+    "construir_prompt": "dedafd37277aa635c23fe7560ec06c333f6fcf52a4be96a00a34a4b960fc2d22",
+    "parsear_respuesta": "f8fd0db598d7eaab8b5c730d77c635267537d938f0bfa0d108594ab39d752c97",
+    "http_groq_body": "3a8476586d89bec8b21976debc1b67be134622fa119af0b7a46f80075bc9318f"
+  },
+  "prodHashBefore": "ced49e79e72e1ffdc4b6743ee45d3131b3596be13e5e4c339a25464bd16123eb",
+  "prodActiveBefore": true,
+  "stockRows": 30,
+  "stockSha": "83fdca32d1f5b395f5c01025ef7734e239a6b5ba040111d589ad5c270be0f571",
+  "outDir": "D:\\Dev\\Nodo-Propiedades\\docs\\validacion\\campana-flujo-3f132c3-2026-11-11"
+}
