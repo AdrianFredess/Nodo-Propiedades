@@ -1,0 +1,17 @@
+{
+  "wfId": "9sR5z7pZrkY6IiaN",
+  "copyHashes": {
+    "construir_prompt": "dedafd37277aa635c23fe7560ec06c333f6fcf52a4be96a00a34a4b960fc2d22",
+    "parsear_respuesta_base": "f8fd0db598d7eaab8b5c730d77c635267537d938f0bfa0d108594ab39d752c97",
+    "http_groq_body": "3a8476586d89bec8b21976debc1b67be134622fa119af0b7a46f80075bc9318f",
+    "system_min": "03c136d84c9c2878a1ff9339a143222644e368456991b47bec89a13ac7d57a44"
+  },
+  "expectedSm": "03c136d84c9c2878a1ff9339a143222644e368456991b47bec89a13ac7d57a44",
+  "prodHashBefore": "ced49e79e72e1ffdc4b6743ee45d3131b3596be13e5e4c339a25464bd16123eb",
+  "prodActiveBefore": true,
+  "stockRows": 30,
+  "stockSha": "83fdca32d1f5b395f5c01025ef7734e239a6b5ba040111d589ad5c270be0f571",
+  "outDir": "D:\\Dev\\Nodo-Propiedades\\docs\\validacion\\v1.1\\campana-2026-11-11",
+  "note": "Producción NO pausada por este script — requiere OK de Adrián",
+  "pausedAt": "2026-11-11T22:28:10.727Z"
+}

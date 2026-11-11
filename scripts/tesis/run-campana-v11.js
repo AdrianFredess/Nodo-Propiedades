@@ -241,9 +241,23 @@ function saveState(dir, state) {
   fs.writeFileSync(path.join(dir, 'estado-corrida.json'), JSON.stringify(state, null, 2) + '\n');
 }
 
+function flattenCell(v) {
+  return String(v ?? '')
+    .replace(/\r?\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function writeOutputs(dir, rows) {
   ensureDir(dir);
-  fs.writeFileSync(path.join(dir, 'resultados.csv'), rowsToCsv(rows, CSV_COLUMNS_V11), 'utf8');
+  const flatRows = rows.map((r) => {
+    const o = { ...r };
+    for (const k of CSV_COLUMNS_V11) {
+      if (o[k] != null) o[k] = flattenCell(o[k]);
+    }
+    return o;
+  });
+  fs.writeFileSync(path.join(dir, 'resultados.csv'), rowsToCsv(flatRows, CSV_COLUMNS_V11), 'utf8');
   const md = ['# Transcripción — campaña v1.1', ''];
   for (const r of rows) {
     md.push(
