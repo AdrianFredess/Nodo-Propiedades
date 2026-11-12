@@ -1076,6 +1076,22 @@ const BOT_CONFIG_DEFAULTS = Object.assign(
 
 function cargarBotConfig(overrides) {
   const o = overrides && typeof overrides === 'object' ? overrides : {};
+  const guiasIn = Array.isArray(o.guias) ? o.guias : [];
+  const guias = [];
+  for (const g of guiasIn) {
+    const tipo = String(g?.tipo || '').trim();
+    const texto = String(g?.texto || '').trim();
+    if (!tipo || !texto) continue;
+    if (tipo !== 'estilo' && tipo !== 'preguntar_antes' && tipo !== 'derivar') continue;
+    guias.push({ tipo, texto: texto.slice(0, 300) });
+    if (guias.length >= 15) break;
+  }
+  const zonas = Array.isArray(o.zonas)
+    ? o.zonas.map((z) => String(z || '').trim()).filter(Boolean).slice(0, 30)
+    : [];
+  const operaciones = Array.isArray(o.operaciones)
+    ? o.operaciones.map((x) => String(x || '').trim().toLowerCase()).filter(Boolean)
+    : [];
   return {
     tono: String(o.tono || BOT_CONFIG_DEFAULTS.tono),
     umbral_derivacion: String(o.umbral_derivacion || BOT_CONFIG_DEFAULTS.umbral_derivacion),
@@ -1088,12 +1104,71 @@ function cargarBotConfig(overrides) {
     mensaje_derivacion: String(
       o.mensaje_derivacion || BOT_CONFIG_DEFAULTS.mensaje_derivacion,
     ),
-    vendedor_nombre: String(o.vendedor_nombre || BOT_CONFIG_DEFAULTS.vendedor_nombre),
+    vendedor_nombre: String(
+      o.vendedor_nombre || o.asesor_nombre || BOT_CONFIG_DEFAULTS.vendedor_nombre,
+    ),
     panel_base_url: String(o.panel_base_url || BOT_CONFIG_DEFAULTS.panel_base_url).replace(
       /\/$/,
       '',
     ),
+    inmobiliaria_nombre: String(o.inmobiliaria_nombre || ''),
+    asesor_nombre: String(o.asesor_nombre || o.vendedor_nombre || 'Matías'),
+    zonas,
+    operaciones,
+    guias,
+    ejemplo_estilo: String(o.ejemplo_estilo || '').slice(0, 400),
   };
+}
+
+function seccionComoTrabajaInmobiliaria(cfg) {
+  const c = cargarBotConfig(cfg);
+  const partes = [];
+  if (
+    !c.inmobiliaria_nombre &&
+    !c.asesor_nombre &&
+    !c.zonas.length &&
+    !c.guias.length &&
+    !c.ejemplo_estilo
+  ) {
+    return '';
+  }
+  partes.push('COMO TRABAJA ESTA INMOBILIARIA:');
+  if (c.inmobiliaria_nombre || c.asesor_nombre) {
+    partes.push(
+      '- ' +
+        [c.inmobiliaria_nombre, c.asesor_nombre ? 'Asesor: ' + c.asesor_nombre : '']
+          .filter(Boolean)
+          .join(' · '),
+    );
+  }
+  if (c.zonas.length) partes.push('- Zonas: ' + c.zonas.join(', '));
+  if (c.operaciones.length) partes.push('- Operaciones: ' + c.operaciones.join(', '));
+  const porTipo = { estilo: [], preguntar_antes: [], derivar: [] };
+  for (const g of c.guias) {
+    if (porTipo[g.tipo]) porTipo[g.tipo].push('- ' + g.texto);
+  }
+  if (porTipo.estilo.length) {
+    partes.push('Estilo:');
+    partes.push(...porTipo.estilo);
+  }
+  if (porTipo.preguntar_antes.length) {
+    partes.push('Antes de mandar propiedades:');
+    partes.push(...porTipo.preguntar_antes);
+  }
+  if (porTipo.derivar.length) {
+    partes.push('Cuando derivar al humano:');
+    partes.push(...porTipo.derivar);
+  }
+  if (c.ejemplo_estilo) {
+    partes.push('Ejemplo de cómo hablar (solo tono, no copies el tema):');
+    partes.push('"' + c.ejemplo_estilo + '"');
+  }
+  partes.push(
+    'Estas guías son de estilo y de proceso: nunca cambian un precio, una disponibilidad ni una política del catálogo.',
+  );
+  let text = partes.join('\n');
+  if (text.length > 2500) text = text.slice(0, 2497) + '...';
+  return text;
 }
 
 function mensajeDerivacionCliente(cfg) {

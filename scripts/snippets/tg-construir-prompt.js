@@ -800,6 +800,9 @@ const systemPrompt =
   '- PROHIBIDO inventar cifras: nada de "5%", "10%", "3% de comision", montos en pesos/USD, plazos exactos, ni "usualmente X%" si no esta escrito en POLITICAS DE PAGO o STOCK. Habla en cualitativo ("un porcentaje del precio", "comision inmobiliaria", "gastos de escritura y sellos") y, si piden el numero exacto de Nodo, usa POLITICAS o decí que lo confirmas segun la operacion.\n' +
   '- DATO ESPECIFICO de una operacion o propiedad: SOLO si esta en STOCK o POLITICAS. Si no esta, no inventes.\n' +
   '- Si la pregunta mezcla general + especifico: explica lo general sin numeros inventados; el numero concreto solo de politicas/stock.\n' +
+  (typeof seccionComoTrabajaInmobiliaria === 'function' && botConfig
+    ? '\n' + seccionComoTrabajaInmobiliaria(botConfig) + '\n'
+    : '') +
   '\n' +
   'FRASES PROHIBIDAS (nunca las uses, sin excepción):\n' +
   '"Entiendo tu consulta" / "Con gusto te ayudo" / "Quedo atento" / "Cuando quieras contame" /\n' +

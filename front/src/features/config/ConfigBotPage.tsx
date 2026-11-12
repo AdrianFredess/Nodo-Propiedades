@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { config } from '../../shared/api/client';
+import { EntrevistaFlow } from './EntrevistaFlow';
 
 type Tono = 'profesional_cercano' | 'formal' | 'distendido';
+type GuiaTipo = 'estilo' | 'preguntar_antes' | 'derivar';
 type Umbral = 'conservador' | 'normal' | 'agresivo';
 type MsgDeriv = 'te_paso' | 'ya_aviso' | 'te_contacta';
 
@@ -13,6 +15,12 @@ export interface BotConfig {
   mensaje_derivacion: MsgDeriv;
   vendedor_nombre: string;
   panel_base_url: string;
+  inmobiliaria_nombre?: string;
+  asesor_nombre?: string;
+  zonas?: string[];
+  operaciones?: string[];
+  guias?: { tipo: GuiaTipo; texto: string }[];
+  ejemplo_estilo?: string;
 }
 
 const DEFAULTS: BotConfig = {
@@ -71,6 +79,7 @@ export function ConfigBotPage() {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<{ id: string }[]>([]);
+  const [entrevistaAbierta, setEntrevistaAbierta] = useState(false);
   const preview = useMemo(() => previewText(cfg), [cfg]);
 
   async function loadHistory() {
@@ -158,6 +167,21 @@ export function ConfigBotPage() {
 
   if (loading) return <p className="muted">Cargando config…</p>;
 
+  if (entrevistaAbierta) {
+    return (
+      <EntrevistaFlow
+        bridgeBase={bridgeBase()}
+        baseConfig={{ ...cfg }}
+        onCancel={() => setEntrevistaAbierta(false)}
+        onSaved={(msg) => {
+          setStatus(msg);
+          setEntrevistaAbierta(false);
+          void loadHistory();
+        }}
+      />
+    );
+  }
+
   return (
     <div className="config-bot">
       <header className="config-bot__head">
@@ -169,6 +193,13 @@ export function ConfigBotPage() {
         {config.useMock ? (
           <p className="muted">Modo mock: la config igual se guarda en el bridge/archivo.</p>
         ) : null}
+        <button
+          type="button"
+          className="btn btn--ghost"
+          onClick={() => setEntrevistaAbierta(true)}
+        >
+          Configurar con una entrevista
+        </button>
       </header>
 
       <div className="config-bot__grid">

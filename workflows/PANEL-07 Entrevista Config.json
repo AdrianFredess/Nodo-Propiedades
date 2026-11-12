@@ -1,0 +1,252 @@
+{
+  "name": "PANEL-07 Entrevista Config",
+  "nodes": [
+    {
+      "id": "panel07-webhook",
+      "name": "Webhook Entrevista",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "panel-entrevista-config",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "panel-entrevista-config",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "http://localhost:5173"
+        }
+      }
+    },
+    {
+      "id": "panel07-auth-check",
+      "name": "Check Panel Auth",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\r\n\r\nconst item = $input.first().json || {};\r\nconst headers = item.headers || {};\r\nconst norm = {};\r\nfor (const [k, v] of Object.entries(headers)) norm[String(k).toLowerCase()] = v;\r\nconst authHeader = String(norm.authorization || '');\r\nconst bearer = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7).trim() : '';\r\nconst got = String(norm['x-panel-token'] || bearer || '').trim();\r\nlet expected = '';\r\ntry {\r\n  expected = String(($env && $env.PANEL_API_TOKEN) || '').trim();\r\n} catch (e) {\r\n  expected = '';\r\n}\r\nlet authOk = false;\r\nif (expected && got) {\r\n  const a = Buffer.from(expected);\r\n  const b = Buffer.from(got);\r\n  authOk = a.length === b.length && crypto.timingSafeEqual(a, b);\r\n}\r\nreturn [{ json: { ...item, _authOk: authOk } }];\r\n"
+      }
+    },
+    {
+      "id": "panel07-auth-if",
+      "name": "IF Panel Auth OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "version": 2,
+            "typeValidation": "strict",
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "id": "auth-ok",
+              "leftValue": "={{ $json._authOk }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "panel07-auth-fail",
+      "name": "Responder Auth Fail",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        640,
+        480
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: 'unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      }
+    },
+    {
+      "id": "panel07-armar",
+      "name": "Armar Prompt Entrevista",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        860,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const root = $input.first().json;\r\nconst body = root.body && typeof root.body === 'object' ? root.body : root;\r\nconst respuestas = Array.isArray(body.respuestas) ? body.respuestas : [];\r\n\r\nconst bloque = respuestas\r\n  .map((r, i) => {\r\n    const pregunta = String(r.pregunta || r.id || 'Pregunta ' + (i + 1)).trim();\r\n    const resp = r.saltada\r\n      ? '(saltada por el dueño)'\r\n      : String(r.respuesta || '').trim() || '(sin respuesta)';\r\n    return pregunta + '\\n' + resp;\r\n  })\r\n  .join('\\n\\n');\r\n\r\nconst system =\r\n  'Sos redactor de configuración para un asesor inmobiliario (Matías) en Mendoza, Argentina.\\n' +\r\n  'A partir de las respuestas del dueño, devolvé SOLO un objeto JSON válido (sin markdown, sin texto extra).\\n' +\r\n  'Reglas:\\n' +\r\n  '- Español rioplatense.\\n' +\r\n  '- NO inventes políticas, descuentos ni promesas que el dueño no dijo.\\n' +\r\n  '- Precios, stock y disponibilidad siempre vienen del catálogo, nunca de estas guías.\\n' +\r\n  '- Máximo 15 guías, cada una hasta 300 caracteres.\\n' +\r\n  '- ejemplo_estilo: respuesta a la pregunta 4 (estilo de mensaje), máximo 400 caracteres.\\n' +\r\n  '- operaciones: array subset de [\"venta\",\"alquiler\",\"temporario\"].\\n' +\r\n  '- tono: \"profesional_cercano\" | \"formal\" | \"distendido\".\\n' +\r\n  '- guias[].tipo: \"estilo\" | \"preguntar_antes\" | \"derivar\".\\n' +\r\n  'Esquema exacto:\\n' +\r\n  '{\"inmobiliaria_nombre\":\"\",\"asesor_nombre\":\"\",\"tono\":\"profesional_cercano|formal|distendido\",' +\r\n  '\"zonas\":[\"\"],\"operaciones\":[\"venta\",\"alquiler\",\"temporario\"],' +\r\n  '\"guias\":[{\"tipo\":\"estilo|preguntar_antes|derivar\",\"texto\":\"\"}],' +\r\n  '\"horario_humano_desde\":\"HH:MM\",\"horario_humano_hasta\":\"HH:MM\",\"ejemplo_estilo\":\"\"}';\r\n\r\nconst user =\r\n  'ENTREVISTA (respuestas del dueño):\\n\\n' +\r\n  bloque +\r\n  '\\n\\nDevolvé el JSON del borrador de configuración.';\r\n\r\nreturn [\r\n  {\r\n    json: {\r\n      messages: [\r\n        { role: 'system', content: system },\r\n        { role: 'user', content: user },\r\n      ],\r\n    },\r\n  },\r\n];\r\n"
+      }
+    },
+    {
+      "id": "panel07-groq",
+      "name": "HTTP Groq Entrevista",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        300
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "__SET_GROQ_CREDENTIAL_ID__",
+          "name": "Groq API"
+        }
+      },
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: 'openai/gpt-oss-120b', messages: $json.messages, temperature: 0.4, max_tokens: 1200, reasoning_effort: 'low' } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "panel07-parse",
+      "name": "Validar Borrador",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const TONO_OK = new Set(['profesional_cercano', 'formal', 'distendido']);\r\nconst GUIA_TIPOS = new Set(['estilo', 'preguntar_antes', 'derivar']);\r\nconst OPERACIONES_OK = new Set(['venta', 'alquiler', 'temporario']);\r\n\r\nfunction isHHMM(s) {\r\n  return /^\\d{2}:\\d{2}$/.test(String(s || ''));\r\n}\r\n\r\n/**\r\n * Valida el borrador JSON de la entrevista (salida Groq).\r\n * @returns {{ ok: true, draft: object } | { ok: false, errors: string[] }}\r\n */\r\nfunction validateEntrevistaDraft(raw) {\r\n  const errors = [];\r\n  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) {\r\n    return { ok: false, errors: ['json_no_objeto'] };\r\n  }\r\n\r\n  const tono = String(raw.tono || '').trim();\r\n  if (!TONO_OK.has(tono)) errors.push('tono_invalido');\r\n\r\n  const inmobiliaria_nombre = String(raw.inmobiliaria_nombre || '').trim();\r\n  const asesor_nombre = String(raw.asesor_nombre || '').trim();\r\n  if (!inmobiliaria_nombre) errors.push('inmobiliaria_requerida');\r\n  if (!asesor_nombre) errors.push('asesor_requerido');\r\n\r\n  const zonasIn = Array.isArray(raw.zonas) ? raw.zonas : [];\r\n  const zonas = zonasIn.map((z) => String(z || '').trim()).filter(Boolean).slice(0, 30);\r\n\r\n  const operacionesIn = Array.isArray(raw.operaciones) ? raw.operaciones : [];\r\n  const operaciones = [];\r\n  for (const o of operacionesIn) {\r\n    const v = String(o || '').trim().toLowerCase();\r\n    if (v && OPERACIONES_OK.has(v)) operaciones.push(v);\r\n  }\r\n\r\n  const guiasIn = Array.isArray(raw.guias) ? raw.guias : [];\r\n  if (guiasIn.length > 15) errors.push('guias_max_15');\r\n  const guias = [];\r\n  for (const g of guiasIn) {\r\n    const tipo = String(g?.tipo || '').trim();\r\n    const texto = String(g?.texto || '').trim();\r\n    if (!tipo && !texto) continue;\r\n    if (!GUIA_TIPOS.has(tipo)) {\r\n      errors.push('guia_tipo_invalido');\r\n      continue;\r\n    }\r\n    if (texto.length > 300) errors.push('guia_texto_largo');\r\n    if (texto) guias.push({ tipo, texto: texto.slice(0, 300) });\r\n  }\r\n\r\n  const horario_humano_desde = String(raw.horario_humano_desde || '').trim();\r\n  const horario_humano_hasta = String(raw.horario_humano_hasta || '').trim();\r\n  if (!isHHMM(horario_humano_desde) || !isHHMM(horario_humano_hasta)) {\r\n    errors.push('horario_invalido');\r\n  }\r\n\r\n  const ejemplo_estilo = String(raw.ejemplo_estilo || '').slice(0, 400);\r\n\r\n  if (errors.length) return { ok: false, errors: [...new Set(errors)] };\r\n\r\n  const draft = {\r\n    inmobiliaria_nombre,\r\n    asesor_nombre,\r\n    tono,\r\n    zonas,\r\n    operaciones,\r\n    guias,\r\n    horario_humano_desde,\r\n    horario_humano_hasta,\r\n    ejemplo_estilo,\r\n  };\r\n  return { ok: true, draft };\r\n}\r\n\r\n/** Mapea borrador de entrevista → campos bot-config (conserva extras del caller). */\r\nfunction mergeDraftIntoBotConfig(draft, baseConfig) {\r\n  const b = baseConfig && typeof baseConfig === 'object' ? baseConfig : {};\r\n  const d = draft && typeof draft === 'object' ? draft : {};\r\n  return {\r\n    ...b,\r\n    tono: d.tono || b.tono || 'profesional_cercano',\r\n    inmobiliaria_nombre: d.inmobiliaria_nombre || b.inmobiliaria_nombre || '',\r\n    asesor_nombre: d.asesor_nombre || b.asesor_nombre || '',\r\n    vendedor_nombre: d.asesor_nombre || b.vendedor_nombre || b.asesor_nombre || 'Matías',\r\n    zonas: Array.isArray(d.zonas) ? d.zonas : b.zonas || [],\r\n    operaciones: Array.isArray(d.operaciones) ? d.operaciones : b.operaciones || [],\r\n    guias: Array.isArray(d.guias) ? d.guias : b.guias || [],\r\n    horario_humano_desde: d.horario_humano_desde || b.horario_humano_desde || '09:00',\r\n    horario_humano_hasta: d.horario_humano_hasta || b.horario_humano_hasta || '18:00',\r\n    ejemplo_estilo: d.ejemplo_estilo || b.ejemplo_estilo || '',\r\n  };\r\n}\n\r\nfunction textoVisibleGroq(message) {\r\n  const msg = message || {};\r\n  let text = msg.content == null ? '' : String(msg.content);\r\n  const thinkClose = new RegExp(String.raw`[\\s\\S]*?` + '\\x3c/' + 'think\\x3e', 'gi');\r\n  text = text.replace(thinkClose, '');\r\n  text = text.replace(/<\\|[^|]*\\|>/g, '');\r\n  return text.trim();\r\n}\r\n\r\nconst groq = $input.first().json;\r\nconst msg = groq.choices?.[0]?.message || {};\r\nlet raw = textoVisibleGroq(msg);\r\n\r\nlet parsed = null;\r\ntry {\r\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\r\n  if (m) parsed = JSON.parse(m[0]);\r\n} catch (e) {\r\n  parsed = null;\r\n}\r\n\r\nconst val = typeof validateEntrevistaDraft === 'function' ? validateEntrevistaDraft(parsed) : { ok: false, errors: ['validator_missing'] };\r\n\r\nif (!val.ok) {\r\n  return [\r\n    {\r\n      json: {\r\n        ok: false,\r\n        errors: val.errors || ['json_invalido'],\r\n        draft: null,\r\n      },\r\n    },\r\n  ];\r\n}\r\n\r\nreturn [{ json: { ok: true, draft: val.draft, errors: [] } }];\r\n"
+      }
+    },
+    {
+      "id": "panel07-respond",
+      "name": "Responder JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1520,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "={{ $env.PANEL_ORIGIN || 'http://localhost:5173' }}"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, X-Panel-Token"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Entrevista": {
+      "main": [
+        [
+          {
+            "node": "Check Panel Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Panel Auth": {
+      "main": [
+        [
+          {
+            "node": "IF Panel Auth OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Panel Auth OK": {
+      "main": [
+        [
+          {
+            "node": "Armar Prompt Entrevista",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder Auth Fail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar Prompt Entrevista": {
+      "main": [
+        [
+          {
+            "node": "HTTP Groq Entrevista",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Groq Entrevista": {
+      "main": [
+        [
+          {
+            "node": "Validar Borrador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Borrador": {
+      "main": [
+        [
+          {
+            "node": "Responder JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
