@@ -22,6 +22,7 @@ const links = [
   { to: '/pipeline', label: 'Pipeline', end: false },
   { to: '/catalogo', label: 'Catálogo', end: false },
   { to: '/config', label: 'Config bot', end: false },
+  { to: '/probar', label: 'Probar', end: false },
 ];
 
 function realtimeText(status: RealtimeStatus | undefined): string {

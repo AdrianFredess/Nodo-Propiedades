@@ -8,6 +8,7 @@ import {
 } from 'react-router-dom';
 import { AppShell } from './app/layout/AppShell';
 import { ConfigBotPage } from './features/config/ConfigBotPage';
+import { ProbarPage } from './features/probar/ProbarPage';
 import { CatalogoPage } from './features/catalogo/CatalogoPage';
 import { PropiedadDetailPage } from './features/catalogo/PropiedadDetailPage';
 import { PublicPropiedadPage } from './features/catalogo/PublicPropiedadPage';
@@ -195,6 +196,7 @@ export default function App() {
             }
           />
           <Route path="config" element={<ConfigBotPage />} />
+          <Route path="probar" element={<ProbarPage />} />
           <Route
             path="resumen"
             element={

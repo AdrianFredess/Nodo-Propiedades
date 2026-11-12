@@ -46,6 +46,14 @@ export const config = {
     'VITE_LEAD_ACTIONS_URL',
     'http://localhost:5678/webhook/panel-lead-actions',
   ),
+  entrevistaUrl: envUrl(
+    'VITE_ENTREVISTA_URL',
+    'http://localhost:5678/webhook/panel-entrevista-config',
+  ),
+  probarBotUrl: envUrl(
+    'VITE_PROBAR_BOT_URL',
+    'http://localhost:5678/webhook/bot-prueba-panel',
+  ),
   /** Header X-Panel-Token. Tiene que coincidir con PANEL_API_TOKEN de n8n. */
   panelApiToken: envUrl('VITE_PANEL_API_TOKEN', ''),
   /** ws://localhost:3099/ws — vacío desactiva realtime */
