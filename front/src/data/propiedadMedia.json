@@ -20,10 +20,10 @@
   },
   "MZA-002": {
     "fotos": [
-      "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&h=600&q=80"
+      "https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=1280&h=800&q=80"
     ],
     "shareToken": "a5fd03b34bc3",
     "linkFicha": "http://localhost:5173/p/MZA-002/a5fd03b34bc3",
@@ -39,10 +39,10 @@
   },
   "MZA-003": {
     "fotos": [
-      "https://images.unsplash.com/photo-1460317442991-0ec209397118?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=900&h=600&q=80"
+      "https://images.unsplash.com/photo-1634547532213-a4b8d7ff8927?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1634547588713-edd93045b9f1?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1634547476021-c1155c01616c?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1632120953531-1654025d5881?auto=format&fit=crop&w=1280&h=800&q=80"
     ],
     "shareToken": "cccf5c9de780",
     "linkFicha": "http://localhost:5173/p/MZA-003/cccf5c9de780",
@@ -58,10 +58,10 @@
   },
   "MZA-004": {
     "fotos": [
-      "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1560448075-bb485b067938?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=900&h=600&q=80"
+      "https://images.unsplash.com/photo-1632120669818-ed5498030e32?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1632120377007-c2adc3017b1e?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1632830196000-d8a1abf32691?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1632829882891-5047ccc421bc?auto=format&fit=crop&w=1280&h=800&q=80"
     ],
     "shareToken": "76e1d50f5058",
     "linkFicha": "http://localhost:5173/p/MZA-004/76e1d50f5058",
@@ -77,10 +77,10 @@
   },
   "MZA-005": {
     "fotos": [
-      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=900&h=600&q=80"
+      "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1560448075-bb485b067938?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1280&h=800&q=80"
     ],
     "shareToken": "1d174e0cc4b5",
     "linkFicha": "http://localhost:5173/p/MZA-005/1d174e0cc4b5",
@@ -115,10 +115,10 @@
   },
   "MZA-007": {
     "fotos": [
-      "https://images.unsplash.com/photo-1632120669818-ed5498030e32?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1632120377007-c2adc3017b1e?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1632830196000-d8a1abf32691?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1632829882891-5047ccc421bc?auto=format&fit=crop&w=900&h=600&q=80"
+      "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1553413077-190dd305871c?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1587293852726-70cdb56c2866?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1601362840469-51e4d8d58785?auto=format&fit=crop&w=1280&h=800&q=80"
     ],
     "shareToken": "1283133bec36",
     "linkFicha": "http://localhost:5173/p/MZA-007/1283133bec36",
@@ -153,10 +153,10 @@
   },
   "MZA-009": {
     "fotos": [
-      "https://images.unsplash.com/photo-1634547532213-a4b8d7ff8927?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1634547588713-edd93045b9f1?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1634547476021-c1155c01616c?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1632120953531-1654025d5881?auto=format&fit=crop&w=900&h=600&q=80"
+      "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1280&h=800&q=80"
     ],
     "shareToken": "3143fe2bc225",
     "linkFicha": "http://localhost:5173/p/MZA-009/3143fe2bc225",
@@ -172,10 +172,10 @@
   },
   "MZA-010": {
     "fotos": [
-      "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1600585152220-90363fe7e115?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&h=600&q=80"
+      "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1600047509358-9dc75507daeb?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1600210492493-0946911123ea?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=1280&h=800&q=80"
     ],
     "shareToken": "14541f8d1e96",
     "linkFicha": "http://localhost:5173/p/MZA-010/14541f8d1e96",
@@ -286,10 +286,10 @@
   },
   "MZA-016": {
     "fotos": [
-      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=900&h=600&q=80",
-      "https://images.unsplash.com/photo-1600585152915-d208bec867a1?auto=format&fit=crop&w=900&h=600&q=80"
+      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1600585152915-d208bec867a1?auto=format&fit=crop&w=1280&h=800&q=80"
     ],
     "shareToken": "a60687f6297f",
     "linkFicha": "http://localhost:5173/p/MZA-016/a60687f6297f",
@@ -568,5 +568,85 @@
     "operacion": "Venta",
     "ambientes": "4",
     "descripcion": "Palmares Valle esquina living integrado cochera doble"
+  },
+  "MZA-031": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1600585152220-90363fe7e115?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1556909172-54557c7e4fb7?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1280&h=800&q=80"
+    ],
+    "shareToken": "8840cc5dba1d",
+    "linkFicha": "http://localhost:5173/p/MZA-031/b5ae8f07a9c4",
+    "caption": "Casa 3 dorm. · Chacras de Coria · 139000 USD",
+    "titulo": "Casa 3 dorm. en Chacras de Coria",
+    "tipo": "Casa 3 dorm.",
+    "zona": "Chacras de Coria",
+    "precio": "139000 USD",
+    "precioUsd": 139000,
+    "operacion": "Venta",
+    "ambientes": "4",
+    "dormitorios": "3",
+    "descripcion": "180 m² cubiertos, lote 450 m², pileta, galería con parrilla, a 4 cuadras de la plaza"
+  },
+  "MZA-032": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1280&h=800&q=80"
+    ],
+    "shareToken": "ab19f7842b76",
+    "linkFicha": "http://localhost:5173/p/MZA-032/18000cc8078d",
+    "caption": "Casa 3 dorm. · Chacras de Coria · 148000 USD",
+    "titulo": "Casa 3 dorm. en Chacras de Coria",
+    "tipo": "Casa 3 dorm.",
+    "zona": "Chacras de Coria",
+    "precio": "148000 USD",
+    "precioUsd": 148000,
+    "operacion": "Venta",
+    "ambientes": "4",
+    "dormitorios": "3",
+    "descripcion": "210 m², jardín con frutales, cochera doble, a estrenar"
+  },
+  "MZA-033": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1536376072261-38c75010e6c9?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=1280&h=800&q=80"
+    ],
+    "shareToken": "c49393dcb8fd",
+    "linkFicha": "http://localhost:5173/p/MZA-033/02e1810d2e2e",
+    "caption": "Departamento 2 dorm. · Godoy Cruz · 84000 USD",
+    "titulo": "Departamento 2 dorm. en Godoy Cruz",
+    "tipo": "Departamento 2 dorm.",
+    "zona": "Godoy Cruz",
+    "precio": "84000 USD",
+    "precioUsd": 84000,
+    "operacion": "Venta",
+    "ambientes": "3",
+    "dormitorios": "2",
+    "descripcion": "68 m², balcón, cochera, a 3 cuadras del Palmares"
+  },
+  "MZA-034": {
+    "fotos": [
+      "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1280&h=800&q=80",
+      "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1280&h=800&q=80"
+    ],
+    "shareToken": "7eb9c8e3dd3f",
+    "linkFicha": "http://localhost:5173/p/MZA-034/0f77d1c28109",
+    "caption": "Departamento 2 dorm. · Godoy Cruz · 89500 USD",
+    "titulo": "Departamento 2 dorm. en Godoy Cruz",
+    "tipo": "Departamento 2 dorm.",
+    "zona": "Godoy Cruz",
+    "precio": "89500 USD",
+    "precioUsd": 89500,
+    "operacion": "Venta",
+    "ambientes": "3",
+    "dormitorios": "2",
+    "descripcion": "74 m², luminoso, amenities, apto crédito"
   }
 }

@@ -15,3 +15,24 @@
 
 ## Fuera de este MVP
 - Esperar a que el cliente termine de escribir (D1 OmniCRM 74b): fase aparte por riesgo de carreras en static data.
+
+## Fase 6b — fotos duplicadas sin sesión única
+
+- MZA-011: sin_sesion_unica
+- MZA-012: sin_sesion_unica
+- MZA-013: sin_sesion_unica
+- MZA-014: sin_sesion_unica
+- MZA-015: sin_sesion_unica
+- MZA-018: sin_sesion_unica
+- MZA-019: sin_sesion_unica
+- MZA-020: sin_sesion_unica
+- MZA-021: sin_sesion_unica
+- MZA-022: sin_sesion_unica
+- MZA-023: sin_sesion_unica
+- MZA-024: sin_sesion_unica
+- MZA-025: sin_sesion_unica
+- MZA-026: sin_sesion_unica
+- MZA-027: sin_sesion_unica
+- MZA-028: sin_sesion_unica
+- MZA-029: sin_sesion_unica
+- MZA-030: sin_sesion_unica
