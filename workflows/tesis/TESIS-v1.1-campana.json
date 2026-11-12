@@ -1,0 +1,984 @@
+{
+  "name": "TESIS-v1.1 Campaña 2026-11-11",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-001",
+              "name": "chat_id",
+              "value": "={{ $json.message.chat.id.toString() }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-002",
+              "name": "texto_usuario",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-003",
+              "name": "nombre_usuario",
+              "value": "={{ $json.message.from.first_name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Set Variables",
+      "id": "a1b2c3d4-0002-0002-0002-000000000002",
+      "typeVersion": 3.4,
+      "position": [
+        464,
+        304
+      ],
+      "type": "n8n-nodes-base.set"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "17OcN_WHHrAchUAfTxLTrjsB-cpz8nB1H2p6eeVvS_XM",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Hoja 1",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "chat_id",
+              "lookupValue": "={{ $('Set Variables').first().json.chat_id }}"
+            }
+          ]
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRangeA1",
+              "range": "A:ZZ"
+            }
+          }
+        },
+        "operation": "read",
+        "resource": "sheet",
+        "range": "'Hoja 1'!A:ZZ"
+      },
+      "name": "Leer Historial",
+      "id": "a1b2c3d4-0003-0003-0003-000000000003",
+      "typeVersion": 4.5,
+      "position": [
+        688,
+        304
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Cuenta de Google Sheets"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\r\n * Bot Telegram — Construir Prompt\r\n * Incluye stock + políticas de pago (Sheets) + instrucción de presupuestos.\r\n * Tags ###ESTADO_ACTUAL### y ###LEAD_COMPLETO### se mantienen.\r\n */\r\nconst setVars = $('Set Variables').first().json;\r\nconst chatId = setVars.chat_id;\r\nconst textoUsuario = setVars.texto_usuario;\r\nconst nombreUsuario = setVars.nombre_usuario;\r\n\r\nlet historialItems = [];\r\ntry {\r\n  historialItems = $('Leer Historial').all();\r\n} catch (e) {\r\n  historialItems = [];\r\n}\r\n\r\nlet stockItems = [];\r\ntry {\r\n  stockItems = $('Leer Stock Propiedades')\r\n    .all()\r\n    .map((item) => item.json)\r\n    .filter(\r\n      (row) =>\r\n        row &&\r\n        typeof row === 'object' &&\r\n        !(\r\n          typeof row.error === 'string' &&\r\n          /authorization grant|invalid_grant|token is invalid|OAuth2/i.test(\r\n            row.error,\r\n          )\r\n        ) &&\r\n        !(\r\n          Object.keys(row).length === 1 &&\r\n          Object.prototype.hasOwnProperty.call(row, 'error')\r\n        ),\r\n    );\r\n} catch (e) {\r\n  stockItems = [];\r\n}\r\n\r\nlet politicasRows = [];\r\ntry {\r\n  politicasRows = $('Leer Politicas Pago')\r\n    .all()\r\n    .map((item) => item.json)\r\n    .filter(\r\n      (row) =>\r\n        row &&\r\n        typeof row === 'object' &&\r\n        !row.error &&\r\n        (row.clave || row.key || row.tema || row.concepto),\r\n    );\r\n} catch (e) {\r\n  politicasRows = [];\r\n}\r\n\r\nfunction pick(row, keys) {\r\n  for (const k of keys) {\r\n    if (row[k] != null && String(row[k]).trim()) return String(row[k]).trim();\r\n  }\r\n  return '';\r\n}\r\n\r\nfunction rowToStockLine(row) {\r\n  const id = pick(row, ['id', 'ID', 'codigo']);\r\n  const tipo = pick(row, ['tipo', 'Tipo', 'tipologia']);\r\n  const zona = pick(row, ['zona', 'Zona', 'barrio']);\r\n  const precio = pick(row, ['precio', 'Precio', 'precio_usd']);\r\n  const operacion = pick(row, ['operacion', 'Operacion', 'tipo_operacion']);\r\n  const desc = pick(row, ['descripcion', 'Descripcion', 'detalle']);\r\n  const estado = pick(row, ['estado', 'Estado', 'stock']) || 'disponible';\r\n  const honorarios = pick(row, ['honorarios', 'Honorarios', 'comision']);\r\n  const reserva = pick(row, ['reserva', 'Reserva', 'seña', 'sena']);\r\n  const medios = pick(row, ['medios_pago', 'mediosPago', 'forma_pago']);\r\n  const alias = pick(row, ['alias_cbu', 'alias', 'cbu', 'CBU']);\r\n  const requisitos = pick(row, ['requisitos', 'Requisitos']);\r\n\r\n  const bits = [\r\n    tipo,\r\n    zona,\r\n    operacion ? 'op:' + operacion : '',\r\n    precio ? String(precio) : '',\r\n    desc,\r\n  ].filter(Boolean);\r\n  const pagoBits = [\r\n    honorarios ? 'honorarios:' + honorarios : '',\r\n    reserva ? 'reserva:' + reserva : '',\r\n    medios ? 'medios:' + medios : '',\r\n    alias ? 'alias/CBU:' + alias : '',\r\n    requisitos ? 'req:' + requisitos : '',\r\n  ].filter(Boolean);\r\n  const head = id ? '[' + id + '] ' : '';\r\n  return (\r\n    head +\r\n    bits.join(' | ') +\r\n    (pagoBits.length ? ' || PAGO: ' + pagoBits.join(' · ') : '') +\r\n    (estado ? ' (' + estado + ')' : '')\r\n  );\r\n}\r\n\r\nlet stockText = '';\r\nif (stockItems.length) {\r\n  stockText = stockItems\r\n    .map(rowToStockLine)\r\n    .map((l) => '- ' + l)\r\n    .join('\\n');\r\n} else {\r\n  stockText =\r\n    '- (Sin filas en la planilla de stock (propiedades) o no se pudo leer. Ofrece ayuda humana o pedir cargar stock.)';\r\n}\r\n\r\nconst FALLBACK_POLITICAS = [\r\n  'transferencia: Alias/CBU EDITAR_EN_SHEETS (hoja Politicas_Pago, clave transferencia). Titular EDITAR_EN_SHEETS.',\r\n  'efectivo: Se acepta en oficina con comprobante; coordinar visita.',\r\n  'reserva: Seña típica a confirmar según operación; no garantiza hasta acreditación.',\r\n  'cuotas: Solo si la propiedad/operación lo indica en stock; no inventar planes.',\r\n  'honorarios: Ver columna honorarios del inmueble o valor de Politicas_Pago; si falta, decir que lo confirma un asesor.',\r\n  'requisitos_alquiler: DNI, recibos, garantía o seguro caución (confirmar en Sheets).',\r\n  'requisitos_compra: DNI, reservar con seña, escritura con escribano (confirmar en Sheets).',\r\n].join('\\n');\r\n\r\nlet politicasText = '';\r\nif (politicasRows.length) {\r\n  politicasText = politicasRows\r\n    .map((row) => {\r\n      const clave = pick(row, ['clave', 'key', 'tema', 'concepto']);\r\n      const valor = pick(row, ['valor', 'value', 'detalle', 'descripcion']);\r\n      if (!clave) return '';\r\n      return '- ' + clave + ': ' + (valor || '(sin detalle)');\r\n    })\r\n    .filter(Boolean)\r\n    .join('\\n');\r\n}\r\nif (!politicasText) {\r\n  politicasText =\r\n    FALLBACK_POLITICAS.split('\\n')\r\n      .map((l) => '- ' + l)\r\n      .join('\\n') +\r\n    '\\n- (Fuente: placeholders. Cargá la hoja Politicas_Pago en Sheets para valores reales.)';\r\n}\r\n\r\nconst matchRow = historialItems.find(\r\n  (item) => item.json && String(item.json.chat_id) === String(chatId),\r\n);\r\nconst historialItemsFiltered = matchRow ? [matchRow] : [];\r\n\r\nlet historialJson = [];\r\nlet turno = 1;\r\nlet rowExists = false;\r\nlet propiedadSeguimientoPrev = '';\r\nlet ultimaActualizacionStr = '';\r\nlet diasSinContacto = 0;\r\n\r\nif (\r\n  historialItemsFiltered.length > 0 &&\r\n  historialItemsFiltered[0].json &&\r\n  historialItemsFiltered[0].json.chat_id\r\n) {\r\n  const row = historialItemsFiltered[0].json;\r\n  rowExists = true;\r\n  turno = parseInt(row.turno || 0) + 1;\r\n  propiedadSeguimientoPrev = String(row.propiedad_seguimiento || '').trim();\r\n  ultimaActualizacionStr = String(row.ultima_actualizacion || '').trim();\r\n  try {\r\n    historialJson = JSON.parse(row.historial_json || '[]');\r\n  } catch (e) {\r\n    historialJson = [];\r\n  }\r\n  if (ultimaActualizacionStr) {\r\n    const t = new Date(ultimaActualizacionStr);\r\n    if (!isNaN(t.getTime())) {\r\n      diasSinContacto = Math.floor((Date.now() - t.getTime()) / 86400000);\r\n    }\r\n  }\r\n}\r\n\r\nlet refSeg = '';\r\nlet idSeg = '';\r\nif (propiedadSeguimientoPrev) {\r\n  try {\r\n    const o = JSON.parse(propiedadSeguimientoPrev);\r\n    if (o && typeof o === 'object') {\r\n      if (o.referencia) refSeg = String(o.referencia);\r\n      if (o.id) idSeg = String(o.id);\r\n      if (!refSeg && o.id) refSeg = String(o.id);\r\n    }\r\n  } catch (e) {\r\n    refSeg =\r\n      propiedadSeguimientoPrev.length > 120\r\n        ? propiedadSeguimientoPrev.slice(0, 117) + '…'\r\n        : propiedadSeguimientoPrev;\r\n  }\r\n}\r\n\r\nconst contextoCliente =\r\n  '- Días aproximados desde el último registro en CRM (ultima_actualizacion): ' +\r\n  (ultimaActualizacionStr ? diasSinContacto : 'sin_dato') +\r\n  '\\n' +\r\n  '- Propiedad en seguimiento guardada (si existe): ' +\r\n  (refSeg || '(ninguna)') +\r\n  (idSeg ? ' [id=' + idSeg + ']' : '') +\r\n  '\\n' +\r\n  '- Si hay varios días sin contacto y hay propiedad en seguimiento, está bien retomar con una sola frase breve y cordial al inicio; no insistir ni presionar.';\r\n\r\nconst systemPrompt =\r\n  'Sos Matías, asesor inmobiliario de Nodo Propiedades (Argentina). Tu trabajo es solo atender consultas sobre inmuebles: disponibilidad, precios en el stock, zonas, tipología, visitas, presupuestos, medios de pago y derivaciones relacionadas con el catálogo.\\n\\n' +\r\n  'ALCANCE: Si el mensaje no tiene relación con inmuebles o el stock (otros temas, bromas, política, tecnología, vida personal, etc.), respondé en 1–2 frases cordiales y profesionales aclarando que solo podés orientar sobre propiedades y el catálogo, y ofrecé continuar si tiene una consulta inmobiliaria. No des datos ni opiniones fuera de ese marco.\\n\\n' +\r\n  'PROHIBICIÓN ESTRICTA: No uses en ningún caso la palabra \"che\" (ni como saludo ni como interjección). Usá un trato profesional directo: \"Hola\", \"Buenos días\", o el nombre si lo tenés.\\n\\n' +\r\n  'CONTEXTO_CLIENTE (uso interno; no lo repitas literal ni digas que venís de un CRM):\\n' +\r\n  contextoCliente +\r\n  '\\n\\n' +\r\n  'SEGUIMIENTO EN CONVERSACIÓN:\\n' +\r\n  '- Si CONTEXTO_CLIENTE muestra ~3 días o más sin registro previo y había propiedad en seguimiento, podés empezar con UNA sola línea corta retomando el interés; después respondé al mensaje actual.\\n' +\r\n  '- No hagas seguimiento agresivo: una mención suave; si el cliente cambió de tema, priorizá lo que preguntó ahora.\\n\\n' +\r\n  'STOCK (solo ofrecé propiedades de esta lista; si no hay match, ofrecé las más cercanas o pedí más datos):\\n' +\r\n  stockText +\r\n  '\\n\\n' +\r\n  'POLITICAS_PAGO (fuente Sheets Politicas_Pago o placeholders editables; NO inventes CBU/alias reales):\\n' +\r\n  politicasText +\r\n  '\\n\\n' +\r\n  'PRESUPUESTOS Y MEDIOS DE PAGO:\\n' +\r\n  '- Si el cliente pide presupuesto, cotización, \"cómo pago\", reserva, seña, honorarios, o hay propiedad en seguimiento clara, armá un PRESUPUESTO LEGIBLE en chat con este formato (adaptá campos faltantes):\\n' +\r\n  '  *Presupuesto — [id/código]*\\n' +\r\n  '  · Propiedad: tipo · zona\\n' +\r\n  '  · Operación: venta|alquiler\\n' +\r\n  '  · Precio: …\\n' +\r\n  '  · Honorarios: … (si no está en stock/políticas, decí que lo confirma un asesor)\\n' +\r\n  '  · Reserva/seña: …\\n' +\r\n  '  · Medios de pago: transferencia (alias/CBU solo si figura en POLITICAS_PAGO o stock), efectivo, etc.\\n' +\r\n  '  · Requisitos: …\\n' +\r\n  '  · Resumen: 1–2 líneas\\n' +\r\n  '- Si el alias/CBU dice EDITAR_EN_SHEETS, explicá que el dato bancario lo confirma la inmobiliaria y ofrecé derivar; no inventes números.\\n' +\r\n  '- No generes PDF; el formato en chat alcanza.\\n\\n' +\r\n  'ESTILO Y FORMATO:\\n' +\r\n  '- Español claro, profesional y cercano (podés usar voseo si resulta natural).\\n' +\r\n  '- Cuando convenga, ordená la respuesta con viñetas o pasos breves; evitá muros de texto largos en Telegram.\\n' +\r\n  '- Priorizá una intención o una pregunta por mensaje cuando pida información al cliente.\\n' +\r\n  '- No inventes inmuebles fuera del stock; podés parafrasear la lista.\\n\\n' +\r\n  'PROPIEDAD EN SEGUIMIENTO (para recordatorios posteriores):\\n' +\r\n  '- Si el usuario se enfoca claramente en UNA propiedad del stock (detalle, visita, reserva, presupuesto, \"me interesa la de…\"), al FINAL del mensaje agregá exactamente este bloque (una sola línea JSON dentro):\\n\\n' +\r\n  '###PROPIEDAD_SEGUIMIENTO###\\n' +\r\n  '{\"id\":\"id_o_codigo_stock\",\"referencia\":\"breve texto para recordatorios (zona + tipo o codigo)\"}\\n' +\r\n  '###FIN_PROP###\\n\\n' +\r\n  '- Si no hay una propiedad clara o es solo una consulta general, NO incluyas este bloque (deja el seguimiento anterior sin cambios en el sistema).\\n\\n' +\r\n  'ESTADO DE INTERÉS (obligatorio en CADA respuesta):\\n' +\r\n  '- Al FINAL del texto para el cliente (antes de bloques opcionales ###PROPIEDAD_SEGUIMIENTO### / ###LEAD_COMPLETO###), agregá exactamente UNA línea con el tag:\\n' +\r\n  '###ESTADO_ACTUAL:frio###\\n' +\r\n  'o ###ESTADO_ACTUAL:tibio### o ###ESTADO_ACTUAL:caliente###\\n' +\r\n  '- frio = curiosidad / sin datos claros; tibio = interés sin urgencia; caliente = urgencia o datos claros de compra/alquiler.\\n' +\r\n  '- Este tag convive con ###LEAD_COMPLETO###: cuando cierres el lead, incluí AMBOS (estado + bloque lead). No inventes el bloque lead si faltan datos.\\n\\n' +\r\n  'CUANDO TENGAS OPORTUNIDAD DE VENTA (nombre, zona, presupuesto aproximado y compra o alquiler), al FINAL del mensaje (después del bloque de propiedad si lo hubo) pegá exactamente este bloque:\\n\\n' +\r\n  '  ###LEAD_COMPLETO###\\n' +\r\n  '  {\"nombre\":\"...\",\"zona\":\"...\",\"presupuesto\":\"...\",\"operacion\":\"compra|alquiler\",\"temperatura\":\"caliente|tibio|frio\",\"resumen\":\"...\"}\\n' +\r\n  '  ###FIN_LEAD###\\n\\n' +\r\n  '- temperatura: caliente = urgencia o presupuesto claro; tibio = interés sin fecha; frío = curiosidad.\\n' +\r\n  '- Si falta información para cerrar el lead, seguí la conversación SIN el bloque JSON.';\r\n\r\nconst messages = [{ role: 'system', content: systemPrompt }];\r\n\r\nfor (const msg of historialJson) {\r\n  messages.push(msg);\r\n}\r\n\r\nmessages.push({ role: 'user', content: textoUsuario });\r\n\r\nreturn [\r\n  {\r\n    json: {\r\n      chat_id: chatId,\r\n      texto_usuario: textoUsuario,\r\n      nombre_usuario: nombreUsuario,\r\n      messages: messages,\r\n      historial_json: historialJson,\r\n      turno: turno,\r\n      row_exists: rowExists,\r\n      propiedad_seguimiento_actual: propiedadSeguimientoPrev,\r\n      dias_sin_contacto: diasSinContacto,\r\n      politicas_source: politicasRows.length ? 'sheets' : 'fallback',\r\n    },\r\n  },\r\n];\r\n"
+      },
+      "name": "Construir Prompt",
+      "id": "a1b2c3d4-0004-0004-0004-000000000004",
+      "typeVersion": 2,
+      "position": [
+        912,
+        304
+      ],
+      "type": "n8n-nodes-base.code"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: 'openai/gpt-oss-120b', messages: $json.messages, temperature: 0.7, max_tokens: 1200, reasoning_effort: 'low' } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "name": "HTTP Groq",
+      "id": "a1b2c3d4-0005-0005-0005-000000000005",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        304
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "credentials": {
+        "openAiApi": {
+          "id": "GgWE6f3vqREslMLv",
+          "name": "Groq API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const groqData = $input.first().json;\nconst promptData = $('Construir Prompt').first().json;\n\nconst msgGroq = groqData.choices[0].message || {};\nconst respuestaCompleta = (msgGroq.content && String(msgGroq.content).trim()) || String(msgGroq.reasoning || msgGroq.reasoning_content || '').trim();\nconst chatId = promptData.chat_id;\nconst textoUsuario = promptData.texto_usuario;\nconst nombreUsuario = promptData.nombre_usuario;\nlet historialJson = Array.isArray(promptData.historial_json) ? promptData.historial_json : [];\nconst turno = promptData.turno;\nconst rowExists = promptData.row_exists;\nconst propiedadPrevRaw = String(promptData.propiedad_seguimiento_actual || '').trim();\n\nfunction quitarMuletillaChe(texto) {\n  if (!texto || typeof texto !== 'string') return texto;\n  let s = texto.replace(/\\b[Cc]he\\b[,.;:!?]*\\s*/g, '');\n  s = s.replace(/\\s{2,}/g, ' ').trim();\n  return s;\n}\n\nconst estadoRegex = /###ESTADO_ACTUAL:(frio|tibio|caliente)###/i;\nconst leadRegex = /###LEAD_COMPLETO###[\\s\\S]*?({[\\s\\S]*?})[\\s\\S]*?###FIN_LEAD###/;\nconst propRegex = /###PROPIEDAD_SEGUIMIENTO###[\\s\\S]*?({[\\s\\S]*?})[\\s\\S]*?###FIN_PROP###/;\n\nlet working = respuestaCompleta;\n\nconst estadoMatch = working.match(estadoRegex);\nlet estadoActual = '';\nif (estadoMatch) {\n  estadoActual = String(estadoMatch[1] || '').toLowerCase();\n  working = working.replace(/###ESTADO_ACTUAL:(frio|tibio|caliente)###/gi, '').trim();\n}\n\nconst propMatch = working.match(propRegex);\nlet propiedadSeguimiento = propiedadPrevRaw;\n\nif (propMatch) {\n  try {\n    const obj = JSON.parse(propMatch[1].trim());\n    const idP = obj.id != null ? String(obj.id).trim() : '';\n    const refP = obj.referencia != null ? String(obj.referencia).trim() : '';\n    if (idP || refP) {\n      propiedadSeguimiento = JSON.stringify({ id: idP, referencia: refP });\n    } else {\n      propiedadSeguimiento = propiedadPrevRaw;\n    }\n  } catch (e) {\n    propiedadSeguimiento = propiedadPrevRaw;\n  }\n  working = working.replace(/###PROPIEDAD_SEGUIMIENTO###[\\s\\S]*?###FIN_PROP###/, '').trim();\n}\n\nconst match = working.match(leadRegex);\n\nlet leadCompleto = false;\nlet leadData = {};\nlet respuestaBot = working;\n\nif (match) {\n  try {\n    leadData = JSON.parse(match[1].trim());\n    leadCompleto = true;\n    respuestaBot = working.replace(/###LEAD_COMPLETO###[\\s\\S]*?###FIN_LEAD###/, '').trim();\n  } catch (e) {\n    leadCompleto = false;\n  }\n}\n\nrespuestaBot = quitarMuletillaChe(respuestaBot);\n\nlet temperatura = '';\nif (leadCompleto && leadData.temperatura) {\n  temperatura = String(leadData.temperatura).toLowerCase();\n} else if (estadoActual) {\n  temperatura = estadoActual;\n} else if (leadData.temperatura) {\n  temperatura = String(leadData.temperatura).toLowerCase();\n}\nif (!['frio', 'tibio', 'caliente'].includes(temperatura)) {\n  temperatura = estadoActual || 'frio';\n}\n\nhistorialJson.push({ role: 'user', content: textoUsuario });\nhistorialJson.push({ role: 'assistant', content: respuestaBot });\n\nif (historialJson.length > 40) {\n  historialJson = historialJson.slice(historialJson.length - 40);\n}\n\nconst ahora = new Date().toISOString();\n\nreturn [\n  {\n    json: {\n      chat_id: chatId,\n      nombre_usuario: nombreUsuario,\n      lead_completo: leadCompleto,\n      respuesta_bot:\n        respuestaBot ||\n        'Hola, soy Matías de Nodo Propiedades. ¿En qué puedo ayudarte con propiedades o el catálogo?',\n      historial_json: JSON.stringify(historialJson),\n      turno: turno,\n      row_exists: rowExists,\n      fecha: ahora,\n      nombre: leadData.nombre || nombreUsuario,\n      zona: leadData.zona || '',\n      presupuesto: leadData.presupuesto || '',\n      tipo_operacion: leadData.operacion || '',\n      temperatura: temperatura,\n      resumen: leadData.resumen || '',\n      texto_usuario: textoUsuario,\n      propiedad_seguimiento: propiedadSeguimiento,\n    },\n  },\n];\n"
+      },
+      "name": "Parsear Respuesta Base",
+      "id": "a1b2c3d4-0006-0006-0006-000000000006",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        304
+      ],
+      "type": "n8n-nodes-base.code"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-lead-001",
+              "leftValue": "={{ $('Parsear Respuesta').first().json.lead_completo }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "IF Lead Completo",
+      "id": "a1b2c3d4-0007-0007-0007-000000000007",
+      "typeVersion": 2.2,
+      "position": [
+        1568,
+        304
+      ],
+      "type": "n8n-nodes-base.if"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1LzSwmJYnrQ5Rc1SpCpY19rLe86LVDfnv2mM1w1aPBiY",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "ignoreTypeMismatch": false,
+          "matchingColumns": [
+            "chat_id"
+          ],
+          "schema": [],
+          "mappingMode": "defineBelow",
+          "attemptToConvertTypes": false,
+          "value": {
+            "chat_id": "={{ $('Parsear Respuesta').first().json.chat_id }}",
+            "fecha": "={{ $('Parsear Respuesta').first().json.fecha }}",
+            "nombre": "={{ $('Parsear Respuesta').first().json.nombre }}",
+            "presupuesto": "={{ $('Parsear Respuesta').first().json.presupuesto }}",
+            "resumen": "={{ $('Parsear Respuesta').first().json.resumen }}",
+            "temperatura": "={{ $('Parsear Respuesta').first().json.temperatura }}",
+            "tipo_operacion": "={{ $('Parsear Respuesta').first().json.tipo_operacion }}",
+            "zona": "={{ $('Parsear Respuesta').first().json.zona }}"
+          }
+        },
+        "options": {}
+      },
+      "name": "Guardar Lead",
+      "id": "a1b2c3d4-0008-0008-0008-000000000008",
+      "typeVersion": 4.5,
+      "position": [
+        1792,
+        160
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Cuenta de Google Sheets"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "17OcN_WHHrAchUAfTxLTrjsB-cpz8nB1H2p6eeVvS_XM",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Hoja 1",
+          "mode": "name"
+        },
+        "columns": {
+          "ignoreTypeMismatch": false,
+          "matchingColumns": [
+            "chat_id"
+          ],
+          "schema": [],
+          "mappingMode": "defineBelow",
+          "attemptToConvertTypes": false,
+          "value": {
+            "chat_id": "={{ $json.chat_id }}",
+            "ultima_actualizacion": "={{ $json.fecha }}",
+            "nombre": "={{ $json.nombre_usuario }}",
+            "historial_json": "={{ $json.historial_json }}",
+            "turno": "={{ $json.turno }}",
+            "propiedad_seguimiento": "={{ $json.propiedad_seguimiento }}",
+            "temperatura": "={{ $json.temperatura }}"
+          }
+        },
+        "options": {}
+      },
+      "name": "Actualizar Historial",
+      "id": "a1b2c3d4-0009-0009-0009-000000000009",
+      "typeVersion": 4.5,
+      "position": [
+        1792,
+        448
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Cuenta de Google Sheets"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Parsear Respuesta Base').first().json.chat_id }}",
+        "text": "={{ $('Parsear Respuesta Base').first().json.respuesta_bot }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "name": "Telegram Responder",
+      "id": "a1b2c3d4-0010-0010-0010-000000000010",
+      "typeVersion": 1.2,
+      "position": [
+        2032,
+        304
+      ],
+      "type": "n8n-nodes-base.telegram",
+      "webhookId": "a52fd1c0-4a56-4cb5-9d42-98f1ff949ae1",
+      "credentials": {
+        "telegramApi": {
+          "id": "__SET_TELEGRAM_CREDENTIAL_ID__",
+          "name": "Telegram Bot Inmobiliaria"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "id": "a755a5cd-89e8-4141-83ea-36ac4a31c82d",
+      "name": "Leer Stock Propiedades",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        576,
+        304
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1sAXgJDFkFbiLPDdqw4vYyCeVC4heWAJ3n92jlrIW-SU"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "range": "A:ZZ",
+              "rangeDefinition": "specifyRangeA1"
+            }
+          }
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Hoja 1"
+        },
+        "resource": "sheet",
+        "operation": "read",
+        "range": "'Hoja 1'!A:ZZ"
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Cuenta de Google Sheets"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "b2c3d4e5-0009-0009-0009-000000000009",
+      "name": "Esperar Lecturas",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        800,
+        304
+      ],
+      "parameters": {
+        "mode": "append",
+        "numberInputs": 3
+      }
+    },
+    {
+      "id": "bot-leads-bot-sheet",
+      "name": "Sync Leads_Bot",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2032,
+        120
+      ],
+      "parameters": {
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "chat_id"
+          ],
+          "schema": [],
+          "value": {
+            "canal_origen": "telegram",
+            "chat_id": "={{ $('Parsear Respuesta').first().json.chat_id }}",
+            "dedupe_key": "={{ 'telegram:' + $('Parsear Respuesta').first().json.chat_id }}",
+            "estado_seguimiento": "ninguno",
+            "last_message": "={{ $('Parsear Respuesta').first().json.texto_usuario || '' }}",
+            "lead_name": "={{ $('Parsear Respuesta').first().json.nombre }}",
+            "nombre": "={{ $('Parsear Respuesta').first().json.nombre }}",
+            "presupuesto": "={{ $('Parsear Respuesta').first().json.presupuesto }}",
+            "source": "telegram",
+            "status": "abierto",
+            "temperature": "={{ $('Parsear Respuesta').first().json.temperatura }}",
+            "tipo_operacion": "={{ $('Parsear Respuesta').first().json.tipo_operacion }}",
+            "ultima_actualizacion": "={{ $now.toISO() }}",
+            "zona": "={{ $('Parsear Respuesta').first().json.zona }}",
+            "lead_completo": "={{ String($('Parsear Respuesta').first().json.lead_completo ? 'si' : 'no') }}",
+            "propiedad_seguimiento": "={{ $('Parsear Respuesta').first().json.propiedad_seguimiento || '' }}"
+          }
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1tjwpgB4V5kd_IsR3BY_bAFc4K5aTp0BdcYhC4fzVia8"
+        },
+        "operation": "appendOrUpdate",
+        "options": {},
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads_Bot"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Cuenta de Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "bot-if-caliente",
+      "name": "IF Temperatura Caliente",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2260,
+        120
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c-hot",
+              "leftValue": "={{ String($('Parsear Respuesta').first().json.temperatura || '').toLowerCase() }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "caliente"
+            }
+          ],
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": false,
+            "typeValidation": "loose"
+          }
+        }
+      }
+    },
+    {
+      "id": "bot-email-hot",
+      "name": "Email Lead Caliente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2500,
+        40
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "jsonBody": "={{ JSON.stringify({ name: 'Nodo Propiedades Bot', email: 'bot@nodopropiedades.local', _subject: 'LEAD CALIENTE Telegram - ' + $('Parsear Respuesta').first().json.nombre, message: 'Lead caliente\\nNombre: ' + $('Parsear Respuesta').first().json.nombre + '\\nZona: ' + $('Parsear Respuesta').first().json.zona + '\\nPresupuesto: ' + $('Parsear Respuesta').first().json.presupuesto + '\\nChat: ' + $('Parsear Respuesta').first().json.chat_id + '\\nResumen: ' + $('Parsear Respuesta').first().json.resumen }) }}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "url": "https://formsubmit.co/ajax/__SET_NOTIFY_EMAIL__"
+      },
+      "onError": "continueRegularOutput",
+      "disabled": true
+    },
+    {
+      "id": "bot-tg-hot",
+      "name": "Telegram Alerta Owner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2500,
+        200
+      ],
+      "parameters": {
+        "jsonBody": "={{ JSON.stringify({ chat_id: '__SET_OWNER_TELEGRAM_CHAT_ID__', text: 'LEAD CALIENTE\\nNombre: ' + $('Parsear Respuesta').first().json.nombre + '\\nZona: ' + $('Parsear Respuesta').first().json.zona + '\\nPresupuesto: ' + $('Parsear Respuesta').first().json.presupuesto + '\\nChat: ' + $('Parsear Respuesta').first().json.chat_id }) }}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "https://api.telegram.org/bot__SET_TELEGRAM_BOT_TOKEN__/sendMessage"
+      },
+      "onError": "continueRegularOutput",
+      "disabled": true
+    },
+    {
+      "id": "tg-n-consultas",
+      "name": "Registrar Consulta Telegram",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1792,
+        560
+      ],
+      "parameters": {
+        "columns": {
+          "mappingMode": "defineBelow",
+          "schema": [],
+          "value": {
+            "anio": "={{ $now.setZone('America/Argentina/Buenos_Aires').toFormat('yyyy') }}",
+            "canal_origen": "telegram",
+            "chat_id": "={{ $('Parsear Respuesta').item.json.chat_id }}",
+            "consulta_id": "={{ 'c_tg_' + $('Parsear Respuesta').item.json.chat_id + '_' + $now.toFormat('yyyyMMddHHmmss') }}",
+            "es_nueva_consulta": "si",
+            "fecha": "={{ $now.toISO() }}",
+            "fecha_local": "={{ $now.setZone('America/Argentina/Buenos_Aires').toFormat('yyyy-MM-dd HH:mm') }}",
+            "intencion": "={{ $('Parsear Respuesta').item.json.tipo_operacion || '' }}",
+            "lead_completo": "={{ String($('Parsear Respuesta').item.json.lead_completo ? 'si' : 'no') }}",
+            "mensaje_cliente": "={{ $('Parsear Respuesta').item.json.texto_usuario || $('Set Variables').item.json.texto_usuario }}",
+            "mes": "={{ $now.setZone('America/Argentina/Buenos_Aires').toFormat('yyyy-MM') }}",
+            "nombre": "={{ $('Parsear Respuesta').item.json.nombre }}",
+            "operacion": "={{ $('Parsear Respuesta').item.json.tipo_operacion || '' }}",
+            "presupuesto": "={{ $('Parsear Respuesta').item.json.presupuesto || '' }}",
+            "respuesta_bot": "={{ $('Parsear Respuesta').item.json.respuesta_bot }}",
+            "temperature": "={{ $('Parsear Respuesta').item.json.temperatura || '' }}",
+            "zona": "={{ $('Parsear Respuesta').item.json.zona || '' }}"
+          }
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1tjwpgB4V5kd_IsR3BY_bAFc4K5aTp0BdcYhC4fzVia8"
+        },
+        "operation": "append",
+        "options": {
+          "useAppend": true
+        },
+        "resource": "sheet",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Consultas"
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Cuenta de Google Sheets"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "bot-leer-politicas-pago",
+      "name": "Leer Politicas Pago",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        576,
+        520
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1sAXgJDFkFbiLPDdqw4vYyCeVC4heWAJ3n92jlrIW-SU"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Politicas_Pago"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "range": "A:ZZ",
+              "rangeDefinition": "specifyRangeA1"
+            }
+          }
+        },
+        "resource": "sheet",
+        "operation": "read",
+        "range": "'Politicas_Pago'!A:ZZ"
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__SET_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Cuenta de Google Sheets"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "emit-panel-realtime",
+      "name": "Emit Panel Realtime",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1792,
+        520
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/panel-realtime-emit",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'chat.message', payload: { chatId: String(($('Parsear Respuesta').first().json.chat_id || $('Set Variables').first().json.chat_id || '')), mensajeCliente: String(($('Set Variables').first().json.texto_usuario || '')), respuestaBot: String(($('Parsear Respuesta').first().json.respuesta_bot || '')), source: 'telegram' } }) }}",
+        "options": {
+          "timeout": 3000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "disabled": true
+    },
+    {
+      "id": "emit-lead-updated",
+      "name": "Emit Lead Updated",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2260,
+        280
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/panel-realtime-emit",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'lead.updated', payload: { chatId: String($json.chat_id || $('Parsear Respuesta').first().json.chat_id || ''), temperatura: String($json.temperature || $json.temperatura || $('Parsear Respuesta').first().json.temperatura || ''), source: 'telegram-sync' } }) }}",
+        "options": {
+          "timeout": 3000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput",
+      "disabled": true
+    },
+    {
+      "id": "v11-preparar-clasificacion",
+      "name": "Preparar Clasificación",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1564,
+        524
+      ],
+      "parameters": {
+        "jsCode": "const SYSTEM_MIN = \"Sos Matías, asesor inmobiliario de Nodo Propiedades (Argentina). Clasificá el mensaje del cliente y respondé en español argentino profesional (sin 'che'). Al FINAL agregá exactamente este bloque (obligatorio en esta validación):\\n###LEAD_COMPLETO###\\n{\\\"nombre\\\":\\\"...\\\",\\\"zona\\\":\\\"...\\\",\\\"presupuesto\\\":\\\"...\\\",\\\"operacion\\\":\\\"compra|alquiler|consulta\\\",\\\"temperatura\\\":\\\"caliente|tibio|frio\\\",\\\"resumen\\\":\\\"...\\\"}\\n###FIN_LEAD###\\nSi falta un dato usá \\\"\\\" o \\\"Cliente\\\". temperatura: caliente=urgencia o datos claros; tibio=interés sin urgencia; frio=curiosidad.\";\nconst base = $('Parsear Respuesta Base').first().json || {};\nlet hist = [];\ntry {\n  const parsed = JSON.parse(base.historial_json || '[]');\n  hist = Array.isArray(parsed) ? parsed : [];\n} catch (e) {\n  hist = [];\n}\nconst userMsgs = hist\n  .filter((m) => m && String(m.role || '') === 'user')\n  .map((m) => String(m.content == null ? '' : m.content));\nconst last6 = userMsgs.slice(-6);\nconst content = last6.join('\\n');\nreturn [{\n  json: {\n    messages: [\n      { role: 'system', content: SYSTEM_MIN },\n      { role: 'user', content: content },\n    ],\n  },\n}];\n"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: 'openai/gpt-oss-120b', messages: $json.messages, temperature: 0.7, max_tokens: 1200, reasoning_effort: 'low' } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "name": "HTTP Groq Clasificador",
+      "id": "v11-http-groq-clasificador",
+      "typeVersion": 4.2,
+      "position": [
+        1784,
+        524
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "credentials": {
+        "openAiApi": {
+          "id": "GgWE6f3vqREslMLv",
+          "name": "Groq API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "v11-parsear-respuesta",
+      "name": "Parsear Respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2004,
+        524
+      ],
+      "parameters": {
+        "jsCode": "function normalizeTemp(v) {\n  return String(v || '')\n    .toLowerCase()\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .trim();\n}\n\nfunction parseClasificadorTemperatura(httpJson) {\n  if (httpJson == null) {\n    return { ok: false, temperatura: '', cruda: '', error: 'sin_respuesta_http' };\n  }\n  if (httpJson.error != null) {\n    const msg =\n      typeof httpJson.error === 'string'\n        ? httpJson.error\n        : httpJson.error.message || JSON.stringify(httpJson.error);\n    return { ok: false, temperatura: '', cruda: '', error: 'http_error:' + msg };\n  }\n  const msg = (httpJson.choices && httpJson.choices[0] && httpJson.choices[0].message) || {};\n  let text = msg.content == null ? '' : String(msg.content);\n  text = text.replace(/<think>[\\s\\S]*?<\\/think>/gi, '').trim();\n  const re = /###LEAD_COMPLETO###[\\s\\S]*?({[\\s\\S]*?})[\\s\\S]*?###FIN_LEAD###/;\n  const m = text.match(re);\n  if (!m) {\n    return { ok: false, temperatura: '', cruda: '', error: 'sin_bloque' };\n  }\n  let lead;\n  try {\n    lead = JSON.parse(m[1].trim());\n  } catch (e) {\n    return { ok: false, temperatura: '', cruda: '', error: 'json_roto:' + e.message };\n  }\n  const cruda = lead && lead.temperatura == null ? '' : String(lead.temperatura);\n  const norm = normalizeTemp(cruda);\n  if (norm === 'frio' || norm === 'tibio' || norm === 'caliente') {\n    return { ok: true, temperatura: norm, cruda: cruda, error: '' };\n  }\n  return { ok: false, temperatura: '', cruda: cruda, error: 'temperatura_invalida:' + cruda };\n}\n\nfunction tokensFromUsage(httpJson) {\n  const usage = (httpJson && httpJson.usage) || {};\n  if (usage.total_tokens != null) return Number(usage.total_tokens);\n  if (usage.prompt_tokens != null && usage.completion_tokens != null) {\n    return Number(usage.prompt_tokens) + Number(usage.completion_tokens);\n  }\n  return '';\n}\n\nconst base = Object.assign({}, $('Parsear Respuesta Base').first().json || {});\nconst temperatura_prompt_principal = base.temperatura;\nconst httpJson = $json || {};\nconst parsed = parseClasificadorTemperatura(httpJson);\nconst tokens_clasificador = tokensFromUsage(httpJson);\nconst out = Object.assign({}, base);\nout.temperatura_prompt_principal = temperatura_prompt_principal;\nout.temperatura_clasificador_cruda = parsed.cruda;\nout.tokens_clasificador = tokens_clasificador;\nif (parsed.ok) {\n  out.temperatura = parsed.temperatura;\n  out.clasificacion_fuente = 'clasificador';\n  delete out.clasificacion_error;\n} else {\n  out.temperatura = temperatura_prompt_principal;\n  out.clasificacion_fuente = 'fallback_prompt_principal';\n  out.clasificacion_error = parsed.error;\n}\nreturn [{ json: out }];\n"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        304
+      ],
+      "webhookId": "7012a561-149f-46d6-8864-47a481d9c26e",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tesis-v11-campana",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "id": "tesis-campana-normalizar-update",
+      "name": "Normalizar Update Telegram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        304
+      ],
+      "parameters": {
+        "jsCode": "const b = ($json && $json.body && $json.body.message) ? $json.body : $json;\nreturn [{ json: b }];"
+      }
+    }
+  ],
+  "connections": {
+    "Construir Prompt": {
+      "main": [
+        [
+          {
+            "node": "HTTP Groq",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Groq": {
+      "main": [
+        [
+          {
+            "node": "Parsear Respuesta Base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Lead Completo": {
+      "main": [
+        [
+          {
+            "node": "Guardar Lead",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF Temperatura Caliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Variables": {
+      "main": [
+        [
+          {
+            "node": "Leer Stock Propiedades",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Leer Historial",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Leer Politicas Pago",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Stock Propiedades": {
+      "main": [
+        [
+          {
+            "node": "Esperar Lecturas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Historial": {
+      "main": [
+        [
+          {
+            "node": "Esperar Lecturas",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Esperar Lecturas": {
+      "main": [
+        [
+          {
+            "node": "Construir Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Lead": {
+      "main": [
+        []
+      ]
+    },
+    "Sync Leads_Bot": {
+      "main": [
+        [
+          {
+            "node": "Emit Lead Updated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Temperatura Caliente": {
+      "main": [
+        [
+          {
+            "node": "Email Lead Caliente",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Alerta Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Politicas Pago": {
+      "main": [
+        [
+          {
+            "node": "Esperar Lecturas",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Parsear Respuesta Base": {
+      "main": [
+        [
+          {
+            "node": "Telegram Responder",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Preparar Clasificación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Clasificación": {
+      "main": [
+        [
+          {
+            "node": "HTTP Groq Clasificador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Groq Clasificador": {
+      "main": [
+        [
+          {
+            "node": "Parsear Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear Respuesta": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Historial",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF Lead Completo",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar Consulta Telegram",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sync Leads_Bot",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Emit Panel Realtime",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Update Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Update Telegram": {
+      "main": [
+        [
+          {
+            "node": "Set Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "binaryMode": "separate"
+  },
+  "staticData": null
+}

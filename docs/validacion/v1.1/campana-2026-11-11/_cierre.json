@@ -1,0 +1,43 @@
+{
+  "n": 30,
+  "stockAll": true,
+  "stockSha": "83fdca32d1f5b395f5c01025ef7734e239a6b5ba040111d589ad5c270be0f571",
+  "hashBefore": "ced49e79e72e1ffdc4b6743ee45d3131b3596be13e5e4c339a25464bd16123eb",
+  "hashAfter": "ced49e79e72e1ffdc4b6743ee45d3131b3596be13e5e4c339a25464bd16123eb",
+  "expected": "ced49e79e72e1ffdc4b6743ee45d3131b3596be13e5e4c339a25464bd16123eb",
+  "hashMatch": true,
+  "activeAfter": true,
+  "counts": {
+    "matrix": {
+      "caliente": {
+        "caliente": 10,
+        "tibio": 0,
+        "frio": 0,
+        "otro": 0
+      },
+      "tibio": {
+        "caliente": 0,
+        "tibio": 6,
+        "frio": 4,
+        "otro": 0
+      },
+      "frio": {
+        "caliente": 0,
+        "tibio": 0,
+        "frio": 10,
+        "otro": 0
+      }
+    },
+    "fuenteClas": 29,
+    "fuenteFb": 1,
+    "leadSi": 2,
+    "leadNo": 28,
+    "tokens": 96111,
+    "okNo": {
+      "historial_ok": 0,
+      "leads_bot_ok": 0,
+      "guardar_lead_ok": 0
+    },
+    "n": 30
+  }
+}
