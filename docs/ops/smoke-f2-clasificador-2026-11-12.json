@@ -1,0 +1,71 @@
+{
+  "ok": false,
+  "rows": [
+    {
+      "id": "CAL-03",
+      "expect": "caliente",
+      "chat_id": 893000101,
+      "exec": "14726",
+      "temperatura": "caliente",
+      "fuente": "clasificador",
+      "conversando": false,
+      "clasifRan": true,
+      "match": true
+    },
+    {
+      "id": "CAL-09",
+      "expect": "caliente",
+      "chat_id": 893000109,
+      "exec": "14727",
+      "temperatura": "caliente",
+      "fuente": "clasificador",
+      "conversando": false,
+      "clasifRan": true,
+      "match": true
+    },
+    {
+      "id": "TIB-12",
+      "expect": "tibio",
+      "chat_id": 893000112,
+      "exec": "14729",
+      "temperatura": "tibio",
+      "fuente": "clasificador",
+      "conversando": true,
+      "clasifRan": true,
+      "match": true
+    },
+    {
+      "id": "TIB-15",
+      "expect": "tibio",
+      "chat_id": 893000115,
+      "exec": "14730",
+      "temperatura": "frio",
+      "fuente": "clasificador",
+      "conversando": false,
+      "clasifRan": true,
+      "match": false
+    },
+    {
+      "id": "FRI-21",
+      "expect": "frio",
+      "chat_id": 893000121,
+      "exec": "14731",
+      "temperatura": "frio",
+      "fuente": "clasificador",
+      "conversando": true,
+      "clasifRan": true,
+      "match": true
+    },
+    {
+      "id": "HOLA",
+      "expect": null,
+      "chat_id": 893000199,
+      "exec": "14732",
+      "temperatura": "frio",
+      "fuente": "clasificador",
+      "conversando": true,
+      "clasifRan": true,
+      "match": true
+    }
+  ]
+}

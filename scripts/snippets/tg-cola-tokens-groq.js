@@ -9,7 +9,7 @@ const j = $input.first().json || {};
 const chatId = String(j.chat_id || '').trim();
 
 const DEFAULT_TPM = 7500; // headroom bajo 8k free
-const DEFAULT_EST = 5200; // pedidos reales ~5k
+const DEFAULT_EST = 6200; // ~5.2k respuesta + ~1k clasificador v1.1
 const MAX_WAIT_MS = 5 * 60 * 1000;
 const MIN_SLOT_MS = 20 * 1000;
 
