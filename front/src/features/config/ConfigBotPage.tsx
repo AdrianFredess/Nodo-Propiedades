@@ -58,6 +58,14 @@ function bridgeBase(): string {
   return 'http://127.0.0.1:3099';
 }
 
+function panelHeaders(json = false): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (json) headers['Content-Type'] = 'application/json';
+  const token = String(import.meta.env.VITE_PANEL_API_TOKEN || '').trim();
+  if (token) headers['X-Panel-Token'] = token;
+  return headers;
+}
+
 export function ConfigBotPage() {
   const [cfg, setCfg] = useState<BotConfig>(DEFAULTS);
   const [status, setStatus] = useState('');
@@ -67,7 +75,9 @@ export function ConfigBotPage() {
 
   async function loadHistory() {
     try {
-      const r = await fetch(`${bridgeBase()}/bot-config/history`);
+      const r = await fetch(`${bridgeBase()}/bot-config/history`, {
+        headers: panelHeaders(),
+      });
       const j = (await r.json()) as { items?: { id: string }[] };
       setHistory(j.items || []);
     } catch {
@@ -79,7 +89,9 @@ export function ConfigBotPage() {
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch(`${bridgeBase()}/bot-config`);
+        const r = await fetch(`${bridgeBase()}/bot-config`, {
+          headers: panelHeaders(),
+        });
         const j = (await r.json()) as { config?: BotConfig };
         if (!cancelled && j.config) setCfg({ ...DEFAULTS, ...j.config });
       } catch {
@@ -107,7 +119,7 @@ export function ConfigBotPage() {
     try {
       const r = await fetch(`${bridgeBase()}/bot-config`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: panelHeaders(true),
         body: JSON.stringify(cfg),
       });
       const j = (await r.json()) as { ok?: boolean; note?: string; error?: string };
@@ -115,10 +127,7 @@ export function ConfigBotPage() {
         setStatus(j.error || 'No se pudo guardar en el bridge');
         return;
       }
-      setStatus(
-        (j.note || 'Guardado.') +
-          ' Para n8n vivo: node scripts/patch-advisor-learning.js --deploy',
-      );
+      setStatus('Listo. Matías responde así desde el próximo mensaje.');
       void loadHistory();
     } catch {
       setStatus('Guardado local. Bridge offline — revisá ws-bridge :3099');
@@ -130,7 +139,7 @@ export function ConfigBotPage() {
     try {
       const r = await fetch(`${bridgeBase()}/bot-config/restore`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: panelHeaders(true),
         body: JSON.stringify({ id }),
       });
       const j = (await r.json()) as { ok?: boolean; config?: BotConfig; error?: string };

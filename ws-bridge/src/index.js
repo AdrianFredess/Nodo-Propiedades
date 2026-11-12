@@ -20,8 +20,12 @@ const BOT_CONFIG_PATH = path.resolve(__dirname, '..', '..', 'data', 'bot-config.
 const PORT = Number(process.env.WS_BRIDGE_PORT || 3099);
 const HOST = process.env.WS_BRIDGE_HOST || '0.0.0.0';
 const TOKEN = String(process.env.WS_BRIDGE_TOKEN || '').trim();
+const PANEL_TOKEN = String(process.env.PANEL_API_TOKEN || process.env.WS_BRIDGE_TOKEN || '').trim();
 const EMIT_WINDOW_MS = Number(process.env.WS_EMIT_RATE_WINDOW_MS || 60_000);
 const EMIT_MAX_PER_WINDOW = Number(process.env.WS_EMIT_RATE_MAX || 60);
+
+const TONO_OK = new Set(['profesional_cercano', 'formal', 'distendido']);
+const GUIA_TIPOS = new Set(['estilo', 'preguntar_antes', 'derivar']);
 
 /** @type {Map<string, number[]>} */
 const emitRateLog = new Map();
@@ -35,7 +39,8 @@ function json(res, status, body) {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Bridge-Token',
+    'Access-Control-Allow-Headers':
+      'Content-Type, Authorization, X-Bridge-Token, X-Panel-Token',
   });
   res.end(raw);
 }
@@ -69,6 +74,55 @@ function tokenOk(req, body) {
       : '');
   const fromBody = body && typeof body.token === 'string' ? body.token : '';
   return String(header || fromBody).trim() === TOKEN;
+}
+
+function panelTokenOk(req) {
+  if (!PANEL_TOKEN) return true;
+  const header = String(req.headers['x-panel-token'] || '').trim();
+  const bearer = String(req.headers.authorization || '').startsWith('Bearer ')
+    ? String(req.headers.authorization).slice(7).trim()
+    : '';
+  return header === PANEL_TOKEN || bearer === PANEL_TOKEN;
+}
+
+/** Normaliza y valida bot-config (Fase 3 + campos Fase 4). */
+function normalizeBotConfig(body) {
+  const b = body && typeof body === 'object' ? body : {};
+  const tono = String(b.tono || 'profesional_cercano');
+  if (!TONO_OK.has(tono)) {
+    return { ok: false, error: 'tono_invalido' };
+  }
+  const guiasIn = Array.isArray(b.guias) ? b.guias : [];
+  if (guiasIn.length > 15) return { ok: false, error: 'guias_max_15' };
+  const guias = [];
+  for (const g of guiasIn) {
+    const tipo = String(g?.tipo || '');
+    const texto = String(g?.texto || '').trim();
+    if (!GUIA_TIPOS.has(tipo)) return { ok: false, error: 'guia_tipo_invalido' };
+    if (texto.length > 300) return { ok: false, error: 'guia_texto_largo' };
+    if (texto) guias.push({ tipo, texto: texto.slice(0, 300) });
+  }
+  const cfg = {
+    tono,
+    umbral_derivacion: String(b.umbral_derivacion || 'normal'),
+    horario_humano_desde: String(b.horario_humano_desde || '09:00'),
+    horario_humano_hasta: String(b.horario_humano_hasta || '18:00'),
+    mensaje_derivacion: String(b.mensaje_derivacion || 'te_paso'),
+    vendedor_nombre: String(b.vendedor_nombre || 'Adrian'),
+    panel_base_url: String(b.panel_base_url || 'http://localhost:5173'),
+    inmobiliaria_nombre: String(b.inmobiliaria_nombre || ''),
+    asesor_nombre: String(b.asesor_nombre || ''),
+    zonas: Array.isArray(b.zonas)
+      ? b.zonas.map((z) => String(z || '').trim()).filter(Boolean).slice(0, 30)
+      : [],
+    operaciones: Array.isArray(b.operaciones)
+      ? b.operaciones.map((o) => String(o || '').trim()).filter(Boolean)
+      : [],
+    guias,
+    ejemplo_estilo: String(b.ejemplo_estilo || '').slice(0, 400),
+    mandar_en_partes: b.mandar_en_partes === false ? false : true,
+  };
+  return { ok: true, config: cfg };
 }
 
 function clientIp(req) {
@@ -119,6 +173,10 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && url.pathname === '/bot-config') {
+    if (!panelTokenOk(req)) {
+      json(res, 401, { ok: false, error: 'token_invalido' });
+      return;
+    }
     try {
       const raw = fs.readFileSync(BOT_CONFIG_PATH, 'utf8');
       json(res, 200, { ok: true, config: JSON.parse(raw) });
@@ -140,11 +198,19 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && url.pathname === '/bot-config/history') {
+    if (!panelTokenOk(req)) {
+      json(res, 401, { ok: false, error: 'token_invalido' });
+      return;
+    }
     json(res, 200, { ok: true, items: listarSnapshots(BOT_CONFIG_PATH) });
     return;
   }
 
   if (req.method === 'POST' && url.pathname === '/bot-config/restore') {
+    if (!panelTokenOk(req)) {
+      json(res, 401, { ok: false, error: 'token_invalido' });
+      return;
+    }
     let body;
     try {
       body = await readBody(req);
@@ -169,6 +235,10 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'POST' && url.pathname === '/bot-config') {
+    if (!panelTokenOk(req)) {
+      json(res, 401, { ok: false, error: 'token_invalido' });
+      return;
+    }
     let body;
     try {
       body = await readBody(req);
@@ -176,20 +246,17 @@ const server = http.createServer(async (req, res) => {
       json(res, 400, { ok: false, error: 'json_invalido' });
       return;
     }
-    const cfg = {
-      tono: String(body.tono || 'profesional_cercano'),
-      umbral_derivacion: String(body.umbral_derivacion || 'normal'),
-      horario_humano_desde: String(body.horario_humano_desde || '09:00'),
-      horario_humano_hasta: String(body.horario_humano_hasta || '18:00'),
-      mensaje_derivacion: String(body.mensaje_derivacion || 'te_paso'),
-      vendedor_nombre: String(body.vendedor_nombre || 'Adrian'),
-      panel_base_url: String(body.panel_base_url || 'http://localhost:5173'),
-    };
+    const norm = normalizeBotConfig(body);
+    if (!norm.ok) {
+      json(res, 400, { ok: false, error: norm.error });
+      return;
+    }
+    const cfg = norm.config;
     try {
       fs.mkdirSync(path.dirname(BOT_CONFIG_PATH), { recursive: true });
       guardarSnapshot(BOT_CONFIG_PATH);
       fs.writeFileSync(BOT_CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
-      json(res, 200, { ok: true, config: cfg, note: 'Guardado. Redeploy patch para inyectar en n8n.' });
+      json(res, 200, { ok: true, config: cfg });
     } catch (err) {
       json(res, 500, { ok: false, error: err instanceof Error ? err.message : 'write_fail' });
     }
