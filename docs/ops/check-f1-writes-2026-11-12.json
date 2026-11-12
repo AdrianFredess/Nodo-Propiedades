@@ -1,0 +1,110 @@
+{
+  "happyOk": true,
+  "brokenOk": true,
+  "happy": [
+    {
+      "chat_id": 893000001,
+      "exec_id": "14690",
+      "lead_completo": false,
+      "temperatura": "tibio",
+      "writers": {
+        "historial": {
+          "ran": true,
+          "err": ""
+        },
+        "sync": {
+          "ran": true,
+          "err": ""
+        },
+        "consulta": {
+          "ran": true,
+          "err": ""
+        },
+        "guardar": {
+          "ran": true,
+          "err": ""
+        }
+      },
+      "sheets": {
+        "Leads_Completos": true,
+        "historial": true,
+        "Leads_Bot": true,
+        "Consultas": true
+      },
+      "ok": true
+    },
+    {
+      "chat_id": 893000002,
+      "exec_id": "14692",
+      "lead_completo": false,
+      "temperatura": "tibio",
+      "writers": {
+        "historial": {
+          "ran": true,
+          "err": ""
+        },
+        "sync": {
+          "ran": true,
+          "err": ""
+        },
+        "consulta": {
+          "ran": true,
+          "err": ""
+        },
+        "guardar": {
+          "ran": true,
+          "err": ""
+        }
+      },
+      "sheets": {
+        "Leads_Completos": true,
+        "historial": true,
+        "Leads_Bot": true,
+        "Consultas": true
+      },
+      "ok": true
+    },
+    {
+      "chat_id": 893000003,
+      "exec_id": "14695",
+      "lead_completo": false,
+      "temperatura": "tibio",
+      "writers": {
+        "historial": {
+          "ran": true,
+          "err": ""
+        },
+        "sync": {
+          "ran": true,
+          "err": ""
+        },
+        "consulta": {
+          "ran": true,
+          "err": ""
+        },
+        "guardar": {
+          "ran": true,
+          "err": ""
+        }
+      },
+      "sheets": {
+        "Leads_Completos": true,
+        "historial": true,
+        "Leads_Bot": true,
+        "Consultas": true
+      },
+      "ok": true
+    }
+  ],
+  "broken": {
+    "alertFlushes": 1,
+    "chatsInAlerts": [
+      "893000001",
+      "893000002",
+      "893000003"
+    ],
+    "ok": true,
+    "sample": "ALERTA escritura Sheets (Nodo Propiedades)\n\n- Nodo: Sync Leads_Bot\n  Hoja: Leads_Bot\n  Error: The resource you are requesting could not be found\n  chat_id: 893000001, 893000002, 893000003"
+  },
+  "note": "Check A corrido antes; Check B re-corrido tras fix flush distinct en todos los Detect"
+}

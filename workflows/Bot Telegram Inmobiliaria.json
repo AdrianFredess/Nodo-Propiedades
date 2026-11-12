@@ -220,7 +220,7 @@
         },
         "sheetName": {
           "__rl": true,
-          "value": "Sheet1",
+          "value": "Leads_Completos",
           "mode": "name"
         },
         "columns": {
@@ -669,7 +669,10 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "X-Panel-Token", "value": "={{ $env.PANEL_API_TOKEN }}" }
+            {
+              "name": "X-Panel-Token",
+              "value": "={{ $env.PANEL_API_TOKEN }}"
+            }
           ]
         },
         "sendBody": true,
@@ -700,7 +703,10 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "X-Panel-Token", "value": "={{ $env.PANEL_API_TOKEN }}" }
+            {
+              "name": "X-Panel-Token",
+              "value": "={{ $env.PANEL_API_TOKEN }}"
+            }
           ]
         },
         "sendBody": true,
@@ -1717,6 +1723,438 @@
       "parameters": {
         "jsCode": "const item = $input.first().json || {};\nconst updateId = Number(item.update_id || 0);\nconst sd = $getWorkflowStaticData('global');\nif (!Array.isArray(sd.seenUpdateIds)) sd.seenUpdateIds = [];\nif (updateId && sd.seenUpdateIds.indexOf(updateId) >= 0) return [];\nif (updateId) {\n  sd.seenUpdateIds.push(updateId);\n  if (sd.seenUpdateIds.length > 200) sd.seenUpdateIds = sd.seenUpdateIds.slice(-200);\n}\nreturn [{ json: item }];\n"
       }
+    },
+    {
+      "id": "mvp-f1-detect-9acb2b817e7a",
+      "name": "Detectar Error Escritura · Guardar Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4140,
+        120
+      ],
+      "parameters": {
+        "jsCode": "const SHEETS_WRITE_ALERT_MS = 60 * 60 * 1000;\nconst item = $input.first() || {};\nconst j = item.json || {};\nlet chatId = String(j.chat_id || '').trim();\ntry {\n  if (!chatId) chatId = String(($('Parsear Respuesta').first().json || {}).chat_id || '').trim();\n} catch (e) {}\ntry {\n  if (!chatId) chatId = String(($('Set Variables').first().json || {}).chat_id || '').trim();\n} catch (e) {}\n\nfunction errMsg(err) {\n  if (err == null) return '';\n  if (typeof err === 'string') return err.slice(0, 240);\n  return String(err.message || err.description || err.error || JSON.stringify(err)).slice(0, 240);\n}\n\n// Google Sheets + onError=continueRegularOutput deja el fallo en item.error\n// (no siempre en json.error). También contemplamos json.error por si el nodo lo mezcla.\nconst msg = errMsg(item.error) || errMsg(j.error);\nconst sd = $getWorkflowStaticData('global');\nif (!sd.writeSheetsAlert) {\n  sd.writeSheetsAlert = { lastSentAt: 0, pending: [] };\n}\nconst st = sd.writeSheetsAlert;\nif (!Array.isArray(st.pending)) st.pending = [];\n\nif (msg) {\n  st.pending.push({\n    at: new Date().toISOString(),\n    nodo: \"Guardar Lead\",\n    hoja: \"Leads_Completos\",\n    error: msg,\n    chat_id: chatId || '(sin chat_id)',\n  });\n}\n\nconst now = Date.now();\nconst due = !st.lastSentAt || now - Number(st.lastSentAt) >= SHEETS_WRITE_ALERT_MS;\nlet alertar = false;\nlet texto = '';\nif (due && st.pending.length) {\n  const byKey = new Map();\n  for (const p of st.pending) {\n    const k = p.nodo + '|' + p.hoja + '|' + p.error;\n    if (!byKey.has(k)) byKey.set(k, { ...p, chats: new Set() });\n    byKey.get(k).chats.add(p.chat_id);\n  }\n  const lines = ['ALERTA escritura Sheets (Nodo Propiedades)'];\n  for (const g of byKey.values()) {\n    lines.push(\n      '- Nodo: ' +\n        g.nodo +\n        '\\n  Hoja: ' +\n        g.hoja +\n        '\\n  Error: ' +\n        g.error +\n        '\\n  chat_id: ' +\n        [...g.chats].join(', '),\n    );\n  }\n  texto = lines.join('\\n\\n').slice(0, 3500);\n  alertar = true;\n  st.lastSentAt = now;\n  st.pending = [];\n}\n\nconst out = Object.assign({}, j);\nout._write_sheets_ok = !msg;\nout._write_sheets_error = msg || '';\nout.alertar_escritura_sheets = alertar;\nout.escritura_alerta_texto = texto;\nreturn [{ json: out }];\n"
+      }
+    },
+    {
+      "id": "mvp-f1-if-9acb2b817e7a",
+      "name": "IF Alerta Escritura · Guardar Lead",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4360,
+        40
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-write-alert",
+              "leftValue": "={{ Boolean($json.alertar_escritura_sheets) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "mvp-f1-tg-9acb2b817e7a",
+      "name": "Telegram Alerta Escritura · Guardar Lead",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4580,
+        40
+      ],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "__SET_OWNER_TELEGRAM_CHAT_ID__",
+        "text": "={{ String($json.escritura_alerta_texto || \"\") }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "telegramApi": {
+          "id": "__SET_TELEGRAM_CREDENTIAL_ID__",
+          "name": "Telegram Bot Inmobiliaria"
+        }
+      }
+    },
+    {
+      "id": "mvp-f1-detect-da6dcc47cf10",
+      "name": "Detectar Error Escritura · Actualizar Historial",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3750,
+        340
+      ],
+      "parameters": {
+        "jsCode": "const SHEETS_WRITE_ALERT_MS = 60 * 60 * 1000;\nconst item = $input.first() || {};\nconst j = item.json || {};\nlet chatId = String(j.chat_id || '').trim();\ntry {\n  if (!chatId) chatId = String(($('Parsear Respuesta').first().json || {}).chat_id || '').trim();\n} catch (e) {}\ntry {\n  if (!chatId) chatId = String(($('Set Variables').first().json || {}).chat_id || '').trim();\n} catch (e) {}\n\nfunction errMsg(err) {\n  if (err == null) return '';\n  if (typeof err === 'string') return err.slice(0, 240);\n  return String(err.message || err.description || err.error || JSON.stringify(err)).slice(0, 240);\n}\n\n// Google Sheets + onError=continueRegularOutput deja el fallo en item.error\n// (no siempre en json.error). También contemplamos json.error por si el nodo lo mezcla.\nconst msg = errMsg(item.error) || errMsg(j.error);\nconst sd = $getWorkflowStaticData('global');\nif (!sd.writeSheetsAlert) {\n  sd.writeSheetsAlert = { lastSentAt: 0, pending: [] };\n}\nconst st = sd.writeSheetsAlert;\nif (!Array.isArray(st.pending)) st.pending = [];\n\nif (msg) {\n  st.pending.push({\n    at: new Date().toISOString(),\n    nodo: \"Actualizar Historial\",\n    hoja: \"Hoja 1 (conversaciones)\",\n    error: msg,\n    chat_id: chatId || '(sin chat_id)',\n  });\n}\n\nconst now = Date.now();\nconst due = !st.lastSentAt || now - Number(st.lastSentAt) >= SHEETS_WRITE_ALERT_MS;\nlet alertar = false;\nlet texto = '';\nif (due && st.pending.length) {\n  const byKey = new Map();\n  for (const p of st.pending) {\n    const k = p.nodo + '|' + p.hoja + '|' + p.error;\n    if (!byKey.has(k)) byKey.set(k, { ...p, chats: new Set() });\n    byKey.get(k).chats.add(p.chat_id);\n  }\n  const lines = ['ALERTA escritura Sheets (Nodo Propiedades)'];\n  for (const g of byKey.values()) {\n    lines.push(\n      '- Nodo: ' +\n        g.nodo +\n        '\\n  Hoja: ' +\n        g.hoja +\n        '\\n  Error: ' +\n        g.error +\n        '\\n  chat_id: ' +\n        [...g.chats].join(', '),\n    );\n  }\n  texto = lines.join('\\n\\n').slice(0, 3500);\n  alertar = true;\n  st.lastSentAt = now;\n  st.pending = [];\n}\n\nconst out = Object.assign({}, j);\nout._write_sheets_ok = !msg;\nout._write_sheets_error = msg || '';\nout.alertar_escritura_sheets = alertar;\nout.escritura_alerta_texto = texto;\nreturn [{ json: out }];\n"
+      }
+    },
+    {
+      "id": "mvp-f1-if-da6dcc47cf10",
+      "name": "IF Alerta Escritura · Actualizar Historial",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3970,
+        260
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-write-alert",
+              "leftValue": "={{ Boolean($json.alertar_escritura_sheets) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "mvp-f1-tg-da6dcc47cf10",
+      "name": "Telegram Alerta Escritura · Actualizar Historial",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4190,
+        260
+      ],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "__SET_OWNER_TELEGRAM_CHAT_ID__",
+        "text": "={{ String($json.escritura_alerta_texto || \"\") }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "telegramApi": {
+          "id": "__SET_TELEGRAM_CREDENTIAL_ID__",
+          "name": "Telegram Bot Inmobiliaria"
+        }
+      }
+    },
+    {
+      "id": "mvp-f1-detect-826db4c6fe62",
+      "name": "Detectar Error Escritura · Sync Leads_Bot",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3750,
+        700
+      ],
+      "parameters": {
+        "jsCode": "const SHEETS_WRITE_ALERT_MS = 60 * 60 * 1000;\nconst item = $input.first() || {};\nconst j = item.json || {};\nlet chatId = String(j.chat_id || '').trim();\ntry {\n  if (!chatId) chatId = String(($('Parsear Respuesta').first().json || {}).chat_id || '').trim();\n} catch (e) {}\ntry {\n  if (!chatId) chatId = String(($('Set Variables').first().json || {}).chat_id || '').trim();\n} catch (e) {}\n\nfunction errMsg(err) {\n  if (err == null) return '';\n  if (typeof err === 'string') return err.slice(0, 240);\n  return String(err.message || err.description || err.error || JSON.stringify(err)).slice(0, 240);\n}\n\n// Google Sheets + onError=continueRegularOutput deja el fallo en item.error\n// (no siempre en json.error). También contemplamos json.error por si el nodo lo mezcla.\nconst msg = errMsg(item.error) || errMsg(j.error);\nconst sd = $getWorkflowStaticData('global');\nif (!sd.writeSheetsAlert) {\n  sd.writeSheetsAlert = { lastSentAt: 0, pending: [] };\n}\nconst st = sd.writeSheetsAlert;\nif (!Array.isArray(st.pending)) st.pending = [];\n\nif (msg) {\n  st.pending.push({\n    at: new Date().toISOString(),\n    nodo: \"Sync Leads_Bot\",\n    hoja: \"Leads_Bot\",\n    error: msg,\n    chat_id: chatId || '(sin chat_id)',\n  });\n}\n\nconst now = Date.now();\nconst due = !st.lastSentAt || now - Number(st.lastSentAt) >= SHEETS_WRITE_ALERT_MS;\nlet alertar = false;\nlet texto = '';\nif (due && st.pending.length) {\n  const byKey = new Map();\n  for (const p of st.pending) {\n    const k = p.nodo + '|' + p.hoja + '|' + p.error;\n    if (!byKey.has(k)) byKey.set(k, { ...p, chats: new Set() });\n    byKey.get(k).chats.add(p.chat_id);\n  }\n  const lines = ['ALERTA escritura Sheets (Nodo Propiedades)'];\n  for (const g of byKey.values()) {\n    lines.push(\n      '- Nodo: ' +\n        g.nodo +\n        '\\n  Hoja: ' +\n        g.hoja +\n        '\\n  Error: ' +\n        g.error +\n        '\\n  chat_id: ' +\n        [...g.chats].join(', '),\n    );\n  }\n  texto = lines.join('\\n\\n').slice(0, 3500);\n  alertar = true;\n  st.lastSentAt = now;\n  st.pending = [];\n}\n\nconst out = Object.assign({}, j);\nout._write_sheets_ok = !msg;\nout._write_sheets_error = msg || '';\nout.alertar_escritura_sheets = alertar;\nout.escritura_alerta_texto = texto;\nreturn [{ json: out }];\n"
+      }
+    },
+    {
+      "id": "mvp-f1-if-826db4c6fe62",
+      "name": "IF Alerta Escritura · Sync Leads_Bot",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3970,
+        620
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-write-alert",
+              "leftValue": "={{ Boolean($json.alertar_escritura_sheets) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "mvp-f1-tg-826db4c6fe62",
+      "name": "Telegram Alerta Escritura · Sync Leads_Bot",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4190,
+        620
+      ],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "__SET_OWNER_TELEGRAM_CHAT_ID__",
+        "text": "={{ String($json.escritura_alerta_texto || \"\") }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "telegramApi": {
+          "id": "__SET_TELEGRAM_CREDENTIAL_ID__",
+          "name": "Telegram Bot Inmobiliaria"
+        }
+      }
+    },
+    {
+      "id": "mvp-f1-detect-d4ad4df527f4",
+      "name": "Detectar Error Escritura · Registrar Consulta Telegram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3750,
+        520
+      ],
+      "parameters": {
+        "jsCode": "const SHEETS_WRITE_ALERT_MS = 60 * 60 * 1000;\nconst item = $input.first() || {};\nconst j = item.json || {};\nlet chatId = String(j.chat_id || '').trim();\ntry {\n  if (!chatId) chatId = String(($('Parsear Respuesta').first().json || {}).chat_id || '').trim();\n} catch (e) {}\ntry {\n  if (!chatId) chatId = String(($('Set Variables').first().json || {}).chat_id || '').trim();\n} catch (e) {}\n\nfunction errMsg(err) {\n  if (err == null) return '';\n  if (typeof err === 'string') return err.slice(0, 240);\n  return String(err.message || err.description || err.error || JSON.stringify(err)).slice(0, 240);\n}\n\n// Google Sheets + onError=continueRegularOutput deja el fallo en item.error\n// (no siempre en json.error). También contemplamos json.error por si el nodo lo mezcla.\nconst msg = errMsg(item.error) || errMsg(j.error);\nconst sd = $getWorkflowStaticData('global');\nif (!sd.writeSheetsAlert) {\n  sd.writeSheetsAlert = { lastSentAt: 0, pending: [] };\n}\nconst st = sd.writeSheetsAlert;\nif (!Array.isArray(st.pending)) st.pending = [];\n\nif (msg) {\n  st.pending.push({\n    at: new Date().toISOString(),\n    nodo: \"Registrar Consulta Telegram\",\n    hoja: \"Consultas\",\n    error: msg,\n    chat_id: chatId || '(sin chat_id)',\n  });\n}\n\nconst now = Date.now();\nconst due = !st.lastSentAt || now - Number(st.lastSentAt) >= SHEETS_WRITE_ALERT_MS;\nlet alertar = false;\nlet texto = '';\nif (due && st.pending.length) {\n  const byKey = new Map();\n  for (const p of st.pending) {\n    const k = p.nodo + '|' + p.hoja + '|' + p.error;\n    if (!byKey.has(k)) byKey.set(k, { ...p, chats: new Set() });\n    byKey.get(k).chats.add(p.chat_id);\n  }\n  const lines = ['ALERTA escritura Sheets (Nodo Propiedades)'];\n  for (const g of byKey.values()) {\n    lines.push(\n      '- Nodo: ' +\n        g.nodo +\n        '\\n  Hoja: ' +\n        g.hoja +\n        '\\n  Error: ' +\n        g.error +\n        '\\n  chat_id: ' +\n        [...g.chats].join(', '),\n    );\n  }\n  texto = lines.join('\\n\\n').slice(0, 3500);\n  alertar = true;\n  st.lastSentAt = now;\n  st.pending = [];\n}\n\nconst out = Object.assign({}, j);\nout._write_sheets_ok = !msg;\nout._write_sheets_error = msg || '';\nout.alertar_escritura_sheets = alertar;\nout.escritura_alerta_texto = texto;\nreturn [{ json: out }];\n"
+      }
+    },
+    {
+      "id": "mvp-f1-if-d4ad4df527f4",
+      "name": "IF Alerta Escritura · Registrar Consulta Telegram",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3970,
+        440
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-write-alert",
+              "leftValue": "={{ Boolean($json.alertar_escritura_sheets) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "mvp-f1-tg-d4ad4df527f4",
+      "name": "Telegram Alerta Escritura · Registrar Consulta Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4190,
+        440
+      ],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "__SET_OWNER_TELEGRAM_CHAT_ID__",
+        "text": "={{ String($json.escritura_alerta_texto || \"\") }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "telegramApi": {
+          "id": "__SET_TELEGRAM_CREDENTIAL_ID__",
+          "name": "Telegram Bot Inmobiliaria"
+        }
+      }
+    },
+    {
+      "id": "mvp-f1-detect-9fa2e09b6c50",
+      "name": "Detectar Error Escritura · Registrar Aprendizaje Matias TG",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2232,
+        720
+      ],
+      "parameters": {
+        "jsCode": "const SHEETS_WRITE_ALERT_MS = 60 * 60 * 1000;\nconst item = $input.first() || {};\nconst j = item.json || {};\nlet chatId = String(j.chat_id || '').trim();\ntry {\n  if (!chatId) chatId = String(($('Parsear Respuesta').first().json || {}).chat_id || '').trim();\n} catch (e) {}\ntry {\n  if (!chatId) chatId = String(($('Set Variables').first().json || {}).chat_id || '').trim();\n} catch (e) {}\n\nfunction errMsg(err) {\n  if (err == null) return '';\n  if (typeof err === 'string') return err.slice(0, 240);\n  return String(err.message || err.description || err.error || JSON.stringify(err)).slice(0, 240);\n}\n\n// Google Sheets + onError=continueRegularOutput deja el fallo en item.error\n// (no siempre en json.error). También contemplamos json.error por si el nodo lo mezcla.\nconst msg = errMsg(item.error) || errMsg(j.error);\nconst sd = $getWorkflowStaticData('global');\nif (!sd.writeSheetsAlert) {\n  sd.writeSheetsAlert = { lastSentAt: 0, pending: [] };\n}\nconst st = sd.writeSheetsAlert;\nif (!Array.isArray(st.pending)) st.pending = [];\n\nif (msg) {\n  st.pending.push({\n    at: new Date().toISOString(),\n    nodo: \"Registrar Aprendizaje Matias TG\",\n    hoja: \"Aprendizaje_Matias\",\n    error: msg,\n    chat_id: chatId || '(sin chat_id)',\n  });\n}\n\nconst now = Date.now();\nconst due = !st.lastSentAt || now - Number(st.lastSentAt) >= SHEETS_WRITE_ALERT_MS;\nlet alertar = false;\nlet texto = '';\nif (due && st.pending.length) {\n  const byKey = new Map();\n  for (const p of st.pending) {\n    const k = p.nodo + '|' + p.hoja + '|' + p.error;\n    if (!byKey.has(k)) byKey.set(k, { ...p, chats: new Set() });\n    byKey.get(k).chats.add(p.chat_id);\n  }\n  const lines = ['ALERTA escritura Sheets (Nodo Propiedades)'];\n  for (const g of byKey.values()) {\n    lines.push(\n      '- Nodo: ' +\n        g.nodo +\n        '\\n  Hoja: ' +\n        g.hoja +\n        '\\n  Error: ' +\n        g.error +\n        '\\n  chat_id: ' +\n        [...g.chats].join(', '),\n    );\n  }\n  texto = lines.join('\\n\\n').slice(0, 3500);\n  alertar = true;\n  st.lastSentAt = now;\n  st.pending = [];\n}\n\nconst out = Object.assign({}, j);\nout._write_sheets_ok = !msg;\nout._write_sheets_error = msg || '';\nout.alertar_escritura_sheets = alertar;\nout.escritura_alerta_texto = texto;\nreturn [{ json: out }];\n"
+      }
+    },
+    {
+      "id": "mvp-f1-if-9fa2e09b6c50",
+      "name": "IF Alerta Escritura · Registrar Aprendizaje Matias TG",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2452,
+        640
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-write-alert",
+              "leftValue": "={{ Boolean($json.alertar_escritura_sheets) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "mvp-f1-tg-9fa2e09b6c50",
+      "name": "Telegram Alerta Escritura · Registrar Aprendizaje Matias TG",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2672,
+        640
+      ],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "__SET_OWNER_TELEGRAM_CHAT_ID__",
+        "text": "={{ String($json.escritura_alerta_texto || \"\") }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "telegramApi": {
+          "id": "__SET_TELEGRAM_CREDENTIAL_ID__",
+          "name": "Telegram Bot Inmobiliaria"
+        }
+      }
+    },
+    {
+      "id": "mvp-f1-detect-b94d9854eebe",
+      "name": "Detectar Error Escritura · Google Sheets - Conversaciones_Revision TG",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4530,
+        1440
+      ],
+      "parameters": {
+        "jsCode": "const SHEETS_WRITE_ALERT_MS = 60 * 60 * 1000;\nconst item = $input.first() || {};\nconst j = item.json || {};\nlet chatId = String(j.chat_id || '').trim();\ntry {\n  if (!chatId) chatId = String(($('Parsear Respuesta').first().json || {}).chat_id || '').trim();\n} catch (e) {}\ntry {\n  if (!chatId) chatId = String(($('Set Variables').first().json || {}).chat_id || '').trim();\n} catch (e) {}\n\nfunction errMsg(err) {\n  if (err == null) return '';\n  if (typeof err === 'string') return err.slice(0, 240);\n  return String(err.message || err.description || err.error || JSON.stringify(err)).slice(0, 240);\n}\n\n// Google Sheets + onError=continueRegularOutput deja el fallo en item.error\n// (no siempre en json.error). También contemplamos json.error por si el nodo lo mezcla.\nconst msg = errMsg(item.error) || errMsg(j.error);\nconst sd = $getWorkflowStaticData('global');\nif (!sd.writeSheetsAlert) {\n  sd.writeSheetsAlert = { lastSentAt: 0, pending: [] };\n}\nconst st = sd.writeSheetsAlert;\nif (!Array.isArray(st.pending)) st.pending = [];\n\nif (msg) {\n  st.pending.push({\n    at: new Date().toISOString(),\n    nodo: \"Google Sheets - Conversaciones_Revision TG\",\n    hoja: \"Conversaciones_Revision\",\n    error: msg,\n    chat_id: chatId || '(sin chat_id)',\n  });\n}\n\nconst now = Date.now();\nconst due = !st.lastSentAt || now - Number(st.lastSentAt) >= SHEETS_WRITE_ALERT_MS;\nlet alertar = false;\nlet texto = '';\nif (due && st.pending.length) {\n  const byKey = new Map();\n  for (const p of st.pending) {\n    const k = p.nodo + '|' + p.hoja + '|' + p.error;\n    if (!byKey.has(k)) byKey.set(k, { ...p, chats: new Set() });\n    byKey.get(k).chats.add(p.chat_id);\n  }\n  const lines = ['ALERTA escritura Sheets (Nodo Propiedades)'];\n  for (const g of byKey.values()) {\n    lines.push(\n      '- Nodo: ' +\n        g.nodo +\n        '\\n  Hoja: ' +\n        g.hoja +\n        '\\n  Error: ' +\n        g.error +\n        '\\n  chat_id: ' +\n        [...g.chats].join(', '),\n    );\n  }\n  texto = lines.join('\\n\\n').slice(0, 3500);\n  alertar = true;\n  st.lastSentAt = now;\n  st.pending = [];\n}\n\nconst out = Object.assign({}, j);\nout._write_sheets_ok = !msg;\nout._write_sheets_error = msg || '';\nout.alertar_escritura_sheets = alertar;\nout.escritura_alerta_texto = texto;\nreturn [{ json: out }];\n"
+      }
+    },
+    {
+      "id": "mvp-f1-if-b94d9854eebe",
+      "name": "IF Alerta Escritura · Google Sheets - Conversaciones_Revision TG",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4750,
+        1360
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-write-alert",
+              "leftValue": "={{ Boolean($json.alertar_escritura_sheets) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "mvp-f1-tg-b94d9854eebe",
+      "name": "Telegram Alerta Escritura · Google Sheets - Conversaciones_Revision TG",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4970,
+        1360
+      ],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "__SET_OWNER_TELEGRAM_CHAT_ID__",
+        "text": "={{ String($json.escritura_alerta_texto || \"\") }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "telegramApi": {
+          "id": "__SET_TELEGRAM_CREDENTIAL_ID__",
+          "name": "Telegram Bot Inmobiliaria"
+        }
+      }
     }
   ],
   "connections": {
@@ -1881,14 +2319,20 @@
     },
     "Guardar Lead": {
       "main": [
-        []
+        [
+          {
+            "node": "Detectar Error Escritura · Guardar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Sync Leads_Bot": {
       "main": [
         [
           {
-            "node": "Emit Lead Updated",
+            "node": "Detectar Error Escritura · Sync Leads_Bot",
             "type": "main",
             "index": 0
           }
@@ -2299,6 +2743,188 @@
             "index": 0
           }
         ]
+      ]
+    },
+    "Detectar Error Escritura · Guardar Lead": {
+      "main": [
+        [
+          {
+            "node": "IF Alerta Escritura · Guardar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Alerta Escritura · Guardar Lead": {
+      "main": [
+        [
+          {
+            "node": "Telegram Alerta Escritura · Guardar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Actualizar Historial": {
+      "main": [
+        [
+          {
+            "node": "Detectar Error Escritura · Actualizar Historial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detectar Error Escritura · Actualizar Historial": {
+      "main": [
+        [
+          {
+            "node": "IF Alerta Escritura · Actualizar Historial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Alerta Escritura · Actualizar Historial": {
+      "main": [
+        [
+          {
+            "node": "Telegram Alerta Escritura · Actualizar Historial",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Detectar Error Escritura · Sync Leads_Bot": {
+      "main": [
+        [
+          {
+            "node": "IF Alerta Escritura · Sync Leads_Bot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Alerta Escritura · Sync Leads_Bot": {
+      "main": [
+        [
+          {
+            "node": "Telegram Alerta Escritura · Sync Leads_Bot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Registrar Consulta Telegram": {
+      "main": [
+        [
+          {
+            "node": "Detectar Error Escritura · Registrar Consulta Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detectar Error Escritura · Registrar Consulta Telegram": {
+      "main": [
+        [
+          {
+            "node": "IF Alerta Escritura · Registrar Consulta Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Alerta Escritura · Registrar Consulta Telegram": {
+      "main": [
+        [
+          {
+            "node": "Telegram Alerta Escritura · Registrar Consulta Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Registrar Aprendizaje Matias TG": {
+      "main": [
+        [
+          {
+            "node": "Detectar Error Escritura · Registrar Aprendizaje Matias TG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detectar Error Escritura · Registrar Aprendizaje Matias TG": {
+      "main": [
+        [
+          {
+            "node": "IF Alerta Escritura · Registrar Aprendizaje Matias TG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Alerta Escritura · Registrar Aprendizaje Matias TG": {
+      "main": [
+        [
+          {
+            "node": "Telegram Alerta Escritura · Registrar Aprendizaje Matias TG",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Google Sheets - Conversaciones_Revision TG": {
+      "main": [
+        [
+          {
+            "node": "Detectar Error Escritura · Google Sheets - Conversaciones_Revision TG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detectar Error Escritura · Google Sheets - Conversaciones_Revision TG": {
+      "main": [
+        [
+          {
+            "node": "IF Alerta Escritura · Google Sheets - Conversaciones_Revision TG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Alerta Escritura · Google Sheets - Conversaciones_Revision TG": {
+      "main": [
+        [
+          {
+            "node": "Telegram Alerta Escritura · Google Sheets - Conversaciones_Revision TG",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
       ]
     }
   },

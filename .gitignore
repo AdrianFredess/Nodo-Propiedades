@@ -56,6 +56,11 @@ db_dump.txt
 .env.evolution
 waha-data/
 
+# Backups de planillas / workflows (datos personales o dumps grandes)
+docs/ops/backup-planillas-*/
+docs/ops/backup-workflows-*/
+demo-fotos/
+
 # Tesis / temporales locales
 docs/validacion/campana-flujo-3f132c3/dry-run-out/
 _tmp_*
