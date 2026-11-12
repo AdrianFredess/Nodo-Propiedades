@@ -5,5 +5,12 @@
   "horario_humano_hasta": "18:00",
   "mensaje_derivacion": "te_paso",
   "vendedor_nombre": "Adrian",
-  "panel_base_url": "http://localhost:5173"
+  "panel_base_url": "http://localhost:5173",
+  "inmobiliaria_nombre": "",
+  "asesor_nombre": "",
+  "zonas": [],
+  "operaciones": [],
+  "guias": [],
+  "ejemplo_estilo": "",
+  "mandar_en_partes": true
 }

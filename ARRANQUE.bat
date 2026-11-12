@@ -67,7 +67,14 @@ echo   GET  /webhook/panel-leads
 echo   POST /webhook/envio-masivo
 echo   POST /webhook/panel-stock-update
 echo   POST /webhook/panel-realtime-emit
+echo   POST /webhook/panel-entrevista-config   (PANEL-07)
+echo   POST /webhook/bot-prueba-panel          (Bot Prueba Panel)
 echo.
+echo Workflows MVP video: PANEL-07 Entrevista Config + Bot Prueba Panel
+echo   (activar con: node scripts/patch-mvp-f4-entrevista.js --deploy
+echo                node scripts/patch-mvp-f5-probar.js --deploy)
+echo.
+echo Demo reset: pnpm demo:reset  (solo DEMO_CHAT_IDS)
 echo Politicas pago: docs\POLITICAS-PAGO.md  (hoja Politicas_Pago)
 echo FormSubmit: configurar __SET_NOTIFY_EMAIL__ en el nodo Email Lead Caliente.
 exit /b 0

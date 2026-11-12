@@ -1144,7 +1144,7 @@
         2240,
         520
       ],
-      "webhookId": "tg-wait-rl-mwe73p08",
+      "webhookId": "tg-wait-rl-mwe74fco",
       "parameters": {
         "resume": "timeInterval",
         "amount": "={{ Math.max(5, Number($json.wait_retry_sec) || 45) }}",
@@ -1704,7 +1704,7 @@
         1460,
         240
       ],
-      "webhookId": "tg-wait-cola-mwe73p09",
+      "webhookId": "tg-wait-cola-mwe74fcp",
       "parameters": {
         "resume": "timeInterval",
         "amount": "={{ Math.max(1, Number($json.wait_cola_sec) || 1) }}",

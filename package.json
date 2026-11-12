@@ -20,7 +20,8 @@
     "check:secrets": "node scripts/check-secrets.js",
     "tesis:test-campana": "node scripts/tesis/test-campana-3f132c3.js",
     "tesis:build-copia": "node scripts/tesis/build-copia-3f132c3.js",
-    "tesis:campana": "node scripts/tesis/run-campana-flujo-3f132c3.js"
+    "tesis:campana": "node scripts/tesis/run-campana-flujo-3f132c3.js",
+    "demo:reset": "node scripts/mvp/demo-reset.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.6.0",

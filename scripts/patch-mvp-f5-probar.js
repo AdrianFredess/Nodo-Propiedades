@@ -22,7 +22,8 @@ async function upsertWorkflow(wf) {
     name: wf.name,
     nodes: wf.nodes,
     connections: wf.connections,
-    settings: wf.settings || { executionOrder: 'v1' },
+    // n8n 2.x API: solo executionOrder (resto de settings del export falla el PUT)
+    settings: { executionOrder: 'v1' },
   };
   if (existing) {
     const was = !!existing.active;

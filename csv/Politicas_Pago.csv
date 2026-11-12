@@ -1,10 +1,12 @@
 clave,valor
-transferencia,Alias: EDITAR_EN_SHEETS | CBU: EDITAR_EN_SHEETS | Titular: EDITAR_EN_SHEETS | Banco: EDITAR_EN_SHEETS
-efectivo,Se acepta en oficina con comprobante. Coordinar dia y monto de sena/reserva.
-reserva,La reserva/sena se acredita y se confirma por escrito. No garantiza la operacion hasta validacion.
-cuotas,Planes en cuotas solo si la propiedad lo indica en stock. Si no figura derivar a asesor.
-honorarios_venta,Honorarios de venta: ver columna honorarios del inmueble o confirmar con asesor.
-honorarios_alquiler,Honorarios de alquiler: ver columna honorarios del inmueble o confirmar con asesor.
-requisitos_alquiler,DNI | recibos de sueldo | garantia o seguro de caucion (confirmar en Sheets)
-requisitos_compra,DNI | sena/reserva | operatoria con escribano (confirmar en Sheets)
-oficina,Atencion en Mendoza — horario y direccion: EDITAR_EN_SHEETS
+nota_demo,DATOS DE DEMO — Nodo Propiedades (Mendoza). No son cuentas bancarias reales.
+transferencia,DEMO: se coordina transferencia con el asesor (sin CBU ni alias publicados en el bot).
+efectivo,DEMO: se acepta efectivo en oficina con comprobante. Coordinar día y monto de seña/reserva.
+reserva,DEMO: seña típica venta ~3–5% del precio pactado; se acredita y confirma por escrito. No garantiza la operación hasta validación.
+cuotas,DEMO: planes en cuotas solo si la ficha del inmueble lo indica. Si no figura, derivar a asesor.
+honorarios_venta,DEMO Mendoza: honorarios de venta orientativos 3% + IVA (comprador) / 3% + IVA (vendedor), confirmar en cada operación.
+honorarios_alquiler,DEMO Mendoza: honorarios de alquiler orientativos 1 mes de alquiler + IVA (confirmar con asesor).
+requisitos_alquiler,DEMO: DNI, recibos de sueldo (últimos 3), garantía propietaria o seguro de caución. Confirmar caso por caso.
+requisitos_compra,DEMO: DNI, seña/reserva, operatoria con escribano. Apto crédito según ficha.
+medios_pago,DEMO: transferencia bancaria coordinada, efectivo en oficina, cheque diferido solo con acuerdo previo.
+oficina,DEMO: atención en Mendoza capital · lun–vie 9:00–18:00 · sáb 9:00–13:00 (demo, no dirección real).
