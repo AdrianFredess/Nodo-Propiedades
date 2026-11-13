@@ -206,18 +206,14 @@ function applyLinkFicha(media, baseUrl) {
 
 function injectOwnerChatId(wf, ownerId) {
   let n = 0;
+  const want = String(ownerId);
   for (const node of wf.nodes || []) {
     if (!/Telegram Alerta/i.test(node.name || '')) continue;
     const p = node.parameters || {};
-    if (p.chatId === '__SET_OWNER_TELEGRAM_CHAT_ID__' || p.chatId == null || p.chatId === '') {
-      p.chatId = String(ownerId);
-      node.parameters = p;
-      n++;
-    } else if (String(p.chatId).includes('__SET_OWNER_TELEGRAM_CHAT_ID__')) {
-      p.chatId = String(ownerId);
-      node.parameters = p;
-      n++;
-    }
+    if (String(p.chatId || '') === want) continue;
+    p.chatId = want;
+    node.parameters = p;
+    n++;
   }
   return n;
 }

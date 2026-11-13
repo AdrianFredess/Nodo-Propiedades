@@ -537,7 +537,7 @@
       ],
       "parameters": {
         "operation": "sendMessage",
-        "chatId": "1947576481",
+        "chatId": "-5594163358",
         "text": "={{ String($('Parsear Respuesta').first().json.aviso_vendedor_texto || $('Parsear Respuesta').first().json.notif_resumen || ('AVISO Nodo\\n' + $('Parsear Respuesta').first().json.nombre + '\\nChat: ' + $('Parsear Respuesta').first().json.chat_id)) }}",
         "additionalFields": {
           "appendAttribution": false,
@@ -1596,7 +1596,7 @@
       "onError": "continueRegularOutput",
       "parameters": {
         "operation": "sendMessage",
-        "chatId": "1947576481",
+        "chatId": "-5594163358",
         "text": "={{ 'Groq sin tokens / fallo\\nChat: ' + String($json.chat_id || '') + '\\nCliente: ' + String($json.nombre || $json.nombre_usuario || '') + '\\nMsg: ' + String($json.texto_usuario || '').slice(0,200) }}",
         "additionalFields": {
           "appendAttribution": false,
@@ -1781,7 +1781,7 @@
       ],
       "parameters": {
         "operation": "sendMessage",
-        "chatId": "1947576481",
+        "chatId": "-5594163358",
         "text": "={{ String($json.escritura_alerta_texto || \"\") }}",
         "additionalFields": {
           "appendAttribution": false,
@@ -1853,7 +1853,7 @@
       ],
       "parameters": {
         "operation": "sendMessage",
-        "chatId": "1947576481",
+        "chatId": "-5594163358",
         "text": "={{ String($json.escritura_alerta_texto || \"\") }}",
         "additionalFields": {
           "appendAttribution": false,
@@ -1925,7 +1925,7 @@
       ],
       "parameters": {
         "operation": "sendMessage",
-        "chatId": "1947576481",
+        "chatId": "-5594163358",
         "text": "={{ String($json.escritura_alerta_texto || \"\") }}",
         "additionalFields": {
           "appendAttribution": false,
@@ -1997,7 +1997,7 @@
       ],
       "parameters": {
         "operation": "sendMessage",
-        "chatId": "1947576481",
+        "chatId": "-5594163358",
         "text": "={{ String($json.escritura_alerta_texto || \"\") }}",
         "additionalFields": {
           "appendAttribution": false,
@@ -2069,7 +2069,7 @@
       ],
       "parameters": {
         "operation": "sendMessage",
-        "chatId": "1947576481",
+        "chatId": "-5594163358",
         "text": "={{ String($json.escritura_alerta_texto || \"\") }}",
         "additionalFields": {
           "appendAttribution": false,
@@ -2141,7 +2141,7 @@
       ],
       "parameters": {
         "operation": "sendMessage",
-        "chatId": "1947576481",
+        "chatId": "-5594163358",
         "text": "={{ String($json.escritura_alerta_texto || \"\") }}",
         "additionalFields": {
           "appendAttribution": false,
@@ -2396,6 +2396,49 @@
         "chatId": "={{ $json.chat_id }}",
         "action": "typing"
       }
+    },
+    {
+      "id": "ignore-owner-27a7ec9b",
+      "name": "Ignorar Chat Dueño",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        300
+      ],
+      "parameters": {
+        "jsCode": "/* mvp-ignore-owner */\n/**\r\n * Ignorar mensajes del chat del dueño (OWNER_TELEGRAM_CHAT_ID).\r\n * Grupos Telegram suelen ser negativos; comparar como string.\r\n */\r\n\r\n/**\r\n * @param {string|number|null|undefined} chatId\r\n * @param {string|number|null|undefined} ownerChatId\r\n * @returns {boolean}\r\n */\r\nfunction isOwnerChat(chatId, ownerChatId) {\r\n  const a = String(chatId ?? '').trim();\r\n  const b = String(ownerChatId ?? '').trim();\r\n  if (!a || !b) return false;\r\n  if (a === b) return true;\r\n  // normalizar -100… vs variantes numéricas\r\n  const na = Number(a);\r\n  const nb = Number(b);\r\n  if (Number.isFinite(na) && Number.isFinite(nb) && na === nb) return true;\r\n  return false;\r\n}\r\n\r\n/**\r\n * @param {{ chat_id?: string|number, [k: string]: unknown }} item\r\n * @param {string|number|null|undefined} ownerChatId\r\n * @returns {{ skip: boolean, reason?: string }}\r\n */\r\nfunction shouldIgnoreOwnerMessage(item, ownerChatId) {\r\n  const chatId = item?.chat_id ?? item?.chatId ?? null;\r\n  if (isOwnerChat(chatId, ownerChatId)) {\r\n    return { skip: true, reason: 'owner_chat' };\r\n  }\r\n  return { skip: false };\r\n}\nconst OWNER = \"-5594163358\";\nconst j = $input.first().json || {};\nconst chat_id = j.chat_id != null ? j.chat_id : (j.message && j.message.chat && j.message.chat.id);\nconst decision = shouldIgnoreOwnerMessage({ chat_id }, OWNER);\nif (decision.skip) {\n  return [{ json: { ...j, chat_id, skip_owner: true, skip_reply: true, ignore_owner: true } }];\n}\nreturn [{ json: { ...j, chat_id, skip_owner: false } }];\n"
+      }
+    },
+    {
+      "id": "if-owner-eb3aeef7",
+      "name": "IF Es Chat Dueño",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        520,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "owner",
+              "leftValue": "={{ Boolean($json.skip_owner) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "options": {
+            "version": 2,
+            "typeValidation": "loose"
+          }
+        }
+      }
     }
   ],
   "connections": {
@@ -2447,7 +2490,7 @@
       "main": [
         [
           {
-            "node": "IF Es Start",
+            "node": "Ignorar Chat Dueño",
             "type": "main",
             "index": 0
           }
@@ -3313,6 +3356,29 @@
         [
           {
             "node": "Telegram Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ignorar Chat Dueño": {
+      "main": [
+        [
+          {
+            "node": "IF Es Chat Dueño",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Es Chat Dueño": {
+      "main": [
+        [],
+        [
+          {
+            "node": "IF Es Start",
             "type": "main",
             "index": 0
           }
