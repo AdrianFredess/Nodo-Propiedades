@@ -72,7 +72,7 @@ function Lista({ titulo, leads }: { titulo: string; leads: Lead[] }) {
       <ul>
         {leads.map((lead) => (
           <li key={lead.id}>
-            <Link to={'/leads/' + lead.id}>{lead.nombre || lead.chatId}</Link>
+            <Link to={'/leads/' + lead.id}>{lead.nombre || 'Cliente'}</Link>
             {lead.zona ? ' · ' + lead.zona : ''}
           </li>
         ))}

@@ -158,7 +158,7 @@ export function ConfigBotPage() {
       }
       setCfg({ ...DEFAULTS, ...j.config });
       localStorage.setItem('nodo_bot_config', JSON.stringify(j.config));
-      setStatus('Restaurado. Para n8n vivo: node scripts/patch-advisor-learning.js --deploy');
+      setStatus('Restaurado. Matías usa esta config desde el próximo mensaje.');
       void loadHistory();
     } catch {
       setStatus('Bridge offline — revisá ws-bridge :3099');
@@ -191,7 +191,7 @@ export function ConfigBotPage() {
           reescribe.
         </p>
         {config.useMock ? (
-          <p className="muted">Modo mock: la config igual se guarda en el bridge/archivo.</p>
+          <p className="muted">Modo demostración: la config se guarda igual.</p>
         ) : null}
         <button
           type="button"

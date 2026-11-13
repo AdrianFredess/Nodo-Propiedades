@@ -15,6 +15,8 @@
 
 ## Fuera de este MVP
 - Esperar a que el cliente termine de escribir (D1 OmniCRM 74b): fase aparte por riesgo de carreras en static data.
+- Login del panel: hoy no tiene ingreso; no se construyó (Fase 7.6.5). El video arranca en Resumen.
+- `linkFicha` sigue en localhost hasta publicar front/ngrok de catálogo (Fase 6b.3).
 
 ## Fase 6b — fotos duplicadas sin sesión única
 

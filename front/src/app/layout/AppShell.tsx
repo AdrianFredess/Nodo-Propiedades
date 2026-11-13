@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { TempNotifications } from '../../features/notifications/TempNotifications';
 import { config } from '../../shared/api/client';
@@ -26,10 +27,10 @@ const links = [
 ];
 
 function realtimeText(status: RealtimeStatus | undefined): string {
-  if (status === 'open') return 'Conectado';
+  if (status === 'open') return 'En vivo';
   if (status === 'connecting') return 'Reconectando…';
-  if (status === 'closed') return 'Polling';
-  return 'Sin WS';
+  if (status === 'closed') return 'Actualización periódica';
+  return 'Sin conexión en vivo';
 }
 
 function realtimeClass(status: RealtimeStatus | undefined): string {
@@ -49,6 +50,7 @@ export function AppShell({
   realtimeStatus = 'off',
 }: AppShellProps) {
   const location = useLocation();
+  const [brandName, setBrandName] = useState('Nodo Propiedades');
   const source = payload?.source ?? (config.useMock ? 'mock' : 'live');
   const routeKey = location.pathname.startsWith('/pipeline')
     ? 'pipeline'
@@ -58,11 +60,27 @@ export function AppShell({
         ? 'lead'
         : 'resumen';
 
+  useEffect(() => {
+    const base = String(config.wsEmitUrl || '')
+      .replace(/\/emit\/?$/, '')
+      .replace(/\/$/, '');
+    if (!base) return;
+    const headers: Record<string, string> = {};
+    if (config.panelApiToken) headers['X-Panel-Token'] = config.panelApiToken;
+    fetch(`${base}/bot-config`, { headers })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { inmobiliaria_nombre?: string } | null) => {
+        const n = String(j?.inmobiliaria_nombre || '').trim();
+        if (n) setBrandName(n);
+      })
+      .catch(() => undefined);
+  }, []);
+
   return (
     <div className={`shell shell--${routeKey}`}>
       <aside className="shell__nav">
         <div className="shell__brand">
-          <span className="shell__brand-mark">Nodo Propiedades</span>
+          <span className="shell__brand-mark">{brandName}</span>
           <span className="shell__brand-sub">Panel comercial</span>
         </div>
         <nav className="shell__links" aria-label="Principal">

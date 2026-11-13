@@ -77,7 +77,7 @@ export function ProbarPage() {
         },
       ]);
     } catch {
-      setError('No se pudo contactar el bot de prueba (n8n).');
+      setError('No se pudo contactar el bot de prueba. Revisá que el panel esté conectado.');
     } finally {
       setBusy(false);
     }

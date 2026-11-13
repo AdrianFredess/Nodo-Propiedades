@@ -1307,6 +1307,13 @@
   gap: 0.35rem;
 }
 
+.lead-detail__resumen {
+  margin: 0.35rem 0 0.5rem;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  color: #37474f;
+}
+
 .lead-detail__channel-meta {
   display: flex;
   flex-wrap: wrap;

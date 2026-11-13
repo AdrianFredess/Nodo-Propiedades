@@ -16,6 +16,7 @@ import {
   TEMPERATURA_LABEL,
 } from '../../shared/lib/labels';
 import { CanalChip } from '../../shared/ui/CanalChip';
+import { buildLeadResumenLine } from '../../shared/lib/leadResumen';
 import { formatDateTime, relativeTimeFrom } from '../../shared/lib/time';
 import type { AppendChatMessageInput } from '../../shared/hooks/useLeads';
 import type { EstadoSeguimiento, Lead } from '../../shared/types/lead';
@@ -204,6 +205,13 @@ export function LeadDetailPage({
       <header className="page-head page-head--compact page-head--detail">
         <div>
           <h1>{lead.nombre}</h1>
+          <p className="lead-detail__resumen">
+            {buildLeadResumenLine({
+              operacion: lead.tipoOperacion,
+              zona: lead.zona,
+              presupuesto: lead.presupuesto,
+            })}
+          </p>
           <p className="lead-detail__channel-meta">
             <CanalChip canal={lead.canalOrigen} />
             <span className={`chip chip--sm chip--${lead.temperatura}`}>
